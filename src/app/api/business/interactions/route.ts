@@ -5,12 +5,10 @@ import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET() {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { getToken } = await auth()
+    const token = await getToken({ template: 'convex' })
 
-    const interactions = await getConvexClient().query(api.business.getInteractions)
+    const interactions = await getConvexClient(token).query(api.business.getInteractions)
     return NextResponse.json({ interactions })
   } catch (error) {
     console.error('Error reading interactions:', error)
@@ -20,11 +18,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const { getToken } = await auth()
+    const token = await getToken({ template: 'convex' })
     const body = await request.json()
     const { contact_id, type, notes } = body
 
@@ -32,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'contact_id, type, and notes are required' }, { status: 400 })
     }
 
-    const id = await getConvexClient().mutation(api.business.addInteraction, {
+    const id = await getConvexClient(token).mutation(api.business.addInteraction, {
       contact_id,
       type,
       date: Date.now(),

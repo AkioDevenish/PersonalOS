@@ -5,15 +5,13 @@ import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET(request: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { getToken } = await auth()
+    const token = await getToken({ template: 'convex' })
 
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    const posts = await getConvexClient().query(api.marketing.getPosts, { limit })
+    const posts = await getConvexClient(token).query(api.marketing.getPosts, { limit })
     return NextResponse.json({ posts })
   } catch (error) {
     console.error('Error reading posts:', error)
@@ -23,11 +21,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const { getToken } = await auth()
+    const token = await getToken({ template: 'convex' })
     const body = await request.json()
     const { bullets, platform, topic, mood, content, published } = body
 
@@ -35,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'platform and content are required' }, { status: 400 })
     }
 
-    const id = await getConvexClient().mutation(api.marketing.addPost, {
+    const id = await getConvexClient(token).mutation(api.marketing.addPost, {
       content,
       platform,
       topic,

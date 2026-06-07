@@ -5,12 +5,10 @@ import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET() {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { getToken } = await auth()
+    const token = await getToken({ template: 'convex' })
 
-    const stats = await getConvexClient().query(api.marketing.getStats)
+    const stats = await getConvexClient(token).query(api.marketing.getStats)
     
     return NextResponse.json({
       total_posts: stats.total,
