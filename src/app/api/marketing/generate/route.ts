@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Database from 'better-sqlite3'
 import path from 'path'
 
-const DB_PATH = path.join(process.env.HOME || '', 'personal_os/Market/data/marketing.db')
+const DB_PATH = process.env.MARKETING_DB_PATH || path.join(process.env.HOME || '', 'personal_os/Market/data/marketing.db')
 
 export async function POST(request: Request) {
   try {
@@ -24,19 +24,21 @@ Write the actual post content (not bullet points). Make it engaging and native t
 
 Post:`
 
-    // Call Ollama
-    const ollamaRes = await fetch('http://localhost:11434/api/generate', {
+    const OLLAMA_URL = process.env.OLLAMA_URL || process.env.GEMMA_URL || 'http://127.0.0.1:11434/api/generate'
+    const OLLAMA_MODEL = process.env.OLLAMA_MODEL || process.env.GEMMA_MODEL || 'gemma4'
+
+    const ollamaRes = await fetch(OLLAMA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.2',
+        model: OLLAMA_MODEL,
         prompt,
         stream: false,
       }),
     })
 
     if (!ollamaRes.ok) {
-      return NextResponse.json({ error: 'Ollama not responding. Is it running?' }, { status: 503 })
+      return NextResponse.json({ error: 'AI generation service unavailable.' }, { status: 503 })
     }
 
     const ollamaData = await ollamaRes.json()

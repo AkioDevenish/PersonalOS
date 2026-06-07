@@ -8,8 +8,8 @@ export type ActorResult =
   | { ok: true; actor: RequestActor }
   | { ok: false; status: number; error: string }
 
-const LOCAL_USER_ID = 'local-akio'
-const LOCAL_WORKSPACE_ID = 'personal-os'
+const LOCAL_USER_ID = 'local-user'
+const LOCAL_WORKSPACE_ID = 'default'
 
 function bearerToken(request: Request) {
   const header = request.headers.get('authorization')

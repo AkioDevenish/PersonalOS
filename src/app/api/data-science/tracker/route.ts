@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-const TRACKER_PATH = path.join(process.env.HOME || '', 'personal_os/Data Science/data_science/tracker.csv')
+const TRACKER_PATH = process.env.DS_TRACKER_PATH || path.join(process.env.HOME || '', 'personal_os/Data Science/data_science/tracker.csv')
 
 export async function GET() {
   try {

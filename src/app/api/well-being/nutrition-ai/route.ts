@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
 
-const dbPath = path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
+const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate'
 const OLLAMA_MODEL = process.env.GEMMA_MODEL || process.env.OLLAMA_MODEL || 'gemma4'
 

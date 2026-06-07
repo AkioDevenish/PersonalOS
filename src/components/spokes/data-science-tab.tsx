@@ -40,24 +40,20 @@ export function DataScienceTab() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Strip */}
       <section>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <KPIMetric label="Projects Deployed" value={`${deployedCount}/5`} trendLabel="Target: 5" />
+          <KPIMetric label="Projects Deployed" value={deployedCount} />
           <KPIMetric label="In Progress" value={inProgressCount} />
-          <KPIMetric label="GitHub Commits (This Week)" value="0" trendLabel="Start tracking" />
-          <KPIMetric label="Kaggle Ranking" value="N/A" trendLabel="Join Kaggle" />
         </div>
       </section>
 
-      {/* Project Tracker */}
       <section>
         <h2 className="text-[18px] font-semibold text-[var(--deep-brown)] mb-4" style={{ fontFamily: "var(--font-display)" }}>Project Tracker</h2>
         <Card>
           {loading ? (
             <div className="p-4 text-center text-[var(--dust)]">Loading projects...</div>
           ) : projects.length === 0 ? (
-            <div className="p-4 text-center text-[var(--dust)]">No projects found. Update tracker.csv</div>
+            <div className="p-4 text-center text-[var(--dust)]">No projects found. Add entries to your tracker to see them here.</div>
           ) : (
             <div className="space-y-2">
               {projects.map((project, index) => (
@@ -86,16 +82,6 @@ export function DataScienceTab() {
             </div>
           )}
         </Card>
-      </section>
-
-      {/* Revenue Metrics */}
-      <section>
-        <h2 className="text-[18px] font-semibold text-[var(--deep-brown)] mb-4" style={{ fontFamily: "var(--font-display)" }}>Freelance Revenue</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <KPIMetric label="Client Pitches Sent" value="0" trendLabel="Start outreach" />
-          <KPIMetric label="Client Responses" value="0" trendLabel="Follow up" />
-          <KPIMetric label="Revenue (Monthly)" value="£0" trendLabel="Target: £500/mo" />
-        </div>
       </section>
     </div>
   )

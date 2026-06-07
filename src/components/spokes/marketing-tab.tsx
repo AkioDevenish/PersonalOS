@@ -190,7 +190,7 @@ export function MarketingTab() {
               {generating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating via Ollama...
+                  Generating...
                 </>
               ) : (
                 <>

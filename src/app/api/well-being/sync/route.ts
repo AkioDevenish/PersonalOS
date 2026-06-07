@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import path from 'path'
+import os from 'os'
 
 const execAsync = promisify(exec)
 
-const ACTIVITY_SCRIPT = '/Users/akio/personal_os/Well Being/health/activity_sync.py'
+const ACTIVITY_SCRIPT = process.env.ACTIVITY_SYNC_SCRIPT_PATH || path.join(os.homedir(), 'personal_os/Well Being/health/activity_sync.py')
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000'
 
 export async function POST() {

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
 
-const dbPath = path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
+const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 
 export async function GET() {
   try {

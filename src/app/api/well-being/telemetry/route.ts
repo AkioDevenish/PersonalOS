@@ -4,7 +4,7 @@ import path from 'path'
 import os from 'os'
 import { randomUUID } from 'crypto'
 
-const dbPath = path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
+const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 
 export async function GET() {
   try {

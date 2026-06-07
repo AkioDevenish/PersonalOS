@@ -211,10 +211,10 @@ export default function SaaSLandingPage() {
       {/* Footer */}
       <footer className="border-t border-border-subtle py-12 px-6 mt-12 bg-elevated/50">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between text-text-muted text-sm gap-4">
-          <p>© 2026 Personal OS. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Personal OS. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link href="#" className="hover:text-text-primary transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-text-primary transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-text-primary transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-text-primary transition-colors">Terms of Service</Link>
           </div>
         </div>
       </footer>

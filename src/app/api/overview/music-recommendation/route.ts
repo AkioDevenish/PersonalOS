@@ -3,15 +3,10 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
 
-const dbPath = path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
+const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate'
 const OLLAMA_MODEL = process.env.GEMMA_MODEL || process.env.OLLAMA_MODEL || 'gemma4'
-const FALLBACK = {
-  artist: 'Tycho',
-  track: 'Awake',
-  genre: 'Ambient',
-  reason: 'A calm fallback while Ollama is unavailable.',
-}
+
 
 async function runOllama(prompt: string): Promise<string> {
   const controller = new AbortController()
@@ -82,8 +77,8 @@ Output ONLY a raw JSON object with no markdown formatting or backticks. Format:
       const cleaned = llmResponse.replace(/```json/g, '').replace(/```/g, '').trim()
       recommendation = JSON.parse(cleaned)
     } catch (e) {
-      console.error('Failed to parse Ollama JSON:', llmResponse)
-      recommendation = FALLBACK
+      console.error('Failed to parse LLM JSON:', llmResponse)
+      return NextResponse.json(null)
     }
 
     // Try to get an iTunes preview URL and a YouTube full video ID
@@ -96,7 +91,6 @@ Output ONLY a raw JSON object with no markdown formatting or backticks. Format:
         recommendation.artworkUrl = itunesData.results[0].artworkUrl100
       }
 
-      // Scrape YouTube for full video ID
       const ytRes = await fetch(`https://www.youtube.com/results?search_query=${term}`)
       const ytHtml = await ytRes.text()
       const ytMatch = ytHtml.match(/"videoId":"([^"]{11})"/)
@@ -110,6 +104,6 @@ Output ONLY a raw JSON object with no markdown formatting or backticks. Format:
     return NextResponse.json(recommendation)
   } catch (error) {
     console.error('Music recommendation failed:', error)
-    return NextResponse.json(FALLBACK, { status: 200 })
+    return NextResponse.json(null)
   }
 }

@@ -2,10 +2,8 @@ import path from 'path'
 import Database from 'better-sqlite3'
 import type { RequestActor } from './request-actor'
 
-export const HEALTH_DB_PATH = path.join(
-  process.env.HOME || '',
-  'personal_os/Well Being/data/health.db',
-)
+export const HEALTH_DB_PATH =
+  process.env.HEALTH_DB_PATH || path.join(process.env.HOME || '', 'personal_os/Well Being/data/health.db')
 
 export const HEALTHKIT_SOURCE = 'healthkit'
 export const LEGACY_DAILY_SOURCE = 'daily_health.txt'
