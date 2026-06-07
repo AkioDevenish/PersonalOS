@@ -6,8 +6,16 @@ import {
   type HealthSampleInput,
 } from '@/lib/health-db'
 import { getRequestActor } from '@/lib/request-actor'
-import { fetchMutation } from "convex/nextjs"
-import { api, internal } from "../../../../../convex/_generated/api"
+import { ConvexHttpClient } from "convex/browser"
+import { internal } from "../../../../../convex/_generated/api"
+
+function getConvexClient() {
+  const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+  if (process.env.CONVEX_DEPLOYMENT_KEY) {
+    client.setAdminAuth(process.env.CONVEX_DEPLOYMENT_KEY)
+  }
+  return client
+}
 
 function isSample(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false
@@ -95,10 +103,12 @@ export async function POST(request: Request) {
         source: HEALTHKIT_SOURCE,
       }))
       
-      const result = await fetchMutation(internal.wellbeing.syncHealthDataInternal, {
-        userId: actor.userId,
-        records: convexRecords
-      })
+      const result = await getConvexClient().mutation(
+        internal.wellbeing.syncHealthDataInternal, {
+          userId: actor.userId,
+          records: convexRecords,
+        }
+      )
       cloudUpserted = result.count
       upserted = result.count
       syncBatchId = `saas-${Date.now()}`
