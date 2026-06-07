@@ -69,7 +69,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 userButtonPopoverActionButton: 'hover:bg-[var(--soft-warm)]',
               }
             }}
-            afterSignOutUrl="/"
           />
         </div>
       </div>
