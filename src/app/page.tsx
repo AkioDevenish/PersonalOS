@@ -398,9 +398,10 @@ export default function SaaSLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                name: "Starter",
+                tier: "STARTER",
+                name: "Personal Dashboard",
+                subtitle: "Perfect for getting started",
                 price: "Free",
-                description: "Perfect for getting started with your personal dashboard.",
                 features: [
                   "Health & well-being tracking",
                   "Business CRM (up to 10 deals)",
@@ -413,10 +414,11 @@ export default function SaaSLandingPage() {
                 featured: false,
               },
               {
-                name: "Pro",
+                tier: "PRO",
+                name: "Full Workspace",
+                subtitle: "Unlock everything",
                 price: "$12",
                 period: "/month",
-                description: "Unlock the full power of local AI and automation.",
                 features: [
                   "Everything in Starter",
                   "Unlimited deals & contacts",
@@ -430,10 +432,11 @@ export default function SaaSLandingPage() {
                 featured: true,
               },
               {
-                name: "Enterprise",
+                tier: "ENTERPRISE",
+                name: "Team Workspace",
+                subtitle: "For teams and power users",
                 price: "$29",
                 period: "/month",
-                description: "For teams and power users who need more.",
                 features: [
                   "Everything in Pro",
                   "Up to 5 team members",
@@ -441,7 +444,6 @@ export default function SaaSLandingPage() {
                   "Team health dashboards",
                   "API access",
                   "Dedicated support",
-                  "Custom integrations",
                 ],
                 cta: "Contact Sales",
                 href: "mailto:sales@personalos.com",
@@ -449,46 +451,68 @@ export default function SaaSLandingPage() {
               },
             ].map((tier) => (
               <div
-                key={tier.name}
-                className={`relative rounded-2xl p-8 border saas-scroll-reveal transition-all duration-300
+                key={tier.tier}
+                className={`relative bg-[var(--warm-white)] rounded-3xl p-8 border saas-scroll-reveal transition-all duration-300
                   ${tier.featured
-                    ? "bg-[var(--deep-brown)] border-[var(--deep-brown)] shadow-xl scale-[1.02] md:scale-105"
-                    : "bg-[var(--warm-white)] border-[var(--border-subtle)] shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                    ? "border-[var(--border-mid)] shadow-lg ring-1 ring-[var(--amber)]/20"
+                    : "border-[var(--border-subtle)] shadow-sm hover:shadow-md"
                   }`}
               >
                 {tier.featured && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[var(--amber)] text-[var(--warm-white)] text-[10px] uppercase tracking-[0.12em] font-semibold rounded-full">
+                  <div className="absolute -top-3 left-8 px-4 py-1 bg-[var(--amber)] text-[var(--warm-white)] text-[10px] uppercase tracking-[0.12em] font-semibold rounded-full">
                     Most Popular
                   </div>
                 )}
-                <div className={tier.featured ? "text-[var(--warm-white)]" : ""}>
-                  <h3 className="font-display text-xl font-bold mb-1">{tier.name}</h3>
-                  <div className="flex items-baseline gap-1 mt-4 mb-2">
-                    <span className="text-4xl font-bold font-display tracking-tight">{tier.price}</span>
-                    {tier.period && <span className="text-[13px] opacity-60">{tier.period}</span>}
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.15em] text-[var(--amber)] font-semibold mb-3">
+                    {tier.tier}
                   </div>
-                  <p className={`text-[13px] mt-1 mb-6 leading-relaxed ${tier.featured ? "text-[var(--dust)]" : "text-[var(--mid-brown)]"}`}>
-                    {tier.description}
+                  <h3 className="font-display text-2xl font-bold text-[var(--deep-brown)] mb-1">
+                    {tier.name}
+                  </h3>
+                  <p className="text-[13px] text-[var(--dust)] mb-6">
+                    {tier.subtitle}
                   </p>
+
+                  <div className="flex items-baseline gap-1 mb-6">
+                    {tier.price === "Free" ? (
+                      <span className="text-5xl font-bold font-display tracking-tight text-[var(--deep-brown)]">
+                        Free
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-5xl font-bold font-display tracking-tight text-[var(--deep-brown)]">
+                          {tier.price}
+                        </span>
+                        {tier.period && (
+                          <span className="text-[14px] text-[var(--dust)]">{tier.period}</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-[var(--border-subtle)] mb-6" />
+
                   <ul className="space-y-3 mb-8">
                     {tier.features.map((f) => (
                       <li key={f} className="flex items-start gap-3 text-[13px]">
-                        <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${tier.featured ? "text-[var(--amber)]" : "text-[var(--sage)]"}`} />
-                        <span className={tier.featured ? "text-[var(--warm-white)]/85" : "text-[var(--mid-brown)]"}>{f}</span>
+                        <Check className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--sage)]" />
+                        <span className="text-[var(--mid-brown)]">{f}</span>
                       </li>
                     ))}
                   </ul>
+
                   <Link
                     href={tier.href}
-                    className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[13px] font-medium transition-all
+                    className={`w-full flex items-center justify-center px-5 py-3.5 rounded-xl text-[13px] font-medium transition-all
                       hover:scale-[1.02] active:scale-[0.98]
                       ${tier.featured
-                        ? "bg-[var(--warm-white)] text-[var(--deep-brown)] hover:opacity-90 shadow-md"
+                        ? "bg-[var(--deep-brown)] text-[var(--warm-white)] hover:opacity-90 shadow-md"
                         : "bg-[var(--deep-brown)] text-[var(--warm-white)] hover:opacity-85 shadow-sm"
                       }`}
                   >
                     {tier.cta}
-                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </div>
