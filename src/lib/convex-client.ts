@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser"
 
-export function getConvexClient(token?: string): any {
+export function getConvexClient(token?: string | null): any {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL
   if (!url) {
     throw new Error("NEXT_PUBLIC_CONVEX_URL is not set")
