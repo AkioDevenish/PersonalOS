@@ -15,6 +15,7 @@ import {
   Quote,
 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
+import { HeroBackground } from "@/components/hero/hero-background"
 import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 
@@ -212,21 +213,7 @@ export default function SaaSLandingPage() {
              HERO
            ══════════════════════════════════════ */}
         <section className="relative min-h-[90vh] flex items-center justify-center px-5 pt-28 pb-20 overflow-hidden">
-          {/* Ambient glow orbs */}
-          <div className="absolute inset-0 pointer-events-none select-none" aria-hidden>
-            <div
-              className="absolute top-[20%] left-[15%] w-[32rem] h-[32rem] rounded-full opacity-20 animate-pulse"
-              style={{ backgroundColor: "var(--amber-low)", filter: "blur(120px)", animationDuration: "8s" }}
-            />
-            <div
-              className="absolute bottom-[15%] right-[10%] w-[28rem] h-[28rem] rounded-full opacity-15 animate-pulse"
-              style={{ backgroundColor: "var(--sage-low)", filter: "blur(100px)", animationDuration: "10s", animationDelay: "1s" }}
-            />
-            <div
-              className="absolute top-[40%] right-[20%] w-[20rem] h-[20rem] rounded-full opacity-10 animate-pulse"
-              style={{ backgroundColor: "#E8553D", filter: "blur(90px)", animationDuration: "12s", animationDelay: "2s" }}
-            />
-          </div>
+          <HeroBackground />
 
           <div className="relative z-10 max-w-4xl mx-auto text-center animate-fade-in">
             {/* Badge */}
