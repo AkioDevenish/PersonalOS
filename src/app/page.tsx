@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation"
 
 const NAV_ITEMS = [
   { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How It Works" },
+  { href: "#pricing", label: "Pricing" },
   { href: "#testimonials", label: "Testimonials" },
 ]
 
@@ -32,7 +32,6 @@ const FEATURES = [
     title: "Health & Well-being",
     description:
       "Sync automatically with Apple Health, track your metabolic events, and get personalized, AI-driven nutrition and recovery recommendations daily.",
-    stat: "47 biomarkers tracked",
   },
   {
     icon: Workflow,
@@ -41,7 +40,6 @@ const FEATURES = [
     title: "Business CRM",
     description:
       "Manage deals, track follow-ups, and log communications. Never let an opportunity slip through the cracks again.",
-    stat: "Pipeline automations",
   },
   {
     icon: Sparkles,
@@ -50,7 +48,6 @@ const FEATURES = [
     title: "Content Marketing",
     description:
       "Schedule posts, track compounding social media metrics, and maintain a sustainable content pipeline.",
-    stat: "AI-generated drafts",
   },
   {
     icon: BarChart3,
@@ -59,7 +56,6 @@ const FEATURES = [
     title: "Local AI Analytics",
     description:
       "Your data stays on your machine. Powerful local models analyze your activity and habits without sending anything to the cloud.",
-    stat: "100% private",
   },
 ]
 
@@ -133,10 +129,7 @@ function FeatureCard({ feature, index }: { feature: (typeof FEATURES)[0]; index:
         </div>
         <h3 className="font-display text-xl font-bold text-[var(--deep-brown)] mb-2.5">{feature.title}</h3>
         <p className="text-[13px] text-[var(--mid-brown)] leading-relaxed">{feature.description}</p>
-        <div className="mt-5 pt-4 border-t border-[var(--border-subtle)] flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: feature.color }} />
-          <span className="text-[11px] text-[var(--dust)] tracking-wide">{feature.stat}</span>
-        </div>
+
       </div>
     </article>
   )
@@ -306,27 +299,6 @@ export default function SaaSLandingPage() {
         </section>
 
         {/* ══════════════════════════════════════
-             STATS
-           ══════════════════════════════════════ */}
-        <section className="border-y border-[var(--border-subtle)] bg-[var(--warm-white)]/40">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-14 px-6 max-w-4xl mx-auto">
-            {[
-              { label: "Health Metrics Tracked", value: "47+" },
-              { label: "AI Models Running", value: "4" },
-              { label: "Lines of Code", value: "15K+" },
-              { label: "Data Stays Local", value: "100%" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-[var(--deep-brown)] font-display tracking-tight">
-                  {s.value}
-                </div>
-                <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--dust)] mt-1.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
              FEATURES
            ══════════════════════════════════════ */}
         <section id="features" className="px-5 py-24 max-w-6xl mx-auto scroll-mt-28">
@@ -408,7 +380,124 @@ export default function SaaSLandingPage() {
         </section>
 
         {/* ══════════════════════════════════════
-             CTA
+              PRICING
+           ══════════════════════════════════════ */}
+        <section id="pricing" className="px-5 py-24 max-w-6xl mx-auto scroll-mt-28">
+          <div className="text-center mb-16">
+            <span className="text-[11px] uppercase tracking-[0.15em] text-[var(--amber)] font-semibold mb-4 block">
+              Pricing
+            </span>
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-[var(--deep-brown)] mb-4">
+              Simple, transparent pricing
+            </h2>
+            <p className="text-[var(--mid-brown)] max-w-lg mx-auto">
+              Start free, upgrade when you need more.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                name: "Starter",
+                price: "Free",
+                description: "Perfect for getting started with your personal dashboard.",
+                features: [
+                  "Health & well-being tracking",
+                  "Business CRM (up to 10 deals)",
+                  "Content marketing drafts",
+                  "Local AI analytics",
+                  "1 user",
+                ],
+                cta: "Get Started",
+                href: "/sign-up",
+                featured: false,
+              },
+              {
+                name: "Pro",
+                price: "$12",
+                period: "/month",
+                description: "Unlock the full power of local AI and automation.",
+                features: [
+                  "Everything in Starter",
+                  "Unlimited deals & contacts",
+                  "AI-powered content generation",
+                  "Advanced health insights",
+                  "Custom AI model selection",
+                  "Priority support",
+                ],
+                cta: "Start Free Trial",
+                href: "/sign-up",
+                featured: true,
+              },
+              {
+                name: "Enterprise",
+                price: "$29",
+                period: "/month",
+                description: "For teams and power users who need more.",
+                features: [
+                  "Everything in Pro",
+                  "Up to 5 team members",
+                  "Shared deal pipelines",
+                  "Team health dashboards",
+                  "API access",
+                  "Dedicated support",
+                  "Custom integrations",
+                ],
+                cta: "Contact Sales",
+                href: "mailto:sales@personalos.com",
+                featured: false,
+              },
+            ].map((tier) => (
+              <div
+                key={tier.name}
+                className={`relative rounded-2xl p-8 border saas-scroll-reveal transition-all duration-300
+                  ${tier.featured
+                    ? "bg-[var(--deep-brown)] border-[var(--deep-brown)] shadow-xl scale-[1.02] md:scale-105"
+                    : "bg-[var(--warm-white)] border-[var(--border-subtle)] shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                  }`}
+              >
+                {tier.featured && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[var(--amber)] text-[var(--warm-white)] text-[10px] uppercase tracking-[0.12em] font-semibold rounded-full">
+                    Most Popular
+                  </div>
+                )}
+                <div className={tier.featured ? "text-[var(--warm-white)]" : ""}>
+                  <h3 className="font-display text-xl font-bold mb-1">{tier.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-4 mb-2">
+                    <span className="text-4xl font-bold font-display tracking-tight">{tier.price}</span>
+                    {tier.period && <span className="text-[13px] opacity-60">{tier.period}</span>}
+                  </div>
+                  <p className={`text-[13px] mt-1 mb-6 leading-relaxed ${tier.featured ? "text-[var(--dust)]" : "text-[var(--mid-brown)]"}`}>
+                    {tier.description}
+                  </p>
+                  <ul className="space-y-3 mb-8">
+                    {tier.features.map((f) => (
+                      <li key={f} className="flex items-start gap-3 text-[13px]">
+                        <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${tier.featured ? "text-[var(--amber)]" : "text-[var(--sage)]"}`} />
+                        <span className={tier.featured ? "text-[var(--warm-white)]/85" : "text-[var(--mid-brown)]"}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={tier.href}
+                    className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[13px] font-medium transition-all
+                      hover:scale-[1.02] active:scale-[0.98]
+                      ${tier.featured
+                        ? "bg-[var(--warm-white)] text-[var(--deep-brown)] hover:opacity-90 shadow-md"
+                        : "bg-[var(--deep-brown)] text-[var(--warm-white)] hover:opacity-85 shadow-sm"
+                      }`}
+                  >
+                    {tier.cta}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════
+              CTA
            ══════════════════════════════════════ */}
         <section className="px-5 py-24 max-w-3xl mx-auto text-center">
           <div className="bg-[var(--deep-brown)] rounded-3xl p-10 md:p-16 shadow-xl saas-scroll-reveal">
@@ -461,7 +550,7 @@ export default function SaaSLandingPage() {
                 links: [
                   { href: "#features", label: "Features" },
                   { href: "#how-it-works", label: "How It Works" },
-                  { href: "/sign-up", label: "Pricing" },
+                  { href: "#pricing", label: "Pricing" },
                 ],
               },
               {
