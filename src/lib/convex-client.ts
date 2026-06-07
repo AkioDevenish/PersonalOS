@@ -2,7 +2,7 @@ import { ConvexHttpClient } from "convex/browser"
 
 let client: ConvexHttpClient | null = null
 
-export function getConvexClient(): ConvexHttpClient {
+export function getConvexClient(): any {
   if (!client) {
     const url = process.env.NEXT_PUBLIC_CONVEX_URL
     if (!url) {
