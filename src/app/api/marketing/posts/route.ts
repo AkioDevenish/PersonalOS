@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ConvexHttpClient } from 'convex/browser'
 import { api } from "../../../../../convex/_generated/api"
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +13,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    const posts = await convex.query(api.marketing.getPosts, { limit })
+    const posts = await getConvexClient().query(api.marketing.getPosts, { limit })
     return NextResponse.json({ posts })
   } catch (error) {
     console.error('Error reading posts:', error)
@@ -37,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'platform and content are required' }, { status: 400 })
     }
 
-    const id = await convex.mutation(api.marketing.addPost, {
+    const id = await getConvexClient().mutation(api.marketing.addPost, {
       content,
       platform,
       topic,

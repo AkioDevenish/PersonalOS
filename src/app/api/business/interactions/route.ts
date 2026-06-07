@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../../../convex/_generated/api'
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET() {
   try {
@@ -12,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const interactions = await convex.query(api.business.getInteractions)
+    const interactions = await getConvexClient().query(api.business.getInteractions)
     return NextResponse.json({ interactions })
   } catch (error) {
     console.error('Error reading interactions:', error)
@@ -34,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'contact_id, type, and notes are required' }, { status: 400 })
     }
 
-    const id = await convex.mutation(api.business.addInteraction, {
+    const id = await getConvexClient().mutation(api.business.addInteraction, {
       contact_id,
       type,
       date: Date.now(),

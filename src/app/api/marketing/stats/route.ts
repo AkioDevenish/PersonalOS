@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ConvexHttpClient } from 'convex/browser'
 import { api } from "../../../../../convex/_generated/api"
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET() {
   try {
@@ -12,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const stats = await convex.query(api.marketing.getStats)
+    const stats = await getConvexClient().query(api.marketing.getStats)
     
     return NextResponse.json({
       total_posts: stats.total,

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server'
-import { ConvexHttpClient } from "convex/browser"
 import { api } from "../../../../../convex/_generated/api"
 import type { Id } from "../../../../../convex/_generated/dataModel"
-
-const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+import { getConvexClient } from "@/lib/convex-client"
 
 export async function GET() {
   try {
-    const contacts = await client.query(api.business.getContacts)
+    const contacts = await getConvexClient().query(api.business.getContacts)
     return NextResponse.json({ contacts })
   } catch (error) {
     console.error('Error reading contacts:', error)
@@ -24,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const id = await client.mutation(api.business.addContact, {
+    const id = await getConvexClient().mutation(api.business.addContact, {
       name,
       company,
       email,
@@ -49,7 +47,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    await client.mutation(api.business.updateContact, {
+    await getConvexClient().mutation(api.business.updateContact, {
       id: id as Id<"contacts">,
       name,
       company,
