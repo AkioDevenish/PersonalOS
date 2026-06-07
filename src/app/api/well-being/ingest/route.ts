@@ -12,7 +12,7 @@ import { internal } from "../../../../../convex/_generated/api"
 function getConvexClient() {
   const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
   if (process.env.CONVEX_DEPLOYMENT_KEY) {
-    client.setAdminAuth(process.env.CONVEX_DEPLOYMENT_KEY)
+    ;(client as any).setAdminAuth(process.env.CONVEX_DEPLOYMENT_KEY)
   }
   return client
 }
