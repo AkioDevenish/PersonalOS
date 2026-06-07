@@ -1,0 +1,36 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="watchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C9A961;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8944D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Simplified hand -->
+  <path d="M 10 22 Q 8 18 10 14 L 11 10 Q 12 8 14 10 L 15 11 Q 16 10 17 11 L 18 10 Q 19 8 20 10 L 21 14 Q 23 18 22 22 L 20 26 Q 18 28 16 28 Q 14 28 12 26 Z" 
+        fill="#D4A574" 
+        stroke="#9D7456" 
+        stroke-width="0.5"/>
+  
+  <!-- Simplified pocket watch -->
+  <circle cx="16" cy="16" r="9" 
+          fill="url(#watchGrad)" 
+          stroke="#9D7F3E" 
+          stroke-width="1"/>
+  
+  <circle cx="16" cy="16" r="7" 
+          fill="#F5F0E8"/>
+  
+  <!-- Watch hands showing 10:10 -->
+  <line x1="16" y1="16" x2="13" y2="13" 
+        stroke="#3C2F28" 
+        stroke-width="1.2" 
+        stroke-linecap="round"/>
+  
+  <line x1="16" y1="16" x2="19" y2="12" 
+        stroke="#3C2F28" 
+        stroke-width="0.8" 
+        stroke-linecap="round"/>
+  
+  <circle cx="16" cy="16" r="1" fill="#3C2F28"/>
+</svg>

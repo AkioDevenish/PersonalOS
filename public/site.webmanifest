@@ -1,0 +1,39 @@
+{
+  "name": "Personal OS",
+  "short_name": "PersonalOS",
+  "description": "A calm, grounded space for your day - time well spent",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF6EF",
+  "theme_color": "#C9A961",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "health"],
+  "shortcuts": [
+    {
+      "name": "Overview",
+      "short_name": "Home",
+      "description": "View your daily overview",
+      "url": "/",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

@@ -1,26 +1,267 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Warm Wood Color System */
+  --color-linen: #F2EDE3;
+  --color-warm-white: #F9F6F0;
+  --color-soft-warm: #F5EFE4;
+  --color-deep-brown: #28200F;
+  --color-mid-brown: #6E5D45;
+  --color-dust: #A8957E;
+  --color-amber: #B8845A;
+  --color-amber-low: #DEC9AE;
+  --color-sage: #7D937A;
+  --color-sage-low: #C4D1BF;
+
+  --color-bg-base: #F2EDE3;
+  --color-bg-elevated: #F9F6F0;
+  --color-bg-hover: #F5EFE4;
+  --color-bg-active: #EDE8DC;
+  --color-border-subtle: rgba(40,32,15,0.10);
+  --color-border-mid: rgba(40,32,15,0.18);
+  --color-text-primary: #28200F;
+  --color-text-secondary: #6E5D45;
+  --color-text-muted: #A8957E;
+
+  --color-accent-amber: #B8845A;
+  --color-accent-sage: #7D937A;
+  --color-accent-danger: #C75B5B;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Jost", system-ui, sans-serif;
+  --font-mono: monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(40,32,15,0.04);
+  --shadow-md: 0 4px 12px rgba(40,32,15,0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --linen: #F2EDE3;
+  --warm-white: #F9F6F0;
+  --soft-warm: #F5EFE4;
+  --deep-brown: #28200F;
+  --mid-brown: #6E5D45;
+  --dust: #A8957E;
+  --amber: #B8845A;
+  --amber-low: #DEC9AE;
+  --sage: #7D937A;
+  --sage-low: #C4D1BF;
+
+  --bg-base: #F2EDE3;
+  --bg-elevated: #F9F6F0;
+  --bg-hover: #F5EFE4;
+  --bg-active: #EDE8DC;
+  --bg-sunken: #EDE8DC;
+  --border-subtle: rgba(40,32,15,0.10);
+  --border-mid: rgba(40,32,15,0.18);
+  --text-primary: #28200F;
+  --text-secondary: #6E5D45;
+  --text-muted: #A8957E;
+
+  --accent-amber: #B8845A;
+  --accent-sage: #7D937A;
+  --accent-danger: #C75B5B;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 3px rgba(40,32,15,0.04);
+  --shadow-md: 0 4px 12px rgba(40,32,15,0.06);
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Jost", system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+:where(button, a, select, summary, [role="button"], [role="tab"], [tabindex]:not([tabindex="-1"])) {
+  cursor: pointer;
+}
+
+:where(button, a, select, summary, [role="button"], [role="tab"]) {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:where(button, a, [role="button"], [role="tab"]):not(:disabled):active {
+  transform: translateY(1px) scale(0.99);
+}
+
+:where(button, a, select, input, textarea, [role="button"], [role="tab"]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--amber) 65%, transparent);
+  outline-offset: 2px;
+}
+
+:where(button, select):disabled,
+:where([aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
+.animate-report-in {
+  animation: report-in 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes report-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--amber-low);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dust);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area insets (iPhone notch, iPad home indicator) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  main {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Fade-in animation for page loads */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 400ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Mobile — prevent iOS auto-zoom on input focus */
+@media (max-width: 640px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* SaaS Landing Page Scroll Animations */
+@keyframes shrink-header {
+  to {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    background-color: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+}
+
+@keyframes float-up-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.saas-header {
+  animation: shrink-header auto linear both;
+  animation-timeline: scroll(block root);
+  animation-range: 0px 150px;
+}
+
+.saas-scroll-reveal {
+  animation: float-up-in auto linear both;
+  animation-timeline: view();
+  animation-range: entry 10% cover 30%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saas-header, .saas-scroll-reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+
+/* Animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
 }
