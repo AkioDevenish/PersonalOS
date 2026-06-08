@@ -9,9 +9,9 @@ import {
   Sparkles,
   ArrowRight,
   Check,
+  Activity,
   Brain,
   Shield,
-  Play,
 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import { HeroBackground } from "@/components/hero/hero-background"
@@ -20,8 +20,8 @@ import { useRouter } from "next/navigation"
 
 const NAV_ITEMS = [
   { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "Workflow" },
   { href: "#pricing", label: "Pricing" },
+  { href: "#testimonials", label: "Testimonials" },
 ]
 
 const FEATURES = [
@@ -95,7 +95,7 @@ function useScrollFallback(headerRef: React.RefObject<HTMLElement | null>) {
   }, [headerRef])
 }
 
-function FeatureCard({ feature }: { feature: (typeof FEATURES)[0] }) {
+function FeatureCard({ feature, index }: { feature: (typeof FEATURES)[0]; index: number }) {
   const Icon = feature.icon
   return (
     <article
@@ -198,47 +198,56 @@ export default function SaaSLandingPage() {
         {/* ══════════════════════════════════════
              HERO
            ══════════════════════════════════════ */}
-        <section className="relative min-h-[100svh] px-5 pt-28 pb-16 overflow-hidden hero-front-page">
+        <section className="relative min-h-[90vh] flex items-center justify-center px-5 pt-28 pb-20 overflow-hidden">
           <HeroBackground />
 
-          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-11rem)] max-w-7xl flex-col justify-center animate-fade-in">
-            <div className="hero-kicker">
-              Personal operating system / private AI workspace
+          <div className="relative z-10 max-w-4xl mx-auto text-center animate-fade-in">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--amber-low)]/25 border border-[var(--amber-low)]/40 text-[11px] text-[var(--amber)] font-semibold tracking-[0.08em] uppercase mb-8">
+              <Activity className="w-3.5 h-3.5" />
+              <span>The Operating System for Your Life</span>
             </div>
 
-            <h1 className="hero-title">
-              PERSONAL
-              <span>OS</span>
+            {/* Headline */}
+            <h1 className="font-display text-5xl sm:text-6xl md:text-[5.5rem] lg:text-[6.5rem] font-bold tracking-tight leading-[0.92] mb-6 text-[var(--deep-brown)]">
+              Everything in
+              <br />
+              <span className="text-[var(--amber)]">its right place.</span>
             </h1>
 
-            <p className="hero-subtitle">
-              One beautiful front door for your health, business, marketing, and daily
-              signal. Designed like a studio object, powered by local intelligence.
+            <p className="text-base sm:text-lg text-[var(--mid-brown)] max-w-xl mx-auto mb-10 leading-relaxed">
+              Consolidate your well-being, business CRM, marketing content, and daily
+              metrics into one unified, intelligent workspace powered by local AI.
             </p>
 
-            <div className="hero-actions">
+            {/* CTAs */}
+            <div className="flex items-center justify-center gap-4 flex-wrap">
               {isLoaded && !isSignedIn && (
                 <>
                   <Link
                     href="/sign-up"
-                    className="hero-primary-action"
+                    className="bg-[#E8553D] text-white px-7 py-3 rounded-xl font-medium text-[15px]
+                      hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md
+                      flex items-center gap-2"
                   >
-                    Get Started
+                    Start Free Trial
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                   <Link
                     href="#features"
-                    className="hero-secondary-action"
+                    className="bg-[var(--warm-white)] text-[var(--deep-brown)] px-7 py-3 rounded-xl font-medium text-[15px]
+                      border border-[var(--border-mid)] hover:bg-[var(--soft-warm)] transition-colors shadow-sm"
                   >
-                    <Play className="w-4 h-4" />
-                    Explore System
+                    See How It Works
                   </Link>
                 </>
               )}
               {isLoaded && isSignedIn && (
                 <Link
                   href="/hub"
-                  className="hero-primary-action"
+                  className="bg-[#E8553D] text-white px-7 py-3 rounded-xl font-medium text-[15px]
+                    hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md
+                    flex items-center gap-2"
                 >
                   Go to Your Dashboard
                   <ArrowRight className="w-4 h-4" />
@@ -246,7 +255,8 @@ export default function SaaSLandingPage() {
               )}
             </div>
 
-            <div className="hero-trust-row">
+            {/* Trust bar */}
+            <div className="mt-14 flex items-center justify-center gap-6 sm:gap-8 flex-wrap text-[12px] text-[var(--dust)]">
               {[
                 { icon: Shield, text: "Your data, your machine" },
                 { icon: Brain, text: "Local AI first" },
@@ -279,7 +289,7 @@ export default function SaaSLandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {FEATURES.map((feature, i) => (
-              <FeatureCard key={feature.title} feature={feature} />
+              <FeatureCard key={feature.title} feature={feature} index={i} />
             ))}
           </div>
         </section>
