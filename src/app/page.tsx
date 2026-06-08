@@ -12,7 +12,6 @@ import {
   Activity,
   Brain,
   Shield,
-  Quote,
 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import { HeroBackground } from "@/components/hero/hero-background"
@@ -64,19 +63,6 @@ const STEPS = [
   { number: "01", title: "Connect", description: "Sync your health data, link your accounts, and import your existing workflows — all in under five minutes." },
   { number: "02", title: "Personalize", description: "Your dashboard adapts to your life. Configure the modules that matter to you, hide what doesn't." },
   { number: "03", title: "Let AI Guide You", description: "Local AI models analyze your patterns and suggest actions, content, and improvements — daily." },
-]
-
-const TESTIMONIALS = [
-  {
-    quote: "I've stopped using three separate apps. Personal OS replaced my health tracker, CRM, and content scheduler in one place.",
-    author: "Alex Chen",
-    role: "Independent Consultant",
-  },
-  {
-    quote: "The local AI recommendations are eerily accurate. It knows when I need rest before I do.",
-    author: "Sarah Mitchell",
-    role: "Software Engineer",
-  },
 ]
 
 function useScrollFallback(headerRef: React.RefObject<HTMLElement | null>) {
@@ -335,38 +321,6 @@ export default function SaaSLandingPage() {
         </section>
 
         {/* ══════════════════════════════════════
-             TESTIMONIALS
-           ══════════════════════════════════════ */}
-        <section id="testimonials" className="px-5 py-24 max-w-5xl mx-auto scroll-mt-28">
-          <div className="text-center mb-16">
-            <span className="text-[11px] uppercase tracking-[0.15em] text-[var(--amber)] font-semibold mb-4 block">
-              Testimonials
-            </span>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[var(--deep-brown)] mb-4">
-              Loved by builders
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <blockquote
-                key={t.author}
-                className="bg-[var(--warm-white)] rounded-2xl p-8 border border-[var(--border-subtle)] shadow-sm saas-scroll-reveal"
-              >
-                <Quote className="w-8 h-8 text-[var(--amber-low)] mb-4" />
-                <p className="text-[14px] text-[var(--mid-brown)] leading-relaxed mb-6">&ldquo;{t.quote}&rdquo;</p>
-                <footer>
-                  <cite className="not-italic">
-                    <div className="text-[13px] font-medium text-[var(--deep-brown)]">{t.author}</div>
-                    <div className="text-[11px] text-[var(--dust)]">{t.role}</div>
-                  </cite>
-                </footer>
-              </blockquote>
-            ))}
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
               PRICING
            ══════════════════════════════════════ */}
         <section id="pricing" className="px-5 py-24 max-w-6xl mx-auto scroll-mt-28">
@@ -507,42 +461,7 @@ export default function SaaSLandingPage() {
           </div>
         </section>
 
-        {/* ══════════════════════════════════════
-              CTA
-           ══════════════════════════════════════ */}
-        <section className="px-5 py-24 max-w-3xl mx-auto text-center">
-          <div className="bg-[var(--deep-brown)] rounded-3xl p-10 md:p-16 shadow-xl saas-scroll-reveal">
-            <Brain className="w-10 h-10 text-[var(--amber)] mx-auto mb-6" />
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-[var(--warm-white)] mb-4">
-              Ready to clear the noise?
-            </h2>
-            <p className="text-[14px] text-[var(--dust)] max-w-md mx-auto mb-8 leading-relaxed">
-              Start your free trial today. No credit card required.
-            </p>
-            {isLoaded && !isSignedIn && (
-              <Link
-                href="/sign-up"
-                className="inline-flex bg-[#E8553D] text-white px-8 py-3 rounded-xl font-medium text-[15px]
-                  hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg
-                  items-center gap-2"
-              >
-                Start Free Trial
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            )}
-            {isLoaded && isSignedIn && (
-              <Link
-                href="/hub"
-                className="inline-flex bg-[#E8553D] text-white px-8 py-3 rounded-xl font-medium text-[15px]
-                  hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg
-                  items-center gap-2"
-              >
-                Go to Dashboard
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            )}
-          </div>
-        </section>
+
       </main>
 
       {/* ── Footer ── */}
@@ -562,41 +481,68 @@ export default function SaaSLandingPage() {
                   { href: "#features", label: "Features" },
                   { href: "#how-it-works", label: "How It Works" },
                   { href: "#pricing", label: "Pricing" },
+                  { href: "/privacy", label: "Privacy" },
+                  { href: "/terms", label: "Terms" },
                 ],
               },
               {
-                title: "Resources",
+                title: "Careers",
                 links: [
-                  { href: "#testimonials", label: "Testimonials" },
-                  { href: "/privacy", label: "Privacy Policy" },
-                  { href: "/terms", label: "Terms of Service" },
+                  { href: "https://x.com", label: "We&apos;re Hiring" },
+                  { href: "mailto:careers@personalos.com", label: "Contact HR" },
                 ],
               },
               {
-                title: "Company",
-                links: [
-                  { href: "mailto:hello@personalos.com", label: "Contact" },
-                  { href: "https://x.com", label: "X / Twitter" },
-                  { href: "https://github.com", label: "GitHub" },
-                ],
+                title: "Social",
+                links: [],
               },
             ].map((group) => (
               <div key={group.title}>
                 <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--dust)] font-semibold mb-4">
                   {group.title}
                 </div>
-                <ul className="space-y-3">
-                  {group.links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-[13px] text-[var(--mid-brown)] hover:text-[var(--deep-brown)] transition-colors"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                {group.links.length > 0 && (
+                  <ul className="space-y-3">
+                    {group.links.map((link) => (
+                      <li key={link.label}>
+                        <Link
+                          href={link.href}
+                          className="text-[13px] text-[var(--mid-brown)] hover:text-[var(--deep-brown)] transition-colors"
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {group.title === "Social" && (
+                  <div className="flex gap-4">
+                    <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors" aria-label="X">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
+                        <path d="M4 20l6.768 -6.768m2.46 -2.46L20 4" />
+                      </svg>
+                    </a>
+                    <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors" aria-label="YouTube">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 8a4 4 0 0 1 4 -4h12a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4H6a4 4 0 0 1 -4 -4V8z" />
+                        <path d="M10 9l5 3l-5 3V9z" />
+                      </svg>
+                    </a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors" aria-label="Instagram">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" />
+                        <circle cx="12" cy="12" r="5" />
+                        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+                      </svg>
+                    </a>
+                    <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors" aria-label="TikTok">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -607,10 +553,10 @@ export default function SaaSLandingPage() {
             </p>
             <div className="flex gap-6">
               <Link href="/privacy" className="text-[12px] text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors">
-                Privacy Policy
+                Privacy
               </Link>
               <Link href="/terms" className="text-[12px] text-[var(--dust)] hover:text-[var(--mid-brown)] transition-colors">
-                Terms of Service
+                Terms
               </Link>
             </div>
           </div>
