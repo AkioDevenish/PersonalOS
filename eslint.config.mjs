@@ -6,7 +6,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   // The React Native app has its own toolchain and lint rules.
-  { ignores: ["mobile/**"] },
+  { ignores: ["ios/**"] },
 
   // Override default ignores of eslint-config-next.
   globalIgnores([
