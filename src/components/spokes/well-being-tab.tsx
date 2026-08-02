@@ -15,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import Link from "next/link"
 import { Card } from "../ui/card"
 import { KPIMetric } from "../ui/kpi-metric"
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Sparkles, Stethoscope, UtensilsCrossed, Loader2, Brain, Sun, Moon, Sunrise, Sunset, Cookie, Clock, History, ChefHat, Flame, Leaf, Zap, Database, Apple, Dumbbell, Footprints, Ear, Activity, Compass, Battery, Trash2, Mic, MicOff, Send } from "lucide-react"
@@ -821,7 +822,8 @@ export function WellBeingTab() {
 
   async function fetchHealthRecords() {
     try {
-      const response = await fetch(`/api/well-being/health-records?days=${days}`)
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      const response = await fetch(`/api/well-being/health-records?days=${days}&tz=${encodeURIComponent(tz)}`)
       const data = await response.json()
       setHealthRecords(data.records || [])
       setHealthSummary(data.summary || null)
@@ -920,9 +922,9 @@ export function WellBeingTab() {
     }
   }, [])
 
-  const visibleHealthRecords = healthRecords.filter(
-    (record) => record.source_file === "daily_health.txt" || record.source_file === "healthkit",
-  )
+  // every row now comes from the resolver, already deduplicated across
+  // providers — source_file names whichever provider won that day
+  const visibleHealthRecords = healthRecords
   const trendSeries = buildTrendSeries(visibleHealthRecords, days)
 
   const avgRecord = healthSummary
@@ -1463,6 +1465,12 @@ export function WellBeingTab() {
     return { emoji, labels, timeAgo }
   })()
 
+  // Nothing has ever synced: send the user to Connections rather than showing
+  // a wall of empty charts, which reads as broken rather than unconfigured.
+  if (!loading && visibleHealthRecords.length === 0) {
+    return <NoDataYet />
+  }
+
   return (
     <div className="space-y-6">
       {/* Time Period Selector + State of Mind Status */}
@@ -1623,6 +1631,37 @@ export function WellBeingTab() {
           {renderSignalIntelligence()}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * First-run state for the Well Being tab. A new account has no samples, and an
+ * empty chart grid looks like a bug — this says what to do instead.
+ */
+function NoDataYet() {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+      <div className="w-12 h-12 rounded-[14px] bg-[var(--linen)] border border-[var(--border-subtle)] flex items-center justify-center mb-5">
+        <Activity className="w-5 h-5 text-[var(--amber)]" />
+      </div>
+      <h2
+        className="text-[20px] font-semibold text-[var(--deep-brown)] mb-2"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        Your ledger is empty
+      </h2>
+      <p className="text-[13px] text-[var(--mid-brown)] max-w-[26rem] leading-relaxed mb-6">
+        Connect a watch, ring, or phone and your health data starts flowing in on
+        its own. Nothing to log by hand.
+      </p>
+      <Link
+        href="/hub/connections"
+        className="bg-[var(--deep-brown)] text-[var(--warm-white)] px-5 py-2.5 rounded-[10px] text-[13px] font-medium
+          hover:opacity-85 transition-all active:scale-[0.98] shadow-[var(--shadow-sm)]"
+      >
+        Connect a device
+      </Link>
     </div>
   )
 }
