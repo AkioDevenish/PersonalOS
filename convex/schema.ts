@@ -133,6 +133,24 @@ export default defineSchema({
     .index("by_external_user", ["external_user_id"]),
 
   /**
+   * Provider OAuth tokens, encrypted before they ever reach Convex.
+   *
+   * The decryption key lives in the Next.js environment only, so these
+   * documents are unreadable from inside Convex — a query that accidentally
+   * returned every row would leak ciphertext and nothing else. Separate from
+   * health_connections so ordinary connection reads never touch them.
+   */
+  health_oauth_tokens: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    access_token: v.string(), // encrypted envelope
+    refresh_token: v.optional(v.string()), // encrypted envelope
+    expires_at: v.optional(v.number()),
+    scopes: v.optional(v.array(v.string())),
+    updated_at: v.number(),
+  }).index("by_user_provider", ["userId", "provider"]),
+
+  /**
    * Per-user override of the default trust order — "use Oura for sleep even
    * though I also wear a Garmin". Absent means the default in metrics.ts.
    */

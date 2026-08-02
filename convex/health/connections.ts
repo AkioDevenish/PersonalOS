@@ -110,6 +110,51 @@ export const connect = mutation({
   },
 })
 
+/**
+ * Server-to-server link, used by the OAuth callback.
+ *
+ * The public `connect` derives the user from the session, but a callback has
+ * no session it should trust — it has a signed state parameter naming the user
+ * who began the flow. So identity is passed explicitly and this stays internal.
+ */
+export const linkForUser = internalMutation({
+  args: {
+    userId: v.string(),
+    provider: v.string(),
+    external_user_id: v.optional(v.string()),
+    scopes: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    if (!isProvider(args.provider)) throw new Error(`Unknown provider: ${args.provider}`)
+
+    const existing = await ctx.db
+      .query("health_connections")
+      .withIndex("by_user_provider", (q) =>
+        q.eq("userId", args.userId).eq("provider", args.provider),
+      )
+      .first()
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        status: "connected",
+        external_user_id: args.external_user_id ?? existing.external_user_id,
+        scopes: args.scopes ?? existing.scopes,
+        last_error: undefined,
+      })
+      return existing._id
+    }
+
+    return await ctx.db.insert("health_connections", {
+      userId: args.userId,
+      provider: args.provider,
+      status: "connected",
+      external_user_id: args.external_user_id,
+      scopes: args.scopes,
+      connected_at: Date.now(),
+    })
+  },
+})
+
 /** Read the resume point so a sync knows where it left off. */
 export const cursorFor = internalQuery({
   args: { userId: v.string(), provider: v.string() },
@@ -174,6 +219,16 @@ export const disconnect = mutation({
       .first()
 
     if (conn) await ctx.db.patch(conn._id, { status: "disconnected" })
+
+    // Revoking access must not leave a usable refresh token behind — that is
+    // the whole point of disconnecting.
+    const token = await ctx.db
+      .query("health_oauth_tokens")
+      .withIndex("by_user_provider", (q) =>
+        q.eq("userId", identity.subject).eq("provider", args.provider),
+      )
+      .first()
+    if (token) await ctx.db.delete(token._id)
 
     let purged = 0
     if (args.purge) {
