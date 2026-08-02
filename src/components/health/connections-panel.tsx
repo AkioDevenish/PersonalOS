@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useQuery, useMutation } from "convex/react"
 import { Check, Smartphone, Link2, AlertCircle, Loader2, X } from "lucide-react"
 import { api } from "../../../convex/_generated/api"
@@ -43,7 +43,7 @@ function relativeTime(ts?: number) {
 
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   connected: { label: "Connected", className: "bg-[var(--sage-low)] text-[#41553F]" },
-  pending: { label: "Waiting", className: "bg-[var(--amber-low)] text-[#7A5227]" },
+  pending: { label: "Not finished", className: "bg-[var(--amber-low)] text-[#7A5227]" },
   error: { label: "Needs attention", className: "bg-[#F3D9D9] text-[#8C3B3B]" },
   disconnected: { label: "Not connected", className: "bg-[var(--bg-active)] text-[var(--dust)]" },
 }
@@ -55,6 +55,34 @@ export default function ConnectionsPanel() {
 
   const [busy, setBusy] = useState<string | null>(null)
   const [deviceHelp, setDeviceHelp] = useState<Connection | null>(null)
+
+  // The OAuth routes redirect back with ?error / ?connected / ?cancelled.
+  // Without reading these, a failed link looked like nothing happened at all.
+  const [notice, setNotice] = useState<{ tone: "error" | "ok"; text: string } | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get("error")
+    const connected = params.get("connected")
+    const cancelled = params.get("cancelled")
+    if (!error && !connected && !cancelled) return
+
+    // Reading these during render instead would mean either touching `window`
+    // on the server, or rendering null there and the banner here — a hydration
+    // mismatch. A mount-time effect is the right tool; it runs once and the
+    // params are cleared immediately after.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotice(
+      error
+        ? { tone: "error", text: error }
+        : connected
+          ? { tone: "ok", text: `${connected} connected.` }
+          : { tone: "error", text: "Connection cancelled." },
+    )
+
+    // strip them so a refresh doesn't replay a stale message
+    window.history.replaceState({}, "", window.location.pathname)
+  }, [])
 
   const connected = useMemo(
     () => (providers ?? []).filter((p) => p.status === "connected"),
@@ -100,6 +128,19 @@ export default function ConnectionsPanel() {
 
   return (
     <div className="space-y-10">
+      {notice && (
+        <div
+          role="status"
+          className={`rounded-[12px] border px-4 py-3 text-[13px] ${
+            notice.tone === "error"
+              ? "border-[#E0BDBD] bg-[#F7E9E9] text-[#8C3B3B]"
+              : "border-[var(--sage-low)] bg-[var(--sage-low)]/40 text-[#41553F]"
+          }`}
+        >
+          {notice.text}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {providers.map((p) => {
           const status = STATUS_STYLE[p.status] ?? STATUS_STYLE.disconnected
@@ -142,6 +183,12 @@ export default function ConnectionsPanel() {
                 <p className="text-[11px] text-[var(--dust)] flex items-center gap-1.5">
                   <Check className="w-3 h-3 text-[var(--sage)]" />
                   Synced {relativeTime(p.last_sync_at)}
+                </p>
+              )}
+
+              {isPending && p.kind === "cloud" && (
+                <p className="text-[11px] text-[var(--mid-brown)]">
+                  You started this but it never completed — try connecting again.
                 </p>
               )}
 

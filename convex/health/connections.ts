@@ -1,7 +1,7 @@
 import { v } from "convex/values"
 import { mutation, query, internalQuery, internalMutation } from "../_generated/server"
 import { isProvider, isMetricKey, defaultPriority, type MetricKey } from "./metrics"
-import { CONNECTABLE, PROVIDER_INFO, providerInfo } from "./providers"
+import { CONNECTABLE, PROVIDER_INFO } from "./providers"
 
 /**
  * Provider connection lifecycle, plus the per-user trust-order override.
@@ -43,13 +43,25 @@ export const available = query({
     return CONNECTABLE.map((key) => {
       const info = PROVIDER_INFO[key]
       const conn = byProvider.get(key)
+
+      /**
+       * "Connected" is a claim about data, so require the evidence.
+       *
+       * A row saying connected while last_sync_at is empty has never delivered
+       * anything — whatever wrote it was wrong. Deriving the display status
+       * here means a bug upstream (or a row already stored by one) can't
+       * present a green badge for a link that does not exist.
+       */
+      const status =
+        conn?.status === "connected" && !conn.last_sync_at ? "pending" : conn?.status ?? "disconnected"
+
       return {
         key,
         label: info.label,
         kind: info.kind,
         platform: info.platform,
         highlights: info.highlights,
-        status: conn?.status ?? "disconnected",
+        status,
         last_sync_at: conn?.last_sync_at,
         last_error: conn?.last_error,
       }
@@ -58,14 +70,16 @@ export const available = query({
 })
 
 /**
- * Begin (or repair) a connection.
+ * Record the *intent* to connect. Never marks anything live.
  *
- * Cloud providers land here after the OAuth callback, with the provider's
- * account id — they are live immediately. Device providers land here when the
- * user taps Connect in the app, before any data exists, so they sit in
- * `pending` until the first batch actually arrives and ingest flips them to
- * `connected`. That distinction is what lets the UI honestly say "waiting for
- * your phone" instead of claiming a connection that has delivered nothing.
+ * This is called when the user clicks Connect, which is before anything has
+ * actually been established: a cloud provider still has to complete OAuth, and
+ * a device still has to send its first batch. Both therefore start `pending`.
+ *
+ * Only evidence promotes a connection to `connected` — the OAuth callback via
+ * linkForUser, or real data arriving via ingest. Marking cloud providers live
+ * here previously meant a failed OAuth left behind a card claiming a
+ * connection that had never happened.
  */
 export const connect = mutation({
   args: {
@@ -78,9 +92,6 @@ export const connect = mutation({
     if (!identity) throw new Error("Not authenticated")
     if (!isProvider(args.provider)) throw new Error(`Unknown provider: ${args.provider}`)
 
-    const info = providerInfo(args.provider)!
-    const status = info.kind === "cloud" ? "connected" : "pending"
-
     const existing = await ctx.db
       .query("health_connections")
       .withIndex("by_user_provider", (q) =>
@@ -90,8 +101,8 @@ export const connect = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        // a reconnect of a device provider that already has data stays connected
-        status: existing.last_sync_at ? "connected" : status,
+        // a provider that has genuinely delivered before stays connected
+        status: existing.last_sync_at ? "connected" : "pending",
         external_user_id: args.external_user_id ?? existing.external_user_id,
         scopes: args.scopes ?? existing.scopes,
         last_error: undefined,
@@ -102,7 +113,7 @@ export const connect = mutation({
     return await ctx.db.insert("health_connections", {
       userId: identity.subject,
       provider: args.provider,
-      status,
+      status: "pending",
       external_user_id: args.external_user_id,
       scopes: args.scopes,
       connected_at: Date.now(),
