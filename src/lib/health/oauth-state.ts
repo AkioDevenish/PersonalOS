@@ -96,14 +96,3 @@ export function verifyState(state: string | null): VerifyResult {
     payload: { userId: body.userId, provider: body.provider, returnTo: body.returnTo },
   }
 }
-
-/**
- * Only ever redirect to our own paths. Echoing an arbitrary `returnTo` back
- * into a Location header is an open redirect, which is exactly the primitive
- * phishing wants.
- */
-export function safeReturnTo(value: string | undefined | null): string {
-  if (!value) return "/connected"
-  if (!value.startsWith("/") || value.startsWith("//")) return "/connected"
-  return value
-}

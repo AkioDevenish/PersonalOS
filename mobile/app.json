@@ -53,7 +53,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "https://web-iota-eight-97.vercel.app"
+      "apiBaseUrl": "https://web-iota-eight-97.vercel.app",
+      "devApiBaseUrl": "http://192.168.100.206:3000"
     },
     "plugins": [
       "expo-secure-store"

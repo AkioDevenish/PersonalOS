@@ -11,9 +11,20 @@ import type { Sample } from "../health/metrics"
  * whose ledger this writes to.
  */
 
-const BASE_URL: string =
-  (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ??
-  "https://web-iota-eight-97.vercel.app"
+const extra = Constants.expoConfig?.extra as
+  | { apiBaseUrl?: string; devApiBaseUrl?: string }
+  | undefined
+
+/**
+ * In development, talk to the Next server on this machine.
+ *
+ * A phone can't resolve localhost — that would be the phone itself — so the
+ * dev URL has to be the Mac's LAN address, and both must be on the same
+ * Wi-Fi. Release builds always use the deployed API.
+ */
+const BASE_URL: string = __DEV__
+  ? (extra?.devApiBaseUrl ?? extra?.apiBaseUrl ?? "http://localhost:3000")
+  : (extra?.apiBaseUrl ?? "https://web-iota-eight-97.vercel.app")
 
 /** The server caps a request at 1000 samples. */
 const BATCH = 500

@@ -2,13 +2,18 @@ import { NextResponse } from "next/server"
 import { getConvexClient } from "@/lib/convex-client"
 import { internal } from "../../../../../../../convex/_generated/api"
 import { oauthProvider, credentialsFor, redirectUriFor } from "@/lib/health/oauth-providers"
-import { verifyState, safeReturnTo } from "@/lib/health/oauth-state"
+import { verifyState } from "@/lib/health/oauth-state"
 import { encryptToken } from "@/lib/health/token-crypto"
 
 export const dynamic = "force-dynamic"
 
 /**
  * Complete an OAuth link.
+ *
+ * This lands in a browser the provider redirected to — there is no web app to
+ * return to, so the response is a self-contained scrap of HTML that bounces
+ * back into the phone app via its personalos:// scheme, with a plain-text
+ * fallback telling the user to switch back by hand.
  *
  * Order matters here:
  *
@@ -29,13 +34,24 @@ export async function GET(
   const url = new URL(request.url)
   const origin = url.origin
 
-  const fail = (message: string, returnTo = "/connected") =>
-    NextResponse.redirect(`${origin}${returnTo}?error=${encodeURIComponent(message)}`)
+  const page = (heading: string, body: string, deepLink: string) =>
+    new NextResponse(
+      `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+        `<meta http-equiv="refresh" content="0;url=${deepLink}">` +
+        `<title>${heading}</title>` +
+        `<body style="font-family:-apple-system,system-ui;background:#F2EDE3;color:#28200F;display:grid;place-items:center;min-height:90vh;text-align:center;padding:24px">` +
+        `<div><h1 style="font-weight:500">${heading}</h1><p style="color:#6E5D45;max-width:28rem">${body}</p>` +
+        `<p style="color:#A8957E;font-size:13px">You can close this window and return to the Personal OS app.</p></div>`,
+      { headers: { "Content-Type": "text/html; charset=utf-8" } },
+    )
+
+  const fail = (message: string) =>
+    page("That didn\u2019t work", message, `personalos://connected?error=${encodeURIComponent(message)}`)
 
   // The user declined on the provider's screen — not an error worth shouting about.
   const denied = url.searchParams.get("error")
   if (denied) {
-    return NextResponse.redirect(`${origin}/connected?cancelled=1`)
+    return page("Connection cancelled", "Nothing was linked.", "personalos://connected?cancelled=1")
   }
 
   const provider = oauthProvider(key)
@@ -44,7 +60,7 @@ export async function GET(
   const verified = verifyState(url.searchParams.get("state"))
   if (!verified.ok) return fail(`Could not verify that link attempt (${verified.error})`)
 
-  const { userId, returnTo } = verified.payload
+  const { userId } = verified.payload
   // the state also names the provider; don't let the path disagree with it
   if (verified.payload.provider !== key) return fail("Provider mismatch")
 
@@ -84,7 +100,7 @@ export async function GET(
     if (!tokenRes.ok || !tokens?.access_token) {
       // Deliberately vague to the user; the detail goes to the server log.
       console.error(`[oauth:${key}] token exchange failed`, tokenRes.status, tokens)
-      return fail(`${provider.label} rejected the connection`, safeReturnTo(returnTo))
+      return fail(`${provider.label} rejected the connection`)
     }
 
     // --- identify ---
@@ -110,13 +126,17 @@ export async function GET(
       scopes: tokens.scope ? tokens.scope.split(/[\s,]+/).filter(Boolean) : provider.scopes,
     })
 
-    return NextResponse.redirect(`${origin}${safeReturnTo(returnTo)}?connected=${key}`)
+    return page(
+      "You\u2019re connected",
+      `${provider.label} is linked. Data will start arriving shortly.`,
+      `personalos://connected?connected=${key}`,
+    )
   } catch (error) {
     console.error(`[oauth:${key}] callback failed`, error)
     const message =
       error instanceof Error && /TOKEN_ENCRYPTION_KEY/.test(error.message)
         ? "Server is missing TOKEN_ENCRYPTION_KEY"
         : `Could not finish connecting ${provider.label}`
-    return fail(message, safeReturnTo(returnTo))
+    return fail(message)
   }
 }
