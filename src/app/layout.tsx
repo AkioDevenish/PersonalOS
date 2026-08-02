@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Jost } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/providers/ConvexClientProvider";
 import { ClerkProvider } from '@clerk/nextjs';
+import { clerkAppearance, clerkLocalization } from '@/components/auth/clerk-appearance';
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-display",
@@ -52,13 +53,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon", type: "image/png", sizes: "32x32" },
+      { url: "/story/icon.png", type: "image/png" },
     ],
     apple: [
-      { url: "/apple-icon", sizes: "180x180", type: "image/png" },
+      { url: "/story/icon.png", type: "image/png" },
     ],
-    shortcut: ["/icon.svg"],
+    shortcut: ["/story/icon.png"],
   },
   manifest: "/site.webmanifest",
 };
@@ -77,26 +77,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
-      appearance={{
-        variables: {
-          colorPrimary: '#C9A961',
-          colorBackground: '#FAF6EF',
-          colorText: '#28200F',
-          colorInputBackground: '#FFFFFF',
-          colorInputText: '#28200F',
-          borderRadius: '12px',
-          fontFamily: 'var(--font-sans)',
-        },
-        elements: {
-          formButtonPrimary: 'bg-[var(--amber)] hover:opacity-90',
-          card: 'shadow-md',
-          headerTitle: 'font-display text-2xl',
-          headerSubtitle: 'text-[var(--dust)]',
-          socialButtonsBlockButton: 'border-[var(--border-subtle)]',
-          formFieldLabel: 'text-[var(--mid-brown)] font-medium',
-          footerActionLink: 'text-[var(--amber)] hover:opacity-80',
-        },
-      }}
+      appearance={clerkAppearance}
+      localization={clerkLocalization}
     >
       <html
         lang="en"
