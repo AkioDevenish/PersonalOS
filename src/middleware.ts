@@ -1,7 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
+// Everything the marketing site serves is public; only /hub and friends
+// sit behind auth. Keep in sync with NAV_ITEMS in components/layout/nav.ts.
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/about',
+  '/how-it-works',
+  '/pricing',
+  '/news(.*)',
+  '/privacy',
+  '/terms',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
