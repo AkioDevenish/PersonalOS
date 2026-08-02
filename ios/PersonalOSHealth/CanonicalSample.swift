@@ -62,6 +62,7 @@ enum CanonicalMapper {
         add("active_energy", snapshot.activeEnergyBurned, "kcal")
         add("basal_energy", snapshot.basalEnergyBurned, "kcal")
 
+        add("resting_heart_rate", snapshot.restingHeartRate, "bpm")
         add("blood_glucose", snapshot.avgBloodGlucoseMgdl, "mg/dL")
         add("dietary_carbohydrates", snapshot.dietaryCarbohydratesG, "g")
         add("insulin_delivery", snapshot.insulinDeliveryIu, "IU")

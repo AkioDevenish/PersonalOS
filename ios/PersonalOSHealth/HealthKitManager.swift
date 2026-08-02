@@ -22,6 +22,7 @@ struct HealthSnapshot {
     let mindfulSessionMins: Double?
     let timeInDaylight: Double?
     let totalSleepHours: Double?
+    let restingHeartRate: Double?
     let stateOfMindLabels: String?
     let stateOfMindValence: Double?
 }
@@ -62,6 +63,7 @@ final class HealthKitManager: ObservableObject {
         if let basalEnergy = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned) { types.insert(basalEnergy) }
         if let audioEx = HKQuantityType.quantityType(forIdentifier: .headphoneAudioExposure) { types.insert(audioEx) }
         if let daylight = HKQuantityType.quantityType(forIdentifier: .timeInDaylight) { types.insert(daylight) }
+        if let rhr = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) { types.insert(rhr) }
         if let sleep = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         if let mindful = HKCategoryType.categoryType(forIdentifier: .mindfulSession) { types.insert(mindful) }
         if #available(iOS 17.0, *) {
@@ -123,6 +125,7 @@ final class HealthKitManager: ObservableObject {
         async let basalEnergy = cumulative(.basalEnergyBurned, unit: .kilocalorie(), predicate: predicate)
         async let audioEx = average(.headphoneAudioExposure, unit: .decibelAWeightedSoundPressureLevel(), predicate: predicate)
         async let daylight = cumulative(.timeInDaylight, unit: .minute(), predicate: predicate)
+        async let restingHR = average(.restingHeartRate, unit: HKUnit.count().unitDivided(by: .minute()), predicate: predicate)
         
         async let sleepSeconds = categoryDurationSum(.sleepAnalysis, predicate: categoryPredicate)
         async let mindfulSeconds = categoryDurationSum(.mindfulSession, predicate: categoryPredicate)
@@ -160,6 +163,7 @@ final class HealthKitManager: ObservableObject {
             mindfulSessionMins: mindfulMins,
             timeInDaylight: await daylight,
             totalSleepHours: totalSleepHours,
+            restingHeartRate: await restingHR,
             stateOfMindLabels: somLabels,
             stateOfMindValence: somValence
         )
