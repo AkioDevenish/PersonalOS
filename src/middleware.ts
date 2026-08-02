@@ -1,8 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Everything the marketing site serves is public; only /hub and friends
-// sit behind auth. Keep in sync with NAV_ITEMS in components/layout/nav.ts.
+// Personal OS is a phone app; the web is a marketing site plus the API the
+// apps talk to. Everything public here, and the only authenticated surface
+// left is /api/*, which the apps reach with a Clerk bearer token.
 const isPublicRoute = createRouteMatcher([
   '/',
   '/about',
@@ -11,6 +12,9 @@ const isPublicRoute = createRouteMatcher([
   '/news(.*)',
   '/privacy',
   '/terms',
+  '/download',
+  // OAuth lands here — providers redirect to a web URL, not into an app
+  '/connected',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',

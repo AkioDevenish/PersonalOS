@@ -23,7 +23,7 @@ export async function GET(
   const origin = new URL(request.url).origin
   const back = (message: string) =>
     NextResponse.redirect(
-      `${origin}/hub/connections?error=${encodeURIComponent(message)}`,
+      `${origin}/connected?error=${encodeURIComponent(message)}`,
     )
 
   if (!userId) {

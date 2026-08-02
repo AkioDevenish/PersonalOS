@@ -29,13 +29,13 @@ export async function GET(
   const url = new URL(request.url)
   const origin = url.origin
 
-  const fail = (message: string, returnTo = "/hub/connections") =>
+  const fail = (message: string, returnTo = "/connected") =>
     NextResponse.redirect(`${origin}${returnTo}?error=${encodeURIComponent(message)}`)
 
   // The user declined on the provider's screen — not an error worth shouting about.
   const denied = url.searchParams.get("error")
   if (denied) {
-    return NextResponse.redirect(`${origin}/hub/connections?cancelled=1`)
+    return NextResponse.redirect(`${origin}/connected?cancelled=1`)
   }
 
   const provider = oauthProvider(key)

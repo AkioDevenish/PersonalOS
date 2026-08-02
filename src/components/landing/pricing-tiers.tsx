@@ -18,7 +18,7 @@ type Cycle = "monthly" | "annual"
 export default function PricingTiers() {
   const { isSignedIn } = useAuth()
   const [cycle, setCycle] = useState<Cycle>("monthly")
-  const ctaHref = isSignedIn ? "/hub" : "/sign-up"
+  const ctaHref = "/download"
   const annual = cycle === "annual"
 
   return (
@@ -82,7 +82,7 @@ export default function PricingTiers() {
               </ul>
 
               <Link href={ctaHref} className={s.tierCta}>
-                {isSignedIn ? "Go to Dashboard" : t.cta} <ArrowRight size={15} />
+                {t.cta} <ArrowRight size={15} />
               </Link>
             </article>
           )

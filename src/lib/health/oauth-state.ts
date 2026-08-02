@@ -103,7 +103,7 @@ export function verifyState(state: string | null): VerifyResult {
  * phishing wants.
  */
 export function safeReturnTo(value: string | undefined | null): string {
-  if (!value) return "/hub/connections"
-  if (!value.startsWith("/") || value.startsWith("//")) return "/hub/connections"
+  if (!value) return "/connected"
+  if (!value.startsWith("/") || value.startsWith("//")) return "/connected"
   return value
 }

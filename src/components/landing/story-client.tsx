@@ -73,7 +73,7 @@ const CHAPTERS: {
 
 export default function StoryClient({ isSignedIn = false }: { isSignedIn?: boolean }) {
   const wrapRef = useRef<HTMLDivElement>(null)
-  const ctaHref = isSignedIn ? "/hub" : "/sign-up"
+  const ctaHref = "/download"
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -408,7 +408,7 @@ export default function StoryClient({ isSignedIn = false }: { isSignedIn?: boole
         <p className={`${sh.kicker} ${sh.reveal}`}>The ledger, balanced</p>
         <h2 className={`${s.finaleTitle} ${sh.reveal}`}>Time well spent.</h2>
         <Link href={ctaHref} className={`${sh.cta} ${sh.reveal}`}>
-          {isSignedIn ? "Go to your ledger" : "Open your ledger"} <ArrowRight size={16} />
+          "Get the app" <ArrowRight size={16} />
         </Link>
         <div className={s.platesRow}>
           {CHAPTERS.map((c) => (

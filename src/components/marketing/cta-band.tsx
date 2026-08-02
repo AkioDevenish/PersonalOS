@@ -22,8 +22,8 @@ export default function CtaBand({
   return (
     <section className={s.ctaBand}>
       <h2 className={s.ctaBandTitle}>{title}</h2>
-      <Link href={isSignedIn ? "/hub" : "/sign-up"} className={sh.cta}>
-        {isSignedIn ? "Go to your ledger" : label} <ArrowRight size={15} />
+      <Link href="/download" className={sh.cta}>
+        {label} <ArrowRight size={15} />
       </Link>
     </section>
   )
