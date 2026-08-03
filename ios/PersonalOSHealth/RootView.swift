@@ -1,4 +1,6 @@
 import SwiftUI
+import ClerkKit
+import ClerkKitUI
 
 /// Sign-in per the Figma design.
 ///
@@ -8,7 +10,7 @@ import SwiftUI
 /// but doesn't call it would be worse than plain words. Clerk + SIWA replace
 /// this when the account exists.
 struct SignInView: View {
-    @AppStorage("onboarded") private var onboarded = false
+    @State private var showAuth = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +37,7 @@ struct SignInView: View {
             Rule().frame(width: 120).padding(.top, 36)
 
             Button {
-                onboarded = true
+                showAuth = true
             } label: {
                 Text("Begin your ledger")
                     .font(Theme.sans(15, medium: true))
@@ -56,6 +58,9 @@ struct SignInView: View {
         }
         .frame(maxWidth: .infinity)
         .background(Theme.linen)
+        // Clerk's prebuilt flow — email code, password, and any social
+        // providers enabled in the dashboard, without hand-rolling forms.
+        .sheet(isPresented: $showAuth) { AuthView() }
     }
 }
 

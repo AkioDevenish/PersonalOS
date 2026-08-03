@@ -1,10 +1,11 @@
 import SwiftUI
+import ClerkKit
 
 /// Settings: the ledger of providers, plus sync controls and the dev section.
 struct ConnectionsView: View {
     @EnvironmentObject var health: HealthKitManager
     @AppStorage("last_sync_at") private var lastSyncAt: Double = 0
-    @AppStorage("onboarded") private var onboarded = false
+    @Environment(Clerk.self) private var clerk
     @State private var status = ""
     @State private var isBusy = false
 
@@ -32,7 +33,9 @@ struct ConnectionsView: View {
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
 
-                Text(Auth.provider.isSignedIn ? "Session active" : "Local mode — sign-in arrives with the next build")
+                Text(clerk.user?.emailAddresses.first?.emailAddress
+                     ?? clerk.user.map { "Signed in as \($0.id)" }
+                     ?? "Not signed in")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.dust)
                     .padding(.top, 6)
@@ -90,7 +93,7 @@ struct ConnectionsView: View {
                 #endif
 
                 Button {
-                    onboarded = false
+                    Task { try? await clerk.auth.signOut() }
                 } label: {
                     Kicker(text: "Sign out", size: 11)
                 }

@@ -18,10 +18,25 @@ enum AppConfig {
     #if DEBUG
     private static let debugBaseURLKey = "personal_os_debug_base_url"
 
-    /// Defaults to the Mac's LAN address; 127.0.0.1 will not resolve from a phone.
+    /// Build-time LAN address of the Mac that compiled this build.
+    ///
+    /// Injected by the build phase in Scripts/dev-host.sh rather than typed in
+    /// — a hardcoded IP goes stale the moment DHCP moves the Mac, and the
+    /// symptom is a sync that hangs against an address nobody owns.
+    private static var compiledHost: String? {
+        Bundle.main.object(forInfoDictionaryKey: "DevServerHost") as? String
+    }
+
+    /// 127.0.0.1 is the phone itself, so a LAN address is required on device.
     static var baseURL: String {
         get {
-            UserDefaults.standard.string(forKey: debugBaseURLKey) ?? "http://192.168.100.206:3000"
+            if let manual = UserDefaults.standard.string(forKey: debugBaseURLKey), !manual.isEmpty {
+                return manual
+            }
+            if let host = compiledHost, !host.isEmpty {
+                return "http://\(host):3000"
+            }
+            return "http://localhost:3000"
         }
         set {
             UserDefaults.standard.set(

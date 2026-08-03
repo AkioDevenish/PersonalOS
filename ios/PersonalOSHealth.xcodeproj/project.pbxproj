@@ -36,6 +36,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0CLERK000000000000B1 /* ClerkKit in Frameworks */,
+				AA0CLERK000000000000B2 /* ClerkKitUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,6 +70,7 @@
 				66A6BA172FB78D4D00563D4F /* Sources */,
 				66A6BA182FB78D4D00563D4F /* Frameworks */,
 				66A6BA192FB78D4D00563D4F /* Resources */,
+				AA0DEV0100000000000001 /* Stamp dev server host */,
 			);
 			buildRules = (
 			);
@@ -78,6 +81,8 @@
 			);
 			name = PersonalOSHealth;
 			packageProductDependencies = (
+				AA0CLERK000000000000P1 /* ClerkKit */,
+				AA0CLERK000000000000P2 /* ClerkKitUI */,
 			);
 			productName = PersonalOSHealth;
 			productReference = 66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */;
@@ -106,6 +111,9 @@
 				Base,
 			);
 			mainGroup = 66A6BA122FB78D4D00563D4F;
+			packageReferences = (
+				AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */,
+			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66A6BA1C2FB78D4D00563D4F /* Products */;
@@ -127,6 +135,33 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		AA0DEV0100000000000001 /* Stamp dev server host */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Stamp dev server host";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$CONFIGURATION\" = \"Debug\" ]; then
+  PLIST=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"
+  for IF in en0 en1 en6; do HOST=$(ipconfig getifaddr $IF 2>/dev/null); [ -n \"$HOST\" ] && break; done
+  if [ -n \"$HOST\" ] && [ -f \"$PLIST\" ]; then
+    /usr/libexec/PlistBuddy -c \"Delete :DevServerHost\" \"$PLIST\" 2>/dev/null
+    /usr/libexec/PlistBuddy -c \"Add :DevServerHost string $HOST\" \"$PLIST\"
+    echo \"note: dev server host stamped as $HOST\"
+  fi
+fi
+";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		66A6BA172FB78D4D00563D4F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -136,6 +171,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/clerk/clerk-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0CLERK000000000000P1 /* ClerkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKit;
+		};
+		AA0CLERK000000000000P2 /* ClerkKitUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKitUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		66A6BA242FB78D5900563D4F /* Debug */ = {
@@ -176,7 +235,7 @@
 				DEVELOPMENT_TEAM = NK44S2KGZY;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -240,7 +299,7 @@
 				DEVELOPMENT_TEAM = NK44S2KGZY;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
