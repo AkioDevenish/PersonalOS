@@ -44,8 +44,17 @@ struct TodayView: View {
                 .buttonStyle(.plain)
                 .padding(.top, 22)
 
+                SectionRule(text: "Consult")
+                    .padding(.top, 30)
+
+                HStack(spacing: 13) {
+                    engineLink("Nutrition", "What to eat next") { NutritionView() }
+                    engineLink("Specialists", "Read by an expert") { ExpertsView() }
+                }
+                .padding(.top, 16)
+
                 SectionRule(text: "The ledger")
-                    .padding(.top, 28)
+                    .padding(.top, 30)
 
                 metricGrid
                     .padding(.top, 18)
@@ -67,6 +76,30 @@ struct TodayView: View {
             metric("Resting HR", snapshot?.restingHeartRate.map { String(Int($0.rounded())) })
             metric("Active energy", snapshot?.activeEnergyBurned.map { "\(Int($0.rounded())) kcal" })
         }
+    }
+
+    /// Two doors to the engines that used to live on the web dashboard.
+    private func engineLink<D: View>(
+        _ title: String,
+        _ subtitle: String,
+        @ViewBuilder destination: @escaping () -> D
+    ) -> some View {
+        NavigationLink { destination() } label: {
+            Plate {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(Theme.serif(20))
+                        .foregroundStyle(Theme.ink)
+                    Text(subtitle)
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+                    Text("→")
+                        .font(Theme.serif(15))
+                        .foregroundStyle(Theme.amber)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func metric(_ label: String, _ value: String??) -> some View {

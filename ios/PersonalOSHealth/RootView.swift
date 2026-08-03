@@ -112,7 +112,7 @@ struct RootView: View {
                 Group {
                     switch tab {
                     case .today: TodayView()
-                    case .history: HistoryView()
+                    case .history: TrendsView()
                     case .account: ConnectionsView()
                     }
                 }
