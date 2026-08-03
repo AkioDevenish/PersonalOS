@@ -10,6 +10,7 @@ struct ConnectionsView: View {
     @State private var status = ""
     @State private var isBusy = false
     @State private var showProfile = false
+    @State private var showModels = false
 
     #if DEBUG
     @State private var debugURL = AppConfig.baseURL
@@ -77,6 +78,31 @@ struct ConnectionsView: View {
                     .lineSpacing(4)
                     .padding(.top, 16)
 
+                SectionRule(text: "Intelligence")
+                    .padding(.top, 32)
+
+                Button {
+                    showModels = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Model and keys")
+                                .font(Theme.serif(19))
+                                .foregroundStyle(Theme.ink)
+                            Text("Claude, ChatGPT, Kimi, Gemini or your own Mac")
+                                .font(Theme.sans(10.5))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        Spacer()
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                    }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                Rule()
+
                 SectionRule(text: "Sync")
                     .padding(.top, 32)
 
@@ -127,6 +153,11 @@ struct ConnectionsView: View {
         }
         .background(Theme.linen)
         .sheet(isPresented: $showProfile) { UserProfileView() }
+        // Its own stack: the model list drills into a provider, and the tab
+        // bar has no navigation of its own to borrow.
+        .sheet(isPresented: $showModels) {
+            NavigationStack { ModelSettingsView() }
+        }
     }
 
     private func providerRow(_ name: String, status: String, connected: Bool) -> some View {

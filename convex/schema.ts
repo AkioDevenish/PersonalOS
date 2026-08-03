@@ -163,6 +163,35 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_metric", ["userId", "metric"]),
 
+  /**
+   * Bring-your-own-key credentials for AI platforms.
+   *
+   * Same posture as health_oauth_tokens and for the same reason: an API key is
+   * a billable secret, so Convex only ever holds the ciphertext. `last4` is
+   * stored separately in the clear so the app can show which key is saved
+   * without anything having to decrypt it just to render a list.
+   */
+  ai_keys: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    api_key: v.string(), // encrypted envelope
+    last4: v.string(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_provider", ["userId", "provider"]),
+
+  /**
+   * Which platform and model this user's insights should run on. One row per
+   * user; absent means fall back to whatever the server has configured.
+   */
+  ai_preferences: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    model: v.string(),
+    updated_at: v.number(),
+  }).index("by_user", ["userId"]),
+
   activity_tracking: defineTable({
     userId: v.string(), // Clerk user ID
     date: v.string(), // YYYY-MM-DD format

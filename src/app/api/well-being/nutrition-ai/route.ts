@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
+import { generateForUser, readSettings, requireCaller } from '@/lib/ai/user-model'
 
 const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate'
@@ -212,6 +213,31 @@ After the 3 recommendations, add one line:
 [NUTRITION_INSIGHT] <A single-sentence metabolic insight about their current nutritional state based on the data>
 
 No greetings. No disclaimers. No markdown headers. Just the structured output.`
+
+    /**
+     * A user who picked a hosted model gets it here.
+     *
+     * Only the local Ollama path streams. The hosted providers each have their
+     * own streaming protocol, and the app doesn't consume this incrementally
+     * anyway — it reads the whole body before rendering — so a single
+     * non-streaming call buys nothing but simplicity. The response shape and
+     * content type stay identical either way, so the client can't tell.
+     */
+    const caller = await requireCaller(request).catch(() => null)
+    const selection = caller ? (await readSettings(caller)).selection : null
+
+    if (caller && selection && selection.provider !== 'ollama') {
+      const { text } = await generateForUser(caller, prompt, { temperature: 1.0 })
+      const db = new Database(dbPath)
+      try {
+        saveRecommendation(db, mealContext || mealTiming, text)
+      } finally {
+        db.close()
+      }
+      return new Response(text, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      })
+    }
 
     const ollamaRes = await fetch(OLLAMA_URL, {
       method: 'POST',

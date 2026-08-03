@@ -6,6 +6,7 @@ import {
   generateWithGemma,
 } from '@/lib/gemma'
 import { getRequestActor, type RequestActor } from '@/lib/request-actor'
+import { generateForUser, requireCaller, type Caller } from '@/lib/ai/user-model'
 const PERIODS = new Set(['daily', 'weekly', 'monthly', 'hourly'])
 const EXPERTS = ['general', 'data_scientist', 'endocrinologist', 'nutritionist', 'strength_coach'] as const
 
@@ -192,7 +193,24 @@ async function getHealthSummary(period: string) {
   }
 }
 
-async function askGemma(prompt: string) {
+/**
+ * Ask whichever model this user chose.
+ *
+ * `caller` is absent for the scheduled runs that drive these reports from cron
+ * — those have no signed-in identity to read a preference for, so they keep
+ * using the server's own Gemma exactly as before. A request from the phone
+ * carries a Clerk token and gets the user's own provider and key.
+ *
+ * The model name comes back either way and is stored with the report, so a
+ * report always records what actually wrote it.
+ */
+async function askGemma(prompt: string, caller?: Caller | null) {
+  if (caller) {
+    const { text, model, provider } = await generateForUser(caller, prompt, {
+      temperature: 0.2,
+    })
+    return { report: text, model: provider === "ollama" ? model : `${provider}/${model}` }
+  }
   const { text, model } = await generateWithGemma({ prompt, temperature: 0.2 })
   return { report: text, model }
 }
@@ -359,7 +377,12 @@ async function saveReport(
   await execSql(query)
 }
 
-async function runAnalysis(period: string, actor: RequestActor, expert?: string) {
+async function runAnalysis(
+  period: string,
+  actor: RequestActor,
+  expert?: string,
+  caller?: Caller | null,
+) {
   await ensureAnalysisStateTable()
 
   if (period === 'hourly') {
@@ -384,7 +407,7 @@ async function runAnalysis(period: string, actor: RequestActor, expert?: string)
     )
     const summaryJson = JSON.stringify(cleanedRows, null, 2)
     const prompt = buildHourlyPrompt(summaryJson, expert)
-    const { report, model } = await askGemma(prompt)
+    const { report, model } = await askGemma(prompt, caller)
     await saveReport('hourly', report, actor, model, expert, getAnalysisWindow('hourly'))
     await setAnalysisState(stateKey, fingerprint)
 
@@ -405,7 +428,7 @@ async function runAnalysis(period: string, actor: RequestActor, expert?: string)
   }
 
   const prompt = buildPrompt(period, result.summary, expert, result.window.label)
-  const { report, model } = await askGemma(prompt)
+  const { report, model } = await askGemma(prompt, caller)
   await saveReport(period, report, actor, model, expert, result.window)
   await setAnalysisState(stateKey, result.fingerprint)
 
@@ -419,6 +442,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
     }
     const { actor } = auth
+
+    /**
+     * Null for the cron-driven runs, which carry no Clerk session — those keep
+     * using the server's Gemma. A request from the phone resolves to a caller
+     * and the report is written by whichever model that user selected.
+     */
+    const caller = await requireCaller(request).catch(() => null)
+
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const auto = body.auto === true
     const background = body.background === true
@@ -444,7 +475,7 @@ export async function POST(request: Request) {
         void (async () => {
           for (const job of jobs) {
             try {
-              await runAnalysis(job.period, actor, job.expert)
+              await runAnalysis(job.period, actor, job.expert, caller)
             } catch (jobError) {
               console.error('Automatic signal report failed:', job, jobError)
             }
@@ -463,7 +494,7 @@ export async function POST(request: Request) {
       const results = []
       for (const job of jobs) {
         try {
-          results.push(await runAnalysis(job.period, actor, job.expert))
+          results.push(await runAnalysis(job.period, actor, job.expert, caller))
         } catch (jobError) {
           results.push({
             success: false,
@@ -488,7 +519,7 @@ export async function POST(request: Request) {
     }
 
     if (period === 'hourly') {
-      const result = await runAnalysis(period, actor, expert)
+      const result = await runAnalysis(period, actor, expert, caller)
       if (!result.success && result.reason === 'no_intraday_data') {
         return NextResponse.json(
           {
@@ -525,7 +556,7 @@ export async function POST(request: Request) {
     }
 
     // For Daily, Weekly, Monthly
-    const result = await runAnalysis(period, actor, expert)
+    const result = await runAnalysis(period, actor, expert, caller)
     if (result.skipped) {
       return NextResponse.json({
         success: result.success,
