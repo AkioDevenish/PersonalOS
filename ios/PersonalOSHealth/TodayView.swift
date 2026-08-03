@@ -15,8 +15,19 @@ struct TodayView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: dateKicker, color: Theme.amber, size: 11)
-                    .padding(.top, 8)
+                HStack(spacing: 10) {
+                    Kicker(text: dateKicker, color: Theme.amber, size: 11)
+                    if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
+                        Text(mood)
+                            .font(Theme.sans(10))
+                            .tracking(1.2)
+                            .foregroundStyle(Theme.mid)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
+                    }
+                }
+                .padding(.top, 8)
 
                 Text("The day so far.")
                     .font(Theme.serif(34))
@@ -53,11 +64,38 @@ struct TodayView: View {
                 }
                 .padding(.top, 16)
 
-                SectionRule(text: "The ledger")
-                    .padding(.top, 30)
+                NavigationLink { CorrelationView() } label: {
+                    Plate {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Correlations")
+                                    .font(Theme.serif(20))
+                                    .foregroundStyle(Theme.ink)
+                                Text("Does one metric follow another?")
+                                    .font(Theme.sans(11))
+                                    .foregroundStyle(Theme.dust)
+                            }
+                            Spacer()
+                            Text("→").font(Theme.serif(16)).foregroundStyle(Theme.amber)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 13)
 
-                metricGrid
-                    .padding(.top, 18)
+                ForEach(Metrics.populatedGroups(snapshot), id: \.self) { group in
+                    SectionRule(text: group.rawValue)
+                        .padding(.top, 30)
+                    grid(for: group)
+                        .padding(.top, 16)
+                }
+
+                if snapshot != nil && Metrics.populatedGroups(snapshot).isEmpty {
+                    Text("Nothing recorded yet today.")
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.dust)
+                        .padding(.top, 26)
+                }
 
                 Spacer(minLength: 24)
             }
@@ -68,13 +106,31 @@ struct TodayView: View {
         .refreshable { await load() }
     }
 
-    private var metricGrid: some View {
+    /// Driven by the catalogue, so a metric added there appears here.
+    private func grid(for group: MetricSpec.Group) -> some View {
         let columns = [GridItem(.flexible(), spacing: 13), GridItem(.flexible(), spacing: 13)]
+        let specs = Metrics.inGroup(group).filter { snapshot.flatMap($0.value) != nil }
         return LazyVGrid(columns: columns, spacing: 13) {
-            metric("Steps", snapshot?.steps.map { Self.grouped($0) })
-            metric("Sleep", snapshot?.totalSleepHours.flatMap { $0 > 0 ? Self.duration($0) : nil })
-            metric("Resting HR", snapshot?.restingHeartRate.map { String(Int($0.rounded())) })
-            metric("Active energy", snapshot?.activeEnergyBurned.map { "\(Int($0.rounded())) kcal" })
+            ForEach(specs) { m in
+                Plate {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Kicker(text: m.label, size: 9)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(snapshot.flatMap { m.display($0) } ?? "—")
+                                .font(Theme.serif(28))
+                                .foregroundStyle(Theme.ink)
+                            if !m.unit.isEmpty {
+                                Text(m.unit)
+                                    .font(Theme.sans(10))
+                                    .foregroundStyle(Theme.dust)
+                            }
+                        }
+                        Text("from Apple Health")
+                            .font(Theme.sans(9.5))
+                            .foregroundStyle(Theme.dust)
+                    }
+                }
+            }
         }
     }
 

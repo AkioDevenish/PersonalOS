@@ -187,11 +187,11 @@ struct ExpertsView: View {
                 .padding(.top, 22)
 
                 HStack(spacing: 8) {
-                    ForEach(["hourly", "daily", "weekly"], id: \.self) { p in
+                    ForEach(["hourly", "daily", "weekly", "monthly"], id: \.self) { p in
                         Button { period = p; Task { await load() } } label: {
                             Text(p.uppercased())
-                                .font(Theme.sans(9.5, medium: period == p))
-                                .tracking(1.4)
+                                .font(Theme.sans(9, medium: period == p))
+                                .tracking(1.2)
                                 .foregroundStyle(period == p ? Theme.warm : Theme.mid)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
