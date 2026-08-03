@@ -14,12 +14,5 @@
 	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Personal OS does not write to Health.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 </dict>
 </plist>

@@ -155,6 +155,11 @@
   if [ -n \"$HOST\" ] && [ -f \"$PLIST\" ]; then
     /usr/libexec/PlistBuddy -c \"Delete :DevServerHost\" \"$PLIST\" 2>/dev/null
     /usr/libexec/PlistBuddy -c \"Add :DevServerHost string $HOST\" \"$PLIST\"
+    /usr/libexec/PlistBuddy -c \"Delete :NSAppTransportSecurity\" \"$PLIST\" 2>/dev/null
+    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity dict\" \"$PLIST\"
+    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains dict\" \"$PLIST\"
+    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains:$HOST dict\" \"$PLIST\"
+    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains:$HOST:NSExceptionAllowsInsecureHTTPLoads bool true\" \"$PLIST\"
     echo \"note: dev server host stamped as $HOST\"
   fi
 fi
