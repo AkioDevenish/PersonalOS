@@ -9,7 +9,6 @@ struct ConnectionsView: View {
     @Environment(Clerk.self) private var clerk
     @State private var status = ""
     @State private var isBusy = false
-    @State private var showProfile = false
 
     #if DEBUG
     @State private var debugURL = AppConfig.baseURL
@@ -87,19 +86,18 @@ struct ConnectionsView: View {
                 .padding(.top, 14)
                 #endif
 
-                SectionRule(text: "Account")
-                    .padding(.top, 36)
-
-                accountRow
-                    .padding(.top, 18)
-
                 Button {
                     Task { try? await clerk.auth.signOut() }
                 } label: {
                     Kicker(text: "Sign out", size: 11)
                 }
                 .padding(.top, 28)
-                .padding(.bottom, 32)
+
+                Text(buildStamp)
+                    .font(Theme.sans(10))
+                    .foregroundStyle(Theme.dust)
+                    .padding(.top, 18)
+                    .padding(.bottom, 32)
             }
             .padding(.horizontal, 24)
         }
@@ -175,40 +173,14 @@ struct ConnectionsView: View {
         }
     }
 
-    /// Tapping opens Clerk's own profile management — photo, email, password,
-    /// connected accounts — rather than a hand-rolled half of it.
-    private var accountRow: some View {
-        Button {
-            showProfile = true
-        } label: {
-            HStack(spacing: 14) {
-                Avatar(user: clerk.user)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(displayName)
-                        .font(Theme.serif(19))
-                        .foregroundStyle(Theme.ink)
-                    if let email = clerk.user?.emailAddresses.first?.emailAddress {
-                        Text(email)
-                            .font(Theme.sans(11.5))
-                            .foregroundStyle(Theme.dust)
-                    }
-                }
-
-                Spacer()
-
-                Text("›")
-                    .font(Theme.serif(22))
-                    .foregroundStyle(Theme.dust)
-            }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
-            .background(Theme.warm)
-            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Theme.hairline, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 2))
-        }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showProfile) { UserProfileView() }
+    /// Answers "which build is this, and where is it pointed" without a
+    /// debugger — the two questions that cost the most time to guess at.
+    private var buildStamp: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        let host = AppConfig.baseURL.replacingOccurrences(of: "http://", with: "")
+        return "v\(version) (\(build)) · \(host)"
     }
 
     private var displayName: String {

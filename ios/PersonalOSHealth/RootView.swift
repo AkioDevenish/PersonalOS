@@ -95,7 +95,9 @@ enum Tab: String, CaseIterable {
 }
 
 struct RootView: View {
+    @Environment(Clerk.self) private var clerk
     @State private var tab: Tab = .today
+    @State private var showProfile = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -130,10 +132,27 @@ struct RootView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // Account sits with the tabs rather than buried in Settings —
+                // the picture is the affordance, so it needs no label.
+                Button {
+                    showProfile = true
+                } label: {
+                    VStack(spacing: 4) {
+                        Avatar(user: clerk.user, size: 22)
+                        Text("ACCOUNT")
+                            .font(Theme.sans(10))
+                            .tracking(1.8)
+                            .foregroundStyle(Theme.dust)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 12)
             .padding(.bottom, 6)
             .background(Theme.linen)
+            .sheet(isPresented: $showProfile) { UserProfileView() }
         }
         .background(Theme.linen)
     }
