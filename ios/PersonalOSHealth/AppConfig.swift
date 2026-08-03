@@ -28,21 +28,36 @@ enum AppConfig {
     }
 
     /// 127.0.0.1 is the phone itself, so a LAN address is required on device.
+    /// Which build's host an override was made against.
+    private static let overrideStampKey = "personal_os_debug_base_url_stamp"
+
+    /// A manual override is honoured only while the build it was typed into
+    /// still points at the same machine. Otherwise a value saved before the
+    /// Mac's DHCP lease moved would silently outrank the freshly stamped host
+    /// — and, being an unexpected address, would also fall outside the ATS
+    /// exception this build carries.
     static var baseURL: String {
         get {
-            if let manual = UserDefaults.standard.string(forKey: debugBaseURLKey), !manual.isEmpty {
+            let stamped = compiledHost ?? ""
+            if let manual = UserDefaults.standard.string(forKey: debugBaseURLKey),
+               !manual.isEmpty,
+               UserDefaults.standard.string(forKey: overrideStampKey) == stamped {
                 return manual
             }
-            if let host = compiledHost, !host.isEmpty {
-                return "http://\(host):3000"
-            }
-            return "http://localhost:3000"
+            return stamped.isEmpty ? "http://localhost:3000" : "http://\(stamped):3000"
         }
         set {
-            UserDefaults.standard.set(
-                newValue.trimmingCharacters(in: .whitespacesAndNewlines),
-                forKey: debugBaseURLKey
-            )
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            let stamped = compiledHost ?? ""
+            // Saving the build default is not an override; keep it clean so a
+            // later rebuild is free to move the host.
+            if trimmed.isEmpty || trimmed == "http://\(stamped):3000" {
+                UserDefaults.standard.removeObject(forKey: debugBaseURLKey)
+                UserDefaults.standard.removeObject(forKey: overrideStampKey)
+            } else {
+                UserDefaults.standard.set(trimmed, forKey: debugBaseURLKey)
+                UserDefaults.standard.set(stamped, forKey: overrideStampKey)
+            }
         }
     }
     #else

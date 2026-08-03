@@ -143,10 +143,9 @@ struct ConnectionsView: View {
     private func sync(days: Int?) async {
         isBusy = true
         defer { isBusy = false }
-        #if DEBUG
-        AppConfig.baseURL = debugURL
-        DebugTokenAuthProvider.token = debugToken
-        #endif
+        // Deliberately does NOT write debugURL back: doing so on every sync
+        // pinned whatever was on screen into UserDefaults, which then outranked
+        // the build-time host forever. The field persists on submit only.
         do {
             try await health.requestAuthorization()
             if let days {
