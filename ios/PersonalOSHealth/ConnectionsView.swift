@@ -9,6 +9,7 @@ struct ConnectionsView: View {
     @Environment(Clerk.self) private var clerk
     @State private var status = ""
     @State private var isBusy = false
+    @State private var showProfile = false
 
     #if DEBUG
     @State private var debugURL = AppConfig.baseURL
@@ -26,13 +27,36 @@ struct ConnectionsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Settings", color: Theme.amber, size: 11)
+                Kicker(text: "Account", color: Theme.amber, size: 11)
                     .padding(.top, 8)
 
-                Text("Connections")
-                    .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.top, 8)
+                // Who you are comes first; what you've connected follows.
+                Button {
+                    showProfile = true
+                } label: {
+                    HStack(spacing: 14) {
+                        Avatar(user: clerk.user, size: 52)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(displayName)
+                                .font(Theme.serif(26))
+                                .foregroundStyle(Theme.ink)
+                            if let email = clerk.user?.emailAddresses.first?.emailAddress {
+                                Text(email)
+                                    .font(Theme.sans(11.5))
+                                    .foregroundStyle(Theme.dust)
+                            }
+                        }
+                        Spacer()
+                        Text("›")
+                            .font(Theme.serif(24))
+                            .foregroundStyle(Theme.dust)
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 12)
+
+                SectionRule(text: "Connections")
+                    .padding(.top, 30)
 
                 VStack(spacing: 0) {
                     Rule()
@@ -45,7 +69,7 @@ struct ConnectionsView: View {
                     providerRow("Fitbit", status: "CONNECT", connected: false)
                     Rule()
                 }
-                .padding(.top, 28)
+                .padding(.top, 18)
 
                 Text("When two devices report the same thing, we pick one and show you which — never both added together.")
                     .font(Theme.sans(11.5))
@@ -102,6 +126,7 @@ struct ConnectionsView: View {
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
+        .sheet(isPresented: $showProfile) { UserProfileView() }
     }
 
     private func providerRow(_ name: String, status: String, connected: Bool) -> some View {
@@ -173,6 +198,13 @@ struct ConnectionsView: View {
         }
     }
 
+    private var displayName: String {
+        guard let u = clerk.user else { return "Not signed in" }
+        let name = [u.firstName, u.lastName].compactMap { $0 }.joined(separator: " ")
+        if !name.trimmingCharacters(in: .whitespaces).isEmpty { return name }
+        return u.emailAddresses.first?.emailAddress ?? "Your account"
+    }
+
     /// Answers "which build is this, and where is it pointed" without a
     /// debugger — the two questions that cost the most time to guess at.
     private var buildStamp: String {
@@ -181,13 +213,6 @@ struct ConnectionsView: View {
         let build = info?["CFBundleVersion"] as? String ?? "?"
         let host = AppConfig.baseURL.replacingOccurrences(of: "http://", with: "")
         return "v\(version) (\(build)) · \(host)"
-    }
-
-    private var displayName: String {
-        guard let u = clerk.user else { return "Not signed in" }
-        let name = [u.firstName, u.lastName].compactMap { $0 }.joined(separator: " ")
-        if !name.trimmingCharacters(in: .whitespaces).isEmpty { return name }
-        return u.emailAddresses.first?.emailAddress ?? "Your account"
     }
 }
 

@@ -88,16 +88,23 @@ struct HistoryView: View {
     }
 }
 
-enum Tab: String, CaseIterable {
-    case today = "TODAY"
-    case history = "HISTORY"
-    case settings = "SETTINGS"
+enum Tab: CaseIterable {
+    case today, history, account
+
+    /// Icons carry the meaning; there are no labels, so these have to read at
+    /// a glance. Light weight keeps them in the same register as the type.
+    var symbol: String {
+        switch self {
+        case .today: return "sun.max"
+        case .history: return "clock"
+        case .account: return "person"   // replaced by the avatar when present
+        }
+    }
 }
 
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
     @State private var tab: Tab = .today
-    @State private var showProfile = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,7 +113,7 @@ struct RootView: View {
                     switch tab {
                     case .today: TodayView()
                     case .history: HistoryView()
-                    case .settings: ConnectionsView()
+                    case .account: ConnectionsView()
                     }
                 }
                 .toolbarBackground(Theme.linen, for: .navigationBar)
@@ -118,41 +125,27 @@ struct RootView: View {
                     Button {
                         tab = t
                     } label: {
-                        VStack(spacing: 4) {
-                            Text("❧")
-                                .font(Theme.serif(14))
-                                .foregroundStyle(Theme.amber)
-                                .opacity(tab == t ? 1 : 0)
-                            Text(t.rawValue)
-                                .font(Theme.sans(10, medium: tab == t))
-                                .tracking(1.8)
-                                .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
+                        Group {
+                            if t == .account {
+                                Avatar(user: clerk.user, size: 24)
+                                    .opacity(tab == t ? 1 : 0.55)
+                            } else {
+                                Image(systemName: t.symbol)
+                                    .font(.system(size: 19, weight: .light))
+                                    .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
+                                    .frame(height: 24)
+                            }
                         }
                         .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(String(describing: t))
                 }
-
-                // Account sits with the tabs rather than buried in Settings —
-                // the picture is the affordance, so it needs no label.
-                Button {
-                    showProfile = true
-                } label: {
-                    VStack(spacing: 4) {
-                        Avatar(user: clerk.user, size: 22)
-                        Text("ACCOUNT")
-                            .font(Theme.sans(10))
-                            .tracking(1.8)
-                            .foregroundStyle(Theme.dust)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 6)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
             .background(Theme.linen)
-            .sheet(isPresented: $showProfile) { UserProfileView() }
         }
         .background(Theme.linen)
     }
