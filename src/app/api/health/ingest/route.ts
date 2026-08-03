@@ -63,10 +63,27 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Forward the caller's own token so Convex derives the same identity we
-    // just verified — the mutation resolves the user itself rather than
-    // trusting anything this route passes it.
-    const token = await getToken({ template: "convex" })
+    /**
+     * Convex needs a JWT minted from the "convex" template. The phone already
+     * fetched one and sent it as its bearer credential, so forward that.
+     *
+     * Re-minting via getToken() only works when the request carries a Clerk
+     * session cookie; for a bearer-authenticated call there is no session to
+     * mint from and it returns null. The client then falls back to no auth at
+     * all, and Convex — correctly — refuses the write. That surfaced as an
+     * opaque 500 rather than an auth error, because it failed inside the
+     * mutation rather than at the door.
+     */
+    const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim()
+    const token = bearer || (await getToken({ template: "convex" }))
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: "No Convex credential on this request" },
+        { status: 401 },
+      )
+    }
+
     const convex = getConvexClient(token)
 
     const result = await convex.mutation(api.health.samples.ingest, {
@@ -81,6 +98,7 @@ export async function POST(request: Request) {
     // them or a mis-mapped metric would fail silently forever.
     return NextResponse.json({ success: true, ...result })
   } catch (error) {
+    console.error("[health/ingest] failed:", error)
     const message = error instanceof Error ? error.message : "Ingest failed"
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }

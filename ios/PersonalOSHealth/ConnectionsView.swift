@@ -1,5 +1,6 @@
 import SwiftUI
 import ClerkKit
+import ClerkKitUI
 
 /// Settings: the ledger of providers, plus sync controls and the dev section.
 struct ConnectionsView: View {
@@ -8,6 +9,7 @@ struct ConnectionsView: View {
     @Environment(Clerk.self) private var clerk
     @State private var status = ""
     @State private var isBusy = false
+    @State private var showProfile = false
 
     #if DEBUG
     @State private var debugURL = AppConfig.baseURL
@@ -32,13 +34,6 @@ struct ConnectionsView: View {
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
-
-                Text(clerk.user?.emailAddresses.first?.emailAddress
-                     ?? clerk.user.map { "Signed in as \($0.id)" }
-                     ?? "Not signed in")
-                    .font(Theme.sans(12))
-                    .foregroundStyle(Theme.dust)
-                    .padding(.top, 6)
 
                 VStack(spacing: 0) {
                     Rule()
@@ -92,13 +87,19 @@ struct ConnectionsView: View {
                 .padding(.top, 14)
                 #endif
 
+                SectionRule(text: "Account")
+                    .padding(.top, 36)
+
+                accountRow
+                    .padding(.top, 18)
+
                 Button {
                     Task { try? await clerk.auth.signOut() }
                 } label: {
                     Kicker(text: "Sign out", size: 11)
                 }
-                .padding(.top, 44)
-                .padding(.bottom, 24)
+                .padding(.top, 28)
+                .padding(.bottom, 32)
             }
             .padding(.horizontal, 24)
         }
@@ -172,5 +173,82 @@ struct ConnectionsView: View {
         } catch {
             status = error.localizedDescription
         }
+    }
+
+    /// Tapping opens Clerk's own profile management — photo, email, password,
+    /// connected accounts — rather than a hand-rolled half of it.
+    private var accountRow: some View {
+        Button {
+            showProfile = true
+        } label: {
+            HStack(spacing: 14) {
+                Avatar(user: clerk.user)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(displayName)
+                        .font(Theme.serif(19))
+                        .foregroundStyle(Theme.ink)
+                    if let email = clerk.user?.emailAddresses.first?.emailAddress {
+                        Text(email)
+                            .font(Theme.sans(11.5))
+                            .foregroundStyle(Theme.dust)
+                    }
+                }
+
+                Spacer()
+
+                Text("›")
+                    .font(Theme.serif(22))
+                    .foregroundStyle(Theme.dust)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            .background(Theme.warm)
+            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Theme.hairline, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 2))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showProfile) { UserProfileView() }
+    }
+
+    private var displayName: String {
+        guard let u = clerk.user else { return "Not signed in" }
+        let name = [u.firstName, u.lastName].compactMap { $0 }.joined(separator: " ")
+        if !name.trimmingCharacters(in: .whitespaces).isEmpty { return name }
+        return u.emailAddresses.first?.emailAddress ?? "Your account"
+    }
+}
+
+/// Circular profile picture, falling back to the ledger mark so the row never
+/// collapses while the image loads or when no photo has been set.
+struct Avatar: View {
+    let user: User?
+    var size: CGFloat = 46
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Theme.linen)
+            Circle().stroke(Theme.hairline, lineWidth: 1)
+
+            if let user, user.hasImage, let url = URL(string: user.imageUrl) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        placeholder
+                    }
+                }
+                .clipShape(Circle())
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+    }
+
+    private var placeholder: some View {
+        Text("❧")
+            .font(Theme.serif(size * 0.38))
+            .foregroundStyle(Theme.amber)
     }
 }
