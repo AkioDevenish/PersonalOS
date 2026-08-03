@@ -8,9 +8,10 @@ struct PersonalOSHealthApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
+            SplashGate {
                 // Clerk restores any existing session on launch; until it has,
                 // showing sign-in would flash at an already-signed-in user.
+                // The splash covers that moment, so it costs nothing visible.
                 if !clerk.isLoaded {
                     LoadingView()
                 } else if clerk.user != nil {
