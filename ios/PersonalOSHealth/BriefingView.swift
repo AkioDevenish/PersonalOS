@@ -26,7 +26,7 @@ struct Briefing {
 
         // zero total is "no samples", not a measured night
         if let sleep = s.totalSleepHours, sleep > 0 {
-            let d = TodayView.duration(sleep)
+            let d = HealthView.duration(sleep)
             if sleep < 6.5 {
                 headline = "A short night."
                 var line = "You slept \(d) — on the short side."
@@ -43,7 +43,7 @@ struct Briefing {
         }
 
         if let steps = s.steps {
-            let n = TodayView.grouped(steps)
+            let n = HealthView.grouped(steps)
             if steps < 4000 {
                 paras.append("Steps stand at \(n) so far — the day still owes you a walk.")
                 sugg.append("An easy 30-minute walk, ideally in daylight")

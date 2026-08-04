@@ -177,7 +177,7 @@ struct TrendsView: View {
 
     private func format(_ v: Double) -> String {
         switch series {
-        case .steps, .energy: return TodayView.grouped(v)
+        case .steps, .energy: return HealthView.grouped(v)
         case .sleep: return String(format: "%.1f", v)
         case .restingHR: return String(Int(v.rounded()))
         }
@@ -205,22 +205,37 @@ struct TrendsView: View {
         }
     }
 
+    /// A ruled list, the same shape the specialists use.
+    ///
+    /// This was a two-column grid of outlined boxes. Against a design whose
+    /// only structural mark is a hairline, four borders per option read as a
+    /// different app — and the selected state had to fight the border to show
+    /// at all. A rule between rows and the ❧ marking the current one carries
+    /// the same information with one line instead of sixteen.
     private var seriesPicker: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        VStack(spacing: 0) {
+            Rule()
             ForEach(Series.allCases) { s in
                 Button { series = s } label: {
-                    Text(s.rawValue)
-                        .font(Theme.serif(17))
-                        .foregroundStyle(series == s ? Theme.amber : Theme.mid)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 14)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2)
-                                .stroke(series == s ? Theme.amber : Theme.hairline, lineWidth: 1)
-                        )
+                    HStack {
+                        Text(s.rawValue)
+                            .font(Theme.serif(18))
+                            .foregroundStyle(series == s ? Theme.amber : Theme.ink)
+                        Spacer()
+                        if !s.unit.isEmpty {
+                            Text(s.unit)
+                                .font(Theme.sans(10))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        if series == s {
+                            Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.amber)
+                        }
+                    }
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                Rule()
             }
         }
     }

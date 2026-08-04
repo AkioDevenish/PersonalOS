@@ -4,5 +4,18 @@
 <dict>
 	<key>com.apple.developer.healthkit</key>
 	<true/>
+	<!--
+	  Running a downloaded 4B model needs these two:
+
+	    com.apple.developer.kernel.increased-memory-limit
+	    com.apple.developer.kernel.extended-virtual-addressing
+
+	  A 4B model at 4-bit is ~2.6GB of weights plus a KV cache, which the
+	  default per-app ceiling kills long before it finishes loading. They are
+	  commented out because a free personal team's provisioning profile cannot
+	  carry them — signing fails with "doesn't include the Increased Memory
+	  Limit capability". Enable both in the developer portal once the account
+	  is enrolled in the paid program, then restore them here.
+	-->
 </dict>
 </plist>

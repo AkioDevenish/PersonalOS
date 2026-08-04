@@ -220,10 +220,14 @@ struct ExpertsView: View {
                 }
                 .padding(.top, 20)
 
+                // The button used to say only "Ask for a new reading", which
+                // left you guessing which specialist and which window you were
+                // about to spend a minute on. Both choices are above it; the
+                // request should say what it heard.
                 Button {
                     Task { await generate() }
                 } label: {
-                    Text(isBusy ? "Consulting…" : "Ask for a new reading")
+                    Text(isBusy ? "Consulting…" : "Ask the \(expertLabel.lowercased()) for a \(period) reading")
                         .font(Theme.sans(13, medium: true))
                         .foregroundStyle(Theme.warm)
                         .frame(maxWidth: .infinity)
@@ -233,6 +237,12 @@ struct ExpertsView: View {
                 }
                 .disabled(isBusy)
                 .padding(.top, 16)
+
+                Text(requestSummary)
+                    .font(Theme.sans(11))
+                    .foregroundStyle(Theme.dust)
+                    .lineSpacing(3)
+                    .padding(.top, 10)
 
                 if !status.isEmpty {
                     Text(status)
@@ -292,6 +302,25 @@ struct ExpertsView: View {
         } catch {
             status = error.localizedDescription
         }
+    }
+
+    private var expertLabel: String {
+        experts.first { $0.key == expert }?.label ?? "specialist"
+    }
+
+    /// Spells out the whole request: who, over what window, on which engine.
+    private var requestSummary: String {
+        let window: String
+        switch period {
+        case "hourly": window = "the last couple of days"
+        case "weekly": window = "the last two weeks"
+        case "monthly": window = "the last two months"
+        default: window = "the last week"
+        }
+        let engine = ModelChoice.isOnDevice
+            ? "on this iPhone"
+            : "by \(ModelChoice.provider)"
+        return "Reads \(window) of your telemetry as a \(expertLabel.lowercased()), written \(engine)."
     }
 
     /// How many days of history each period should hand the model.

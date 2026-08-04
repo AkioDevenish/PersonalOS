@@ -61,22 +61,32 @@ struct ConnectionsView: View {
 
                 VStack(spacing: 0) {
                     Rule()
-                    providerRow("Apple Health", status: "Connected · \(lastSyncLine)", connected: true)
+                    providerRow("Apple Health", status: "Connected · \(lastSyncLine)", state: .connected)
                     Rule()
-                    providerRow("Oura", status: "CONNECT", connected: false)
+                    providerRow("Oura", status: "Not set up yet", state: .unavailable)
                     Rule()
-                    providerRow("Whoop", status: "CONNECT", connected: false)
+                    providerRow("Whoop", status: "Not set up yet", state: .unavailable)
                     Rule()
-                    providerRow("Fitbit", status: "CONNECT", connected: false)
+                    providerRow("Fitbit", status: "Not set up yet", state: .unavailable)
                     Rule()
                 }
                 .padding(.top, 18)
+
+                // These read CONNECT in amber, which looked like a button and
+                // did nothing when tapped. The server-side OAuth is written and
+                // waiting, but each of these needs a developer app registered
+                // with the vendor before there is anything to send someone to.
+                Text("Oura, Whoop and Fitbit need Personal OS registered as an app with each company before they can be linked. That hasn't been done yet.")
+                    .font(Theme.sans(11.5))
+                    .foregroundStyle(Theme.dust)
+                    .lineSpacing(4)
+                    .padding(.top, 16)
 
                 Text("When two devices report the same thing, we pick one and show you which — never both added together.")
                     .font(Theme.sans(11.5))
                     .foregroundStyle(Theme.dust)
                     .lineSpacing(4)
-                    .padding(.top, 16)
+                    .padding(.top, 10)
 
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
@@ -160,22 +170,20 @@ struct ConnectionsView: View {
         }
     }
 
-    private func providerRow(_ name: String, status: String, connected: Bool) -> some View {
+    /// Sage for a live connection, dust for one that isn't offered yet.
+    /// Deliberately no amber: amber is the app's call-to-action colour, and
+    /// using it for something unactionable is what made these look tappable.
+    private enum ProviderState { case connected, unavailable }
+
+    private func providerRow(_ name: String, status: String, state: ProviderState) -> some View {
         HStack {
             Text(name)
                 .font(Theme.serif(20))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(state == .connected ? Theme.ink : Theme.mid)
             Spacer()
-            if connected {
-                Text(status)
-                    .font(Theme.sans(11))
-                    .foregroundStyle(Theme.sage)
-            } else {
-                Text(status)
-                    .font(Theme.sans(10, medium: true))
-                    .tracking(1.5)
-                    .foregroundStyle(Theme.amber)
-            }
+            Text(status)
+                .font(Theme.sans(11))
+                .foregroundStyle(state == .connected ? Theme.sage : Theme.dust)
         }
         .padding(.vertical, 18)
     }
@@ -238,12 +246,15 @@ struct ConnectionsView: View {
 
     /// Answers "which build is this, and where is it pointed" without a
     /// debugger — the two questions that cost the most time to guess at.
+    /// The server URL used to be appended here so I could tell which build was
+    /// on the phone during development. It served its purpose and became a raw
+    /// https:// address sitting under Sign out, which reads like a mistake.
+    /// The version and build number are the part worth keeping.
     private var buildStamp: String {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
-        let host = AppConfig.baseURL.replacingOccurrences(of: "http://", with: "")
-        return "v\(version) (\(build)) · \(host)"
+        return "v\(version) (\(build))"
     }
 }
 

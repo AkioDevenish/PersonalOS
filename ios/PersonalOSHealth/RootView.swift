@@ -88,32 +88,54 @@ struct HistoryView: View {
     }
 }
 
+/// The four pillars, and the drawer everything else lives in.
+///
+/// Health is where the app began and still carries the most: the day's
+/// briefing, every metric, the charts and the specialists. The other three are
+/// the rest of a life the ledger is meant to hold, each backed by its own
+/// Convex module — contacts and pipeline, published work, projects.
 enum Tab: CaseIterable {
-    case today, history, account
+    case health, business, creative, data, settings
 
     /// Icons carry the meaning; there are no labels, so these have to read at
     /// a glance. Light weight keeps them in the same register as the type.
     var symbol: String {
         switch self {
-        case .today: return "sun.max"
-        case .history: return "clock"
-        case .account: return "person"   // replaced by the avatar when present
+        case .health: return "heart"
+        case .business: return "briefcase"
+        case .creative: return "pencil.and.outline"
+        case .data: return "chart.xyaxis.line"
+        case .settings: return "person"   // replaced by the avatar when present
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .health: return "Health"
+        case .business: return "Business"
+        case .creative: return "Creative"
+        case .data: return "Data"
+        case .settings: return "Settings"
         }
     }
 }
 
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
-    @State private var tab: Tab = .today
+    @State private var tab: Tab = .health
 
     var body: some View {
         VStack(spacing: 0) {
+            // Each pillar keeps its own stack, so drilling into a specialist
+            // and switching tabs doesn't unwind where you were.
             NavigationStack {
                 Group {
                     switch tab {
-                    case .today: TodayView()
-                    case .history: TrendsView()
-                    case .account: ConnectionsView()
+                    case .health: HealthView()
+                    case .business: BusinessView()
+                    case .creative: CreativeView()
+                    case .data: DataView()
+                    case .settings: ConnectionsView()
                     }
                 }
                 .toolbarBackground(Theme.linen, for: .navigationBar)
@@ -126,21 +148,21 @@ struct RootView: View {
                         tab = t
                     } label: {
                         Group {
-                            if t == .account {
-                                Avatar(user: clerk.user, size: 24)
+                            if t == .settings {
+                                Avatar(user: clerk.user, size: 22)
                                     .opacity(tab == t ? 1 : 0.55)
                             } else {
                                 Image(systemName: t.symbol)
-                                    .font(.system(size: 19, weight: .light))
+                                    .font(.system(size: 17, weight: .light))
                                     .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
-                                    .frame(height: 24)
+                                    .frame(height: 22)
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(String(describing: t))
+                    .accessibilityLabel(t.title)
                 }
             }
             .padding(.top, 14)

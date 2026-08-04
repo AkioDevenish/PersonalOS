@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The screen you open in the morning: date, briefing, the ledger.
-struct TodayView: View {
+struct HealthView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var snapshot: HealthSnapshot?
     @State private var loadFailed = false
@@ -58,30 +58,22 @@ struct TodayView: View {
                 SectionRule(text: "Consult")
                     .padding(.top, 30)
 
-                HStack(spacing: 13) {
-                    engineLink("Nutrition", "What to eat next") { NutritionView() }
-                    engineLink("Specialists", "Read by an expert") { ExpertsView() }
+                // One ruled list rather than a grid of plates. Boxes inside
+                // boxes fought the hairline vocabulary the rest of the app uses,
+                // and a rule between rows says "list" without drawing four more
+                // edges to do it.
+                VStack(spacing: 0) {
+                    Rule()
+                    consultRow("Trends", "Steps, sleep, heart rate over time") { TrendsView() }
+                    Rule()
+                    consultRow("Correlations", "Does one metric follow another?") { CorrelationView() }
+                    Rule()
+                    consultRow("Nutrition", "What to eat next") { NutritionView() }
+                    Rule()
+                    consultRow("Specialists", "Read by an expert") { ExpertsView() }
+                    Rule()
                 }
                 .padding(.top, 16)
-
-                NavigationLink { CorrelationView() } label: {
-                    Plate {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Correlations")
-                                    .font(Theme.serif(20))
-                                    .foregroundStyle(Theme.ink)
-                                Text("Does one metric follow another?")
-                                    .font(Theme.sans(11))
-                                    .foregroundStyle(Theme.dust)
-                            }
-                            Spacer()
-                            Text("→").font(Theme.serif(16)).foregroundStyle(Theme.amber)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 13)
 
                 ForEach(Metrics.populatedGroups(snapshot), id: \.self) { group in
                     SectionRule(text: group.rawValue)
@@ -134,26 +126,27 @@ struct TodayView: View {
         }
     }
 
-    /// Two doors to the engines that used to live on the web dashboard.
-    private func engineLink<D: View>(
+    /// A door to one of the engines, in the ledger's list idiom.
+    private func consultRow<D: View>(
         _ title: String,
         _ subtitle: String,
         @ViewBuilder destination: @escaping () -> D
     ) -> some View {
         NavigationLink { destination() } label: {
-            Plate {
-                VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(Theme.serif(20))
+                        .font(Theme.serif(19))
                         .foregroundStyle(Theme.ink)
                     Text(subtitle)
-                        .font(Theme.sans(11))
+                        .font(Theme.sans(10.5))
                         .foregroundStyle(Theme.dust)
-                    Text("→")
-                        .font(Theme.serif(15))
-                        .foregroundStyle(Theme.amber)
                 }
+                Spacer()
+                Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
             }
+            .padding(.vertical, 15)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
