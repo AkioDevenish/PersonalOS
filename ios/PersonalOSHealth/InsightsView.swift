@@ -5,6 +5,7 @@ import SwiftUI
 /// Same server route the web dashboard used: it reads your recent metabolic
 /// signals and asks Gemma for three suggestions for the moment you pick.
 struct NutritionView: View {
+    @EnvironmentObject var health: HealthKitManager
     @State private var history: [InsightsClient.Recommendation] = []
     @State private var latest = ""
     @State private var status = ""
@@ -121,8 +122,19 @@ struct NutritionView: View {
         status = ""
         defer { isBusy = false }
         do {
-            latest = try await InsightsClient().generateMeals(context: context)
-            await loadHistory()
+            // On-device reads HealthKit here and never leaves the phone; every
+            // other engine is reached through the server, which holds the key.
+            if ModelChoice.isOnDevice, #available(iOS 26.0, *) {
+                let snaps = try await health.fetchHistoricalSnapshots(days: 7)
+                latest = try await OnDeviceInsights.generate(
+                    instructions: InsightPrompts.mealInstructions,
+                    prompt: InsightPrompts.meals(snapshots: snaps, context: context),
+                    temperature: 0.8
+                )
+            } else {
+                latest = try await InsightsClient().generateMeals(context: context)
+                await loadHistory()
+            }
         } catch {
             status = error.localizedDescription
         }
@@ -131,11 +143,15 @@ struct NutritionView: View {
 
 /// Expert reports — the personas the analyze route already knows how to be.
 struct ExpertsView: View {
+    @EnvironmentObject var health: HealthKitManager
     @State private var expert = "general"
     @State private var period = "daily"
     @State private var reports: [InsightsClient.Report] = []
     @State private var status = ""
     @State private var isBusy = false
+    /// On-device reports aren't stored on a server, so they live here for the
+    /// session. Persisting them is a separate job from generating them.
+    @State private var localReport = ""
 
     /// Mirrors EXPERTS in api/well-being/analyze — each has its own persona
     /// and its own allowed findings, so the reports genuinely differ.
@@ -226,6 +242,19 @@ struct ExpertsView: View {
                         .padding(.top, 14)
                 }
 
+                if !localReport.isEmpty {
+                    Plate {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Kicker(text: "Written on this iPhone", size: 9)
+                            Text(localReport)
+                                .font(Theme.serifBody(16.5))
+                                .foregroundStyle(Theme.ink)
+                                .lineSpacing(6)
+                        }
+                    }
+                    .padding(.top, 16)
+                }
+
                 ForEach(reports) { r in
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
@@ -239,7 +268,7 @@ struct ExpertsView: View {
                     .padding(.top, 16)
                 }
 
-                if reports.isEmpty && !isBusy && status.isEmpty {
+                if reports.isEmpty && localReport.isEmpty && !isBusy && status.isEmpty {
                     Text("No readings yet for this specialist.")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.dust)
@@ -255,6 +284,8 @@ struct ExpertsView: View {
     }
 
     private func load() async {
+        // Nothing to fetch when reports are written on the phone.
+        guard !ModelChoice.isOnDevice else { status = ""; return }
         do {
             reports = try await InsightsClient().reports(period: period, expert: expert)
             status = ""
@@ -263,10 +294,44 @@ struct ExpertsView: View {
         }
     }
 
+    /// How many days of history each period should hand the model.
+    private var daysForPeriod: Int {
+        switch period {
+        case "hourly": return 2
+        case "weekly": return 14
+        case "monthly": return 60
+        default: return 7
+        }
+    }
+
     private func generate() async {
         isBusy = true
-        status = "Gemma is reading your telemetry — this takes a minute."
         defer { isBusy = false }
+
+        if ModelChoice.isOnDevice, #available(iOS 26.0, *) {
+            status = "Reading your telemetry on this iPhone…"
+            do {
+                let snaps = try await health.fetchHistoricalSnapshots(days: daysForPeriod)
+                // Refuse before asking rather than let the model fill the gap.
+                guard InsightPrompts.canReport(snapshots: snaps) else {
+                    throw OnDeviceInsights.OnDeviceError.notEnoughData
+                }
+                localReport = try await OnDeviceInsights.generate(
+                    instructions: InsightPrompts.instructions(for: expert),
+                    prompt: InsightPrompts.report(
+                        snapshots: snaps,
+                        expert: expert,
+                        rangeLabel: "the last \(daysForPeriod) days"
+                    )
+                )
+                status = ""
+            } catch {
+                status = error.localizedDescription
+            }
+            return
+        }
+
+        status = "Reading your telemetry — this takes a minute."
         do {
             try await InsightsClient().generateReport(period: period, expert: expert)
             await load()

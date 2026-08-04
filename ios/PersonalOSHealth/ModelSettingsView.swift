@@ -114,6 +114,12 @@ struct ModelSettingsView: View {
     }
 
     private func detailLine(_ p: AIClient.Provider, stored: AIClient.StoredKey?) -> String {
+        if p.id == ModelChoice.deviceProvider {
+            // The one entry whose readiness is a property of the phone rather
+            // than of anything stored on a server.
+            if #available(iOS 26.0, *) { return OnDeviceInsights.availability.explanation }
+            return "Needs iOS 26 or later"
+        }
         if !p.needsKey { return "Runs on your Mac · no key needed" }
         if let stored { return "Key ending \(stored.last4)" }
         return "No key yet"
@@ -131,7 +137,11 @@ struct ModelSettingsView: View {
         loading = true
         defer { loading = false }
         do {
-            settings = try await AIClient().settings()
+            let s = try await AIClient().settings()
+            settings = s
+            // Keep the offline mirror honest, so the next launch knows which
+            // engine to use without waiting on this call.
+            if let sel = s.selection { ModelChoice.adopt(provider: sel.provider, model: sel.model) }
             status = ""
         } catch {
             status = error.localizedDescription
@@ -152,7 +162,12 @@ private struct ProviderDetailView: View {
     @State private var isBusy = false
     @State private var chosenModel = ""
 
-    private var hasKey: Bool { stored != nil || !provider.needsKey }
+    /// On-device is usable when the phone says so; everything else when a key
+    /// is stored, or when it needs none at all.
+    private var hasKey: Bool {
+        if provider.id == ModelChoice.deviceProvider { return ModelChoice.deviceEngineReady }
+        return stored != nil || !provider.needsKey
+    }
 
     var body: some View {
         ScrollView {
@@ -249,9 +264,20 @@ private struct ProviderDetailView: View {
                 .padding(.top, 16)
 
                 if !hasKey {
-                    Text("Add a key above to use these.")
+                    Text(provider.id == ModelChoice.deviceProvider
+                         ? unavailableNote
+                         : "Add a key above to use these.")
                         .font(Theme.sans(11))
                         .foregroundStyle(Theme.dust)
+                        .lineSpacing(3)
+                        .padding(.top, 12)
+                }
+
+                if provider.id == ModelChoice.deviceProvider && hasKey {
+                    Text("Your readings never leave this iPhone. It's a smaller model than the hosted ones, so a hosted model will give a deeper read when you want one.")
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+                        .lineSpacing(3)
                         .padding(.top, 12)
                 }
 
@@ -276,6 +302,11 @@ private struct ProviderDetailView: View {
         provider.keyPrefix.map { "\($0)…" } ?? "API key"
     }
 
+    private var unavailableNote: String {
+        if #available(iOS 26.0, *) { return OnDeviceInsights.availability.explanation }
+        return "Needs iOS 26 or later."
+    }
+
     private func isCurrent(_ model: String) -> Bool {
         selection?.provider == provider.id && selection?.model == model
     }
@@ -298,13 +329,18 @@ private struct ProviderDetailView: View {
     private func use(model: String) async {
         isBusy = true
         defer { isBusy = false }
+        // Local first: the choice must survive losing the network, and for the
+        // on-device engine there is nothing the server is needed for anyway.
+        ModelChoice.adopt(provider: provider.id, model: model)
         do {
             try await AIClient().select(provider: provider.id, model: model)
             status = "Reports will use \(model)."
             await onChange()
             dismiss()
         } catch {
-            status = error.localizedDescription
+            // The selection still holds on this phone; say so rather than
+            // implying it didn't take.
+            status = "Saved on this iPhone. Couldn't reach the server to sync it: \(error.localizedDescription)"
         }
     }
 

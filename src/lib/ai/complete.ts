@@ -227,11 +227,25 @@ async function ollama(
   return typeof data?.response === "string" ? data.response : ""
 }
 
+/**
+ * The on-device model has no server side. If a request lands here asking for
+ * it, the app has fallen back to the network when it should have generated
+ * locally — so say that, rather than reporting it as an unknown provider.
+ */
+async function device(spec: ProviderSpec): Promise<string> {
+  throw new AiError(
+    `${spec.label} runs on the phone — the app generates this locally and never asks the server for it.`,
+    400,
+    spec.id,
+  )
+}
+
 const ADAPTERS: Record<Dialect, typeof openaiCompatible> = {
   openai: openaiCompatible,
   anthropic,
   google,
   ollama,
+  device: device as unknown as typeof openaiCompatible,
 }
 
 export async function complete(a: CompleteArgs): Promise<CompleteResult> {

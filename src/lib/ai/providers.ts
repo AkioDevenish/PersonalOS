@@ -12,7 +12,7 @@
  * until you use it.
  */
 
-export type Dialect = "openai" | "anthropic" | "google" | "ollama"
+export type Dialect = "openai" | "anthropic" | "google" | "ollama" | "device"
 
 export type ProviderSpec = {
   id: string
@@ -30,6 +30,25 @@ export type ProviderSpec = {
 }
 
 export const PROVIDERS: ProviderSpec[] = [
+  {
+    /**
+     * Apple's on-device model. Listed first because it is the only entry that
+     * asks nothing of the user — no key, no account, no network — and so is
+     * the one a new person should land on.
+     *
+     * The server can never run this: the model lives on the phone. It is in
+     * the catalogue because the settings screen is driven from here, and
+     * because a request that does reach the server should say why it can't be
+     * served rather than "unknown provider".
+     */
+    id: "apple",
+    label: "Apple Intelligence",
+    aka: "on this iPhone",
+    dialect: "device",
+    baseURL: "",
+    needsKey: false,
+    models: ["on-device"],
+  },
   {
     id: "anthropic",
     label: "Anthropic",
