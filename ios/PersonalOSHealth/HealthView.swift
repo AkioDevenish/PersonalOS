@@ -5,6 +5,7 @@ struct HealthView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var snapshot: HealthSnapshot?
     @State private var loadFailed = false
+    @State private var appeared = false
 
     private var dateKicker: String {
         let f = DateFormatter()
@@ -99,29 +100,18 @@ struct HealthView: View {
     }
 
     /// Driven by the catalogue, so a metric added there appears here.
+    ///
+    /// No plates. The warm-white cards put a lighter rectangle behind every
+    /// figure, which on a linen ground read as a box floating on paper rather
+    /// than a number written on it — and fifteen of them turned the screen
+    /// into a grid of tiles. The numbers now sit directly on the ground with a
+    /// hairline under each, the same mark the rest of the app uses.
     private func grid(for group: MetricSpec.Group) -> some View {
-        let columns = [GridItem(.flexible(), spacing: 13), GridItem(.flexible(), spacing: 13)]
+        let columns = [GridItem(.flexible(), spacing: 18), GridItem(.flexible(), spacing: 18)]
         let specs = Metrics.inGroup(group).filter { snapshot.flatMap($0.value) != nil }
-        return LazyVGrid(columns: columns, spacing: 13) {
-            ForEach(specs) { m in
-                Plate {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Kicker(text: m.label, size: 9)
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(snapshot.flatMap { m.display($0) } ?? "—")
-                                .font(Theme.serif(28))
-                                .foregroundStyle(Theme.ink)
-                            if !m.unit.isEmpty {
-                                Text(m.unit)
-                                    .font(Theme.sans(10))
-                                    .foregroundStyle(Theme.dust)
-                            }
-                        }
-                        Text("from Apple Health")
-                            .font(Theme.sans(9.5))
-                            .foregroundStyle(Theme.dust)
-                    }
-                }
+        return LazyVGrid(columns: columns, spacing: 20) {
+            ForEach(Array(specs.enumerated()), id: \.element.id) { index, m in
+                MetricTile(spec: m, snapshot: snapshot, index: index, appeared: appeared)
             }
         }
     }
@@ -151,20 +141,6 @@ struct HealthView: View {
         .buttonStyle(.plain)
     }
 
-    private func metric(_ label: String, _ value: String??) -> some View {
-        Plate {
-            VStack(alignment: .leading, spacing: 6) {
-                Kicker(text: label, size: 9)
-                Text((value ?? nil) ?? "—")
-                    .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
-                Text((value ?? nil) == nil ? "no data yet" : "from Apple Health")
-                    .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
-            }
-        }
-    }
-
     private func load() async {
         do {
             try await health.requestAuthorization()
@@ -172,6 +148,9 @@ struct HealthView: View {
         } catch {
             loadFailed = true
         }
+        // Drives the glyph stagger. Set after the read so the icons animate in
+        // alongside their numbers rather than over an empty grid.
+        withAnimation(.easeOut(duration: 0.3)) { appeared = true }
     }
 
     static func grouped(_ v: Double) -> String {
