@@ -82,18 +82,24 @@ struct Ornament: View {
     }
 }
 
-/// Warm-white plate with a hairline — the card of the system.
+/// A block of content on the ground, closed by a hairline.
+///
+/// This was a warm-white card with a border. On linen that read as paper
+/// floating on paper — a lighter rectangle behind every figure — and once
+/// several appeared on a screen it became a grid of tiles rather than a page
+/// of writing. The fill and the border are gone; what groups the content now
+/// is the rule under it, which is the only structural mark this design has.
+///
+/// Changed here rather than at each call site so every screen moves together.
+/// `Theme.warm` survives for type on ink, where it is a foreground colour.
 struct Plate<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
-            .background(Theme.warm)
-            .overlay(
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(Theme.hairline, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 2))
+        VStack(alignment: .leading, spacing: 12) {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Rule()
+        }
+        .padding(.vertical, 4)
     }
 }

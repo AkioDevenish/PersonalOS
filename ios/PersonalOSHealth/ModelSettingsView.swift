@@ -181,15 +181,18 @@ private struct ProviderDetailView: View {
                     SectionRule(text: stored == nil ? "Add a key" : "Replace the key")
                         .padding(.top, 26)
 
-                    SecureField(placeholder, text: $entry)
-                        .font(Theme.sans(13))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 14)
-                        .background(Theme.warm)
-                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(Theme.hairline, lineWidth: 1))
-                        .padding(.top, 16)
+                    // A field still needs to read as somewhere you type, but a
+                    // filled box was the wrong way to say it. A rule under the
+                    // text says the same thing in this vocabulary.
+                    VStack(spacing: 8) {
+                        SecureField(placeholder, text: $entry)
+                            .font(Theme.sans(13))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .padding(.vertical, 6)
+                        Rule()
+                    }
+                    .padding(.top, 16)
 
                     if let stored {
                         Text("A key ending \(stored.last4) is already stored. Typing a new one replaces it.")
