@@ -88,23 +88,22 @@ struct HistoryView: View {
     }
 }
 
-/// The four pillars, and the drawer everything else lives in.
+/// What the tab bar shows.
 ///
-/// Health is where the app began and still carries the most: the day's
-/// briefing, every metric, the charts and the specialists. The other three are
-/// the rest of a life the ledger is meant to hold, each backed by its own
-/// Convex module — contacts and pipeline, published work, projects.
+/// Business, Creative and Data were here and are pulled for now. Their screens
+/// and the route behind them are untouched in PillarViews.swift,
+/// PillarClient.swift and /api/pillars — bringing them back is adding the
+/// cases below and the matching lines in the switch, nothing more. They were
+/// removed from view rather than deleted because they work and are wired to
+/// live Convex modules.
 enum Tab: CaseIterable {
-    case health, business, creative, data, settings
+    case health, settings
 
     /// Icons carry the meaning; there are no labels, so these have to read at
     /// a glance. Light weight keeps them in the same register as the type.
     var symbol: String {
         switch self {
         case .health: return "heart"
-        case .business: return "briefcase"
-        case .creative: return "pencil.and.outline"
-        case .data: return "chart.xyaxis.line"
         case .settings: return "person"   // replaced by the avatar when present
         }
     }
@@ -112,9 +111,6 @@ enum Tab: CaseIterable {
     var title: String {
         switch self {
         case .health: return "Health"
-        case .business: return "Business"
-        case .creative: return "Creative"
-        case .data: return "Data"
         case .settings: return "Settings"
         }
     }
@@ -132,9 +128,6 @@ struct RootView: View {
                 Group {
                     switch tab {
                     case .health: HealthView()
-                    case .business: BusinessView()
-                    case .creative: CreativeView()
-                    case .data: DataView()
                     case .settings: ConnectionsView()
                     }
                 }
