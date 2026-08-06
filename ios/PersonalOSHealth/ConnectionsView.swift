@@ -12,22 +12,15 @@ struct ConnectionsView: View {
     @State private var isBusy = false
     @State private var showProfile = false
     @State private var showModels = false
+    @State private var showConnections = false
     @State private var connections = ConnectionsClient()
     @State private var wearables: [ConnectionsClient.Connection] = []
-    @State private var busyProvider: String?
 
     #if DEBUG
     @State private var debugURL = AppConfig.baseURL
     @State private var debugToken = DebugTokenAuthProvider.token
     #endif
 
-    private var lastSyncLine: String {
-        guard lastSyncAt > 0 else { return "never synced" }
-        let d = Date(timeIntervalSince1970: lastSyncAt)
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .abbreviated
-        return "synced \(f.localizedString(for: d, relativeTo: Date()))"
-    }
 
     var body: some View {
         ScrollView {
@@ -63,33 +56,31 @@ struct ConnectionsView: View {
                 SectionRule(text: "Connections")
                     .padding(.top, 30)
 
-                VStack(spacing: 0) {
-                    Rule()
-                    providerRow("Apple Health", status: "Connected · \(lastSyncLine)", state: .connected)
-                    Rule()
-                    // Real rows now, from the server: whether the account is
-                    // linked, when it last delivered, and whether this
-                    // deployment even holds the credentials to offer a link.
-                    ForEach(wearables) { c in
-                        wearableRow(c)
-                        Rule()
+                // One row into its own screen, the same as Model and keys. The
+                // full list lived inline here and turned Settings into a wall
+                // — and made connections read as a different kind of thing
+                // from models, which they aren't.
+                Button {
+                    showConnections = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Sources")
+                                .font(Theme.serif(19))
+                                .foregroundStyle(Theme.ink)
+                            Text(connectionsSubtitle)
+                                .font(Theme.sans(10.5))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        Spacer()
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
                     }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
                 }
-                .padding(.top, 18)
-
-                if wearables.contains(where: { !$0.configured }) {
-                    Text("Greyed-out services need Personal OS registered as an app with that company first. The sync is written and waiting on the credentials.")
-                        .font(Theme.sans(11.5))
-                        .foregroundStyle(Theme.dust)
-                        .lineSpacing(4)
-                        .padding(.top, 16)
-                }
-
-                Text("When two devices report the same thing, we pick one and show you which — never both added together.")
-                    .font(Theme.sans(11.5))
-                    .foregroundStyle(Theme.dust)
-                    .lineSpacing(4)
-                    .padding(.top, 10)
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                Rule()
 
                 SectionRule(text: "Plan")
                     .padding(.top, 32)
@@ -195,6 +186,17 @@ struct ConnectionsView: View {
         .sheet(isPresented: $showModels) {
             NavigationStack { ModelSettingsView() }
         }
+        .sheet(isPresented: $showConnections) {
+            NavigationStack { ConnectionsListView() }
+        }
+    }
+
+    /// Reads as a summary of the screen behind it, so the row is worth
+    /// something before it's tapped.
+    private var connectionsSubtitle: String {
+        let linked = wearables.filter(\.isConnected).count
+        if linked == 0 { return "Apple Health · connect a watch or ring" }
+        return "Apple Health and \(linked) more"
     }
 
     private var planTitle: String {
@@ -210,98 +212,15 @@ struct ConnectionsView: View {
         return "On-device readings and your own key · see plans"
     }
 
-    /// Sage for a live connection, dust for one that isn't offered yet.
-    /// Deliberately no amber: amber is the app's call-to-action colour, and
-    /// using it for something unactionable is what made these look tappable.
-    private enum ProviderState { case connected, unavailable }
 
-    /// A wearable: tappable when it can actually do something, inert when it
-    /// can't — and the row says which, rather than looking the same either way.
-    @ViewBuilder
-    private func wearableRow(_ c: ConnectionsClient.Connection) -> some View {
-        let busy = busyProvider == c.key
-        Button {
-            Task { await act(on: c) }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(c.label)
-                        .font(Theme.serif(20))
-                        .foregroundStyle(c.configured ? Theme.ink : Theme.mid)
-                    if let err = c.last_error, !err.isEmpty, c.isConnected {
-                        Text(err)
-                            .font(Theme.sans(10))
-                            .foregroundStyle(Theme.amber)
-                            .lineLimit(2)
-                    }
-                }
-                Spacer()
-                Text(wearableStatus(c, busy: busy))
-                    .font(Theme.sans(11))
-                    .foregroundStyle(wearableTint(c))
-            }
-            .padding(.vertical, 18)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!c.configured || busy)
-    }
 
-    private func wearableStatus(_ c: ConnectionsClient.Connection, busy: Bool) -> String {
-        if busy { return c.isConnected ? "Syncing…" : "Connecting…" }
-        if !c.configured { return "Not set up yet" }
-        if c.isConnected {
-            guard let t = c.last_sync_at, t > 0 else { return "Connected · tap to sync" }
-            let f = RelativeDateTimeFormatter()
-            f.unitsStyle = .abbreviated
-            return "synced \(f.localizedString(for: Date(timeIntervalSince1970: t / 1000), relativeTo: Date()))"
-        }
-        return "CONNECT"
-    }
 
-    private func wearableTint(_ c: ConnectionsClient.Connection) -> Color {
-        if !c.configured { return Theme.dust }
-        return c.isConnected ? Theme.sage : Theme.amber
-    }
 
-    /// Connect if it isn't linked, sync if it is.
-    private func act(on c: ConnectionsClient.Connection) async {
-        guard c.configured else { return }
-        busyProvider = c.key
-        defer { busyProvider = nil }
-        do {
-            if c.isConnected {
-                status = "\(c.label): \(try await connections.sync(c.key, days: 14))"
-            } else {
-                try await connections.connect(c.key)
-                status = "\(c.label) connected. Pulling your history…"
-                // A fresh link has nothing behind it until the first pull.
-                status = "\(c.label): \(try await connections.sync(c.key, days: 30))"
-            }
-            await loadConnections()
-        } catch ConnectionError.cancelled {
-            status = ""
-        } catch {
-            status = error.localizedDescription
-        }
-    }
 
     private func loadConnections() async {
         wearables = (try? await connections.list()) ?? []
     }
 
-    private func providerRow(_ name: String, status: String, state: ProviderState) -> some View {
-        HStack {
-            Text(name)
-                .font(Theme.serif(20))
-                .foregroundStyle(state == .connected ? Theme.ink : Theme.mid)
-            Spacer()
-            Text(status)
-                .font(Theme.sans(11))
-                .foregroundStyle(state == .connected ? Theme.sage : Theme.dust)
-        }
-        .padding(.vertical, 18)
-    }
 
     private func actionButton(_ label: String, action: @escaping () async -> Void) -> some View {
         Button {
