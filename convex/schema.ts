@@ -182,6 +182,47 @@ export default defineSchema({
     .index("by_user_provider", ["userId", "provider"]),
 
   /**
+   * What a user has paid for.
+   *
+   * Written only by the verification route, after Apple's signature on the
+   * transaction has been checked. Nothing the app sends can grant an
+   * entitlement directly — a client that could write here could give itself a
+   * subscription for free, which is the whole reason receipts are signed.
+   *
+   * `credits` is a running balance rather than a log because the balance is
+   * what every read wants; ai_credit_ledger keeps the history.
+   */
+  entitlements: defineTable({
+    userId: v.string(),
+    /** none | active | expired | grace | revoked */
+    subscription_status: v.string(),
+    product_id: v.optional(v.string()),
+    expires_at: v.optional(v.number()),
+    /** Apple's stable per-user id, for reconciling renewals. */
+    original_transaction_id: v.optional(v.string()),
+    credits: v.number(),
+    updated_at: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /**
+   * Every credit movement, so a balance can always be explained.
+   *
+   * A bare number that only ever goes down is impossible to support when
+   * someone asks where their credits went. `transaction_id` is unique per
+   * purchase and is what makes granting idempotent — Apple can and does
+   * deliver the same transaction more than once.
+   */
+  ai_credit_ledger: defineTable({
+    userId: v.string(),
+    delta: v.number(), // positive for a purchase, negative for a spend
+    reason: v.string(),
+    transaction_id: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_transaction", ["transaction_id"]),
+
+  /**
    * Which platform and model this user's insights should run on. One row per
    * user; absent means fall back to whatever the server has configured.
    */

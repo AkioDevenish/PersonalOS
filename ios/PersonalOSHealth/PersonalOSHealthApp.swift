@@ -5,6 +5,11 @@ import ClerkKit
 struct PersonalOSHealthApp: App {
     @StateObject private var health = HealthKitManager()
     @State private var clerk = Clerk.configure(publishableKey: Auth.publishableKey)
+    /// Owned at app level, not by the paywall: transactions arrive whenever
+    /// Apple feels like it — a renewal, an Ask-to-Buy approval days later, a
+    /// purchase made on another device — and the listener has to be running to
+    /// catch them.
+    @State private var store = Store()
 
     var body: some Scene {
         WindowGroup {
@@ -21,6 +26,7 @@ struct PersonalOSHealthApp: App {
                 }
             }
             .environmentObject(health)
+            .environment(store)
             .environment(clerk)
         }
     }

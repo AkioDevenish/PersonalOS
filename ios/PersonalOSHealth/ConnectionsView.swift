@@ -5,6 +5,7 @@ import ClerkKitUI
 /// Settings: the ledger of providers, plus sync controls and the dev section.
 struct ConnectionsView: View {
     @EnvironmentObject var health: HealthKitManager
+    @Environment(Store.self) private var store
     @AppStorage("last_sync_at") private var lastSyncAt: Double = 0
     @Environment(Clerk.self) private var clerk
     @State private var status = ""
@@ -90,6 +91,29 @@ struct ConnectionsView: View {
                     .lineSpacing(4)
                     .padding(.top, 10)
 
+                SectionRule(text: "Plan")
+                    .padding(.top, 32)
+
+                NavigationLink { PaywallView() } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(planTitle)
+                                .font(Theme.serif(19))
+                                .foregroundStyle(Theme.ink)
+                            Text(planSubtitle)
+                                .font(Theme.sans(10.5))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        Spacer()
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                    }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                Rule()
+
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
 
@@ -171,6 +195,19 @@ struct ConnectionsView: View {
         .sheet(isPresented: $showModels) {
             NavigationStack { ModelSettingsView() }
         }
+    }
+
+    private var planTitle: String {
+        if store.entitlement.isSubscribed { return "Subscribed" }
+        if store.entitlement.credits > 0 { return "\(store.entitlement.credits) readings left" }
+        return "Free"
+    }
+
+    private var planSubtitle: String {
+        if store.entitlement.isSubscribed {
+            return "Hosted readings, sync and wearables"
+        }
+        return "On-device readings and your own key · see plans"
     }
 
     /// Sage for a live connection, dust for one that isn't offered yet.
