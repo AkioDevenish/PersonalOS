@@ -43,9 +43,8 @@ struct MetricTile: View {
                         .foregroundStyle(Theme.dust)
                 }
             }
-            // No rule under each reading. Fifteen of them across two columns
-            // read as ruled paper, and the grid spacing already separates
-            // them perfectly well.
+
+            Rule()
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)

@@ -80,6 +80,7 @@ struct ConnectionsView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 6)
+                Rule()
 
                 SectionRule(text: "Plan")
                     .padding(.top, 32)
@@ -102,6 +103,7 @@ struct ConnectionsView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 6)
+                Rule()
 
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
@@ -126,6 +128,7 @@ struct ConnectionsView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 6)
+                Rule()
 
                 SectionRule(text: "Sync")
                     .padding(.top, 32)
