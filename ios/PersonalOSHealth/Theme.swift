@@ -82,24 +82,23 @@ struct Ornament: View {
     }
 }
 
-/// A block of content on the ground, closed by a hairline.
+/// A block of content on the ground. Nothing drawn around it.
 ///
-/// This was a warm-white card with a border. On linen that read as paper
-/// floating on paper — a lighter rectangle behind every figure — and once
-/// several appeared on a screen it became a grid of tiles rather than a page
-/// of writing. The fill and the border are gone; what groups the content now
-/// is the rule under it, which is the only structural mark this design has.
+/// This was a warm-white card, then briefly a block closed by a hairline. Both
+/// were wrong in the same direction: the card put paper on paper, and the rule
+/// — once every block on every screen had one, on top of the section rules and
+/// the ruled lists — turned the app into ruled paper.
 ///
-/// Changed here rather than at each call site so every screen moves together.
-/// `Theme.warm` survives for type on ink, where it is a foreground colour.
+/// So it draws nothing. Space groups it, which is what space is for, and the
+/// hairline goes back to meaning one thing: a boundary between rows in a list.
+///
+/// Kept as a type rather than deleted because the call sites read better for
+/// it, and because a shared idea of "a block" is worth having a name for.
 struct Plate<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Rule()
-        }
-        .padding(.vertical, 4)
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
     }
 }
