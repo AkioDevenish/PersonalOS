@@ -47,6 +47,7 @@ struct SignInView: View {
                     .background(Theme.ink)
                     .clipShape(Capsule())
             }
+            .buttonStyle(.press)
             .padding(.top, 44)
 
             Text("Your ledger stays yours.")
@@ -114,11 +115,19 @@ enum Tab: CaseIterable {
         case .settings: return "Settings"
         }
     }
+
+    /// Position in the bar, which is what the content drifts along when you
+    /// move between them.
+    var index: Int { Tab.allCases.firstIndex(of: self) ?? 0 }
 }
 
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
     @State private var tab: Tab = .health
+    /// Which way the last tap moved, so the screens drift the way your thumb
+    /// went rather than always the same way.
+    @State private var forward = true
+    @Namespace private var mark
 
     var body: some View {
         VStack(spacing: 0) {
@@ -131,6 +140,11 @@ struct RootView: View {
                     case .settings: ConnectionsView()
                     }
                 }
+                // The identity changes with the tab, which is what lets one
+                // screen leave while the other arrives instead of the content
+                // being swapped underneath a static frame.
+                .id(tab)
+                .transition(.drift(forward ? 28 : -28))
                 .toolbarBackground(Theme.linen, for: .navigationBar)
             }
 
@@ -138,30 +152,58 @@ struct RootView: View {
             HStack {
                 ForEach(Tab.allCases, id: \.self) { t in
                     Button {
-                        tab = t
+                        select(t)
                     } label: {
-                        Group {
-                            if t == .settings {
-                                Avatar(user: clerk.user, size: 22)
-                                    .opacity(tab == t ? 1 : 0.55)
-                            } else {
-                                Image(systemName: t.symbol)
-                                    .font(.system(size: 17, weight: .light))
-                                    .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
-                                    .frame(height: 22)
+                        VStack(spacing: 7) {
+                            Group {
+                                if t == .settings {
+                                    Avatar(user: clerk.user, size: 22)
+                                        .opacity(tab == t ? 1 : 0.55)
+                                } else {
+                                    Image(systemName: t.symbol)
+                                        .font(.system(size: 17, weight: .light))
+                                        .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
+                                        .frame(height: 22)
+                                }
+                            }
+                            // The overshoot lives here: the icon springs past
+                            // its size and settles back, which is the whole
+                            // bounce. Anything larger and the bar wobbles.
+                            .scaleEffect(tab == t ? 1.14 : 1)
+
+                            // Amber is punctuation in this design, so the
+                            // selected tab gets a full stop. One dot for the
+                            // whole bar, matched between positions, so it
+                            // slides across rather than blinking on and off.
+                            ZStack {
+                                Circle().fill(.clear).frame(width: 4, height: 4)
+                                if tab == t {
+                                    Circle()
+                                        .fill(Theme.amber)
+                                        .frame(width: 4, height: 4)
+                                        .matchedGeometryEffect(id: "tab-mark", in: mark)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressRow)
                     .accessibilityLabel(t.title)
                 }
             }
-            .padding(.top, 14)
+            .animation(Theme.Motion.pop, value: tab)
+            .padding(.top, 12)
             .padding(.bottom, 8)
             .background(Theme.linen)
         }
         .background(Theme.linen)
+    }
+
+    private func select(_ t: Tab) {
+        guard t != tab else { return }
+        Haptics.select()
+        forward = t.index > tab.index
+        withAnimation(Theme.Motion.flow) { tab = t }
     }
 }

@@ -34,17 +34,19 @@ struct CorrelationView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "Correlation", color: Theme.amber, size: 11)
                     .padding(.top, 12)
+                    .flowIn(0)
 
                 Text("Does one follow\nthe other?")
                     .font(Theme.serif(32))
                     .foregroundStyle(Theme.ink)
                     .lineSpacing(2)
                     .padding(.top, 8)
+                    .flowIn(1)
 
-                pickers.padding(.top, 22)
-                rangePills.padding(.top, 16)
+                pickers.padding(.top, 22).flowIn(2)
+                rangePills.padding(.top, 16).flowIn(3)
 
-                chart.padding(.top, 24)
+                chart.padding(.top, 24).flowIn(4)
 
                 if let r = pearson {
                     Plate {
@@ -63,6 +65,7 @@ struct CorrelationView: View {
                         }
                     }
                     .padding(.top, 22)
+                    .flowIn(5)
                 }
 
                 Spacer(minLength: 40)
@@ -105,7 +108,7 @@ struct CorrelationView: View {
             .padding(.vertical, 15)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressRow)
     }
 
     private func metricPicker(for slot: Int) -> some View {
@@ -116,7 +119,10 @@ struct CorrelationView: View {
                         SectionRule(text: g.rawValue).padding(.top, 22)
                         ForEach(Metrics.inGroup(g)) { m in
                             Button {
-                                if slot == 0 { a = m } else { b = m }
+                                Haptics.select()
+                                withAnimation(Theme.Motion.bouncy) {
+                                    if slot == 0 { a = m } else { b = m }
+                                }
                                 picking = nil
                             } label: {
                                 HStack {
@@ -131,7 +137,7 @@ struct CorrelationView: View {
                                 .padding(.vertical, 13)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressRow)
                             Rule()
                         }
                     }
@@ -146,24 +152,8 @@ struct CorrelationView: View {
     }
 
     private var rangePills: some View {
-        HStack(spacing: 8) {
-            ForEach([14, 30, 90], id: \.self) { d in
-                Button {
-                    days = d
-                    Task { await load() }
-                } label: {
-                    Text("\(d) DAYS")
-                        .font(Theme.sans(10, medium: days == d))
-                        .tracking(1.5)
-                        .foregroundStyle(days == d ? Theme.warm : Theme.mid)
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(days == d ? Theme.ink : .clear)
-                        .overlay(Capsule().stroke(days == d ? .clear : Theme.hairline, lineWidth: 1))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
+        PillPicker(values: [14, 30, 90], selection: $days) { "\($0) days" }
+            .onSelect { Task { await load() } }
     }
 
     /// Scales a series into 0–1 so two different magnitudes share an axis.

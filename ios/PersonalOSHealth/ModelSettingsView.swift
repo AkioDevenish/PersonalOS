@@ -74,7 +74,7 @@ struct ModelSettingsView: View {
                             } label: {
                                 row(p)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressRow)
                             Rule()
                         }
                     }
@@ -83,6 +83,8 @@ struct ModelSettingsView: View {
 
                 Spacer(minLength: 40)
             }
+            .animation(Theme.Motion.flow, value: status)
+            .animation(Theme.Motion.bouncy, value: settings?.selection?.model)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
@@ -105,7 +107,7 @@ struct ModelSettingsView: View {
             }
             Spacer()
             if isCurrent {
-                Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.amber)
+                SelectionMark()
             }
             Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
         }
@@ -212,7 +214,14 @@ private struct ProviderDetailView: View {
                             .padding(.vertical, 15)
                             .background(entry.isEmpty ? Theme.dust : Theme.ink)
                             .clipShape(Capsule())
+                            .contentTransition(.opacity)
+                            .animation(Theme.Motion.flow, value: isBusy)
+                            // The fill goes live the moment the field has
+                            // something in it, so the button looks ready before
+                            // it is tapped rather than after.
+                            .animation(Theme.Motion.flow, value: entry.isEmpty)
                     }
+                    .buttonStyle(.press)
                     .disabled(entry.isEmpty || isBusy)
                     .padding(.top, 14)
 
@@ -244,6 +253,8 @@ private struct ProviderDetailView: View {
                     Rule()
                     ForEach(provider.models, id: \.self) { m in
                         Button {
+                            guard !isCurrent(m) else { return }
+                            Haptics.select()
                             Task { await use(model: m) }
                         } label: {
                             HStack {
@@ -252,13 +263,13 @@ private struct ProviderDetailView: View {
                                     .foregroundStyle(isCurrent(m) ? Theme.amber : Theme.ink)
                                 Spacer()
                                 if isCurrent(m) {
-                                    Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.amber)
+                                    SelectionMark()
                                 }
                             }
                             .padding(.vertical, 14)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressRow)
                         .disabled(!hasKey || isBusy)
                         .opacity(hasKey ? 1 : 0.4)
                         Rule()
@@ -290,11 +301,13 @@ private struct ProviderDetailView: View {
                     } label: {
                         Kicker(text: "Remove this key", size: 10)
                     }
+                    .buttonStyle(.press)
                     .padding(.top, 30)
                 }
 
                 Spacer(minLength: 40)
             }
+            .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)

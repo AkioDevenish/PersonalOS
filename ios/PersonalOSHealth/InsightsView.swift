@@ -19,35 +19,30 @@ struct NutritionView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "Nutrition", color: Theme.amber, size: 11)
                     .padding(.top, 12)
+                    .flowIn(0)
 
                 Text("What to eat next.")
                     .font(Theme.serif(32))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
+                    .flowIn(1)
 
                 Text("Read from your recent glucose, sleep and activity — not a generic meal plan.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
                     .padding(.top, 10)
+                    .flowIn(2)
 
-                HStack(spacing: 8) {
-                    ForEach(contexts, id: \.self) { c in
-                        Button { context = c } label: {
-                            Text(c.uppercased())
-                                .font(Theme.sans(9.5, medium: context == c))
-                                .tracking(1.4)
-                                .foregroundStyle(context == c ? Theme.warm : Theme.mid)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(context == c ? Theme.ink : .clear)
-                                .overlay(Capsule().stroke(context == c ? .clear : Theme.hairline, lineWidth: 1))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 22)
+                PillPicker(
+                    values: contexts,
+                    selection: $context,
+                    size: 9.5,
+                    tracking: 1.4,
+                    padding: 12
+                ) { $0 }
+                    .padding(.top, 22)
+                    .flowIn(3)
 
                 Button {
                     Task { await generate() }
@@ -59,7 +54,12 @@ struct NutritionView: View {
                         .padding(.vertical, 15)
                         .background(Theme.ink)
                         .clipShape(Capsule())
+                        // The label changes under you while it works; the
+                        // words should cross-fade rather than jump.
+                        .contentTransition(.opacity)
+                        .animation(Theme.Motion.flow, value: isBusy)
                 }
+                .buttonStyle(.press)
                 .disabled(isBusy)
                 .padding(.top, 16)
 
@@ -168,57 +168,58 @@ struct ExpertsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "Consult", color: Theme.amber, size: 11)
                     .padding(.top, 12)
+                    .flowIn(0)
 
                 Text("Read by a specialist.")
                     .font(Theme.serif(32))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
+                    .flowIn(1)
 
                 Text("The same telemetry, examined through a different lens. Patterns only — never a diagnosis.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
                     .padding(.top, 10)
+                    .flowIn(2)
 
                 VStack(spacing: 0) {
                     Rule()
                     ForEach(experts, id: \.key) { e in
-                        Button { expert = e.key; Task { await load() } } label: {
+                        Button {
+                            guard expert != e.key else { return }
+                            Haptics.select()
+                            withAnimation(Theme.Motion.bouncy) { expert = e.key }
+                            Task { await load() }
+                        } label: {
                             HStack {
                                 Text(e.label)
                                     .font(Theme.serif(19))
                                     .foregroundStyle(expert == e.key ? Theme.amber : Theme.ink)
                                 Spacer()
                                 if expert == e.key {
-                                    Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.amber)
+                                    SelectionMark()
                                 }
                             }
                             .padding(.vertical, 15)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressRow)
                         Rule()
                     }
                 }
                 .padding(.top, 22)
+                .flowIn(3)
 
-                HStack(spacing: 8) {
-                    ForEach(["hourly", "daily", "weekly", "monthly"], id: \.self) { p in
-                        Button { period = p; Task { await load() } } label: {
-                            Text(p.uppercased())
-                                .font(Theme.sans(9, medium: period == p))
-                                .tracking(1.2)
-                                .foregroundStyle(period == p ? Theme.warm : Theme.mid)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(period == p ? Theme.ink : .clear)
-                                .overlay(Capsule().stroke(period == p ? .clear : Theme.hairline, lineWidth: 1))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 20)
+                PillPicker(
+                    values: ["hourly", "daily", "weekly", "monthly"],
+                    selection: $period,
+                    size: 9,
+                    tracking: 1.2,
+                    padding: 12
+                ) { $0 }
+                    .onSelect { Task { await load() } }
+                    .padding(.top, 20)
 
                 // The button used to say only "Ask for a new reading", which
                 // left you guessing which specialist and which window you were
@@ -234,7 +235,13 @@ struct ExpertsView: View {
                         .padding(.vertical, 15)
                         .background(Theme.ink)
                         .clipShape(Capsule())
+                        // The label restates the two choices above it, so it
+                        // rewrites itself on every tap up there — a cross-fade
+                        // rather than a snap.
+                        .contentTransition(.opacity)
+                        .animation(Theme.Motion.flow, value: isBusy)
                 }
+                .buttonStyle(.press)
                 .disabled(isBusy)
                 .padding(.top, 16)
 

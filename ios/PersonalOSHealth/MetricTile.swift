@@ -48,7 +48,7 @@ struct MetricTile: View {
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
-        .animation(.easeOut(duration: 0.35).delay(delay), value: appeared)
+        .animation(Theme.Motion.flow.delay(delay), value: appeared)
     }
 
     @ViewBuilder
@@ -61,13 +61,13 @@ struct MetricTile: View {
             base
                 .symbolEffect(.pulse.byLayer, options: .repeat(.continuous))
                 .scaleEffect(appeared ? 1 : 0.6)
-                .animation(.spring(response: 0.45, dampingFraction: 0.6).delay(delay), value: appeared)
+                .animation(Theme.Motion.pop.delay(delay), value: appeared)
         } else {
             base
                 // A single bounce as it lands, then still.
                 .symbolEffect(.bounce, options: .nonRepeating, value: appeared)
                 .scaleEffect(appeared ? 1 : 0.6)
-                .animation(.spring(response: 0.45, dampingFraction: 0.6).delay(delay), value: appeared)
+                .animation(Theme.Motion.pop.delay(delay), value: appeared)
         }
     }
 }

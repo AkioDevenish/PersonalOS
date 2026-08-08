@@ -27,6 +27,7 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "Account", color: Theme.amber, size: 11)
                     .padding(.top, 8)
+                    .flowIn(0)
 
                 // Who you are comes first; what you've connected follows.
                 Button {
@@ -50,11 +51,13 @@ struct ConnectionsView: View {
                             .foregroundStyle(Theme.dust)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 .padding(.top, 12)
+                .flowIn(1)
 
                 SectionRule(text: "Connections")
                     .padding(.top, 30)
+                    .flowIn(2)
 
                 // One row into its own screen, the same as Model and keys. The
                 // full list lived inline here and turned Settings into a wall
@@ -78,12 +81,13 @@ struct ConnectionsView: View {
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 .padding(.top, 6)
                 Rule()
 
                 SectionRule(text: "Plan")
                     .padding(.top, 32)
+                    .flowIn(3)
 
                 NavigationLink { PaywallView() } label: {
                     HStack(spacing: 12) {
@@ -101,12 +105,13 @@ struct ConnectionsView: View {
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 .padding(.top, 6)
                 Rule()
 
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
+                    .flowIn(4)
 
                 Button {
                     showModels = true
@@ -126,25 +131,30 @@ struct ConnectionsView: View {
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 .padding(.top, 6)
                 Rule()
 
                 SectionRule(text: "Sync")
                     .padding(.top, 32)
+                    .flowIn(5)
 
                 VStack(spacing: 12) {
                     actionButton(isBusy ? "Syncing…" : "Sync today to Personal OS") { await sync(days: nil) }
                     actionButton(isBusy ? "Working…" : "Backfill last 30 days") { await sync(days: 30) }
                 }
                 .padding(.top, 18)
+                .flowIn(6)
 
                 if !status.isEmpty {
+                    // Sync writes here as it goes; the line should arrive the
+                    // way everything else on the screen does.
                     Text(status)
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.mid)
                         .lineSpacing(4)
                         .padding(.top, 14)
+                        .transition(.opacity.combined(with: .offset(y: -6)))
                 }
 
                 #if DEBUG
@@ -168,6 +178,7 @@ struct ConnectionsView: View {
                 } label: {
                     Kicker(text: "Sign out", size: 11)
                 }
+                .buttonStyle(.press)
                 .padding(.top, 28)
 
                 Text(buildStamp)
@@ -176,6 +187,10 @@ struct ConnectionsView: View {
                     .padding(.top, 18)
                     .padding(.bottom, 32)
             }
+            // Status arrives and disappears as a sync runs, which moves
+            // everything under it. Animating on the value rather than at each
+            // assignment keeps that one line from being written in six places.
+            .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
@@ -233,7 +248,10 @@ struct ConnectionsView: View {
                 .padding(.vertical, 15)
                 .background(Theme.ink)
                 .clipShape(Capsule())
+                .contentTransition(.opacity)
+                .animation(Theme.Motion.flow, value: isBusy)
         }
+        .buttonStyle(.press)
         .disabled(isBusy)
     }
 

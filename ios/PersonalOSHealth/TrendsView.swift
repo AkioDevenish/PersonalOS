@@ -52,22 +52,24 @@ struct TrendsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "History", color: Theme.amber, size: 11)
                     .padding(.top, 8)
+                    .flowIn(0)
 
                 Text("The ledger's past.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
+                    .flowIn(0)
 
-                rangePicker.padding(.top, 20)
+                rangePicker.padding(.top, 20).flowIn(1)
 
-                SectionRule(text: series.rawValue).padding(.top, 26)
+                SectionRule(text: series.rawValue).padding(.top, 26).flowIn(2)
 
-                chart.padding(.top, 20)
+                chart.padding(.top, 20).flowIn(3)
 
-                summary.padding(.top, 22)
+                summary.padding(.top, 22).flowIn(4)
 
-                SectionRule(text: "Show").padding(.top, 34)
-                seriesPicker.padding(.top, 16)
+                SectionRule(text: "Show").padding(.top, 34).flowIn(5)
+                seriesPicker.padding(.top, 16).flowIn(6)
 
                 Spacer(minLength: 40)
             }
@@ -136,6 +138,12 @@ struct TrendsView: View {
                 }
             }
             .frame(height: 220)
+            // Bars and lines are different marks, and asking Charts to morph
+            // one into the other looks like a mistake. Redrawn on a cross-fade
+            // instead: the old series dissolves as the new one arrives, which
+            // is the same idea as the tab drift a level up.
+            .id(series)
+            .transition(.opacity)
         }
     }
 
@@ -184,25 +192,8 @@ struct TrendsView: View {
     }
 
     private var rangePicker: some View {
-        HStack(spacing: 8) {
-            ForEach([7, 30, 90], id: \.self) { d in
-                Button {
-                    days = d
-                    Task { await load() }
-                } label: {
-                    Text("\(d) DAYS")
-                        .font(Theme.sans(10, medium: days == d))
-                        .tracking(1.5)
-                        .foregroundStyle(days == d ? Theme.warm : Theme.mid)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(days == d ? Theme.ink : .clear)
-                        .overlay(Capsule().stroke(days == d ? .clear : Theme.hairline, lineWidth: 1))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
+        PillPicker(values: [7, 30, 90], selection: $days) { "\($0) days" }
+            .onSelect { Task { await load() } }
     }
 
     /// A ruled list, the same shape the specialists use.
@@ -216,7 +207,11 @@ struct TrendsView: View {
         VStack(spacing: 0) {
             Rule()
             ForEach(Series.allCases) { s in
-                Button { series = s } label: {
+                Button {
+                    guard series != s else { return }
+                    Haptics.select()
+                    withAnimation(Theme.Motion.bouncy) { series = s }
+                } label: {
                     HStack {
                         Text(s.rawValue)
                             .font(Theme.serif(18))
@@ -228,13 +223,13 @@ struct TrendsView: View {
                                 .foregroundStyle(Theme.dust)
                         }
                         if series == s {
-                            Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.amber)
+                            SelectionMark()
                         }
                     }
                     .padding(.vertical, 14)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 Rule()
             }
         }

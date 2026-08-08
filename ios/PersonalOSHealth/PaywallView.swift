@@ -20,17 +20,20 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Kicker(text: "Personal OS", color: Theme.amber, size: 11)
                     .padding(.top, 12)
+                    .flowIn(0)
 
                 Text(store.entitlement.isSubscribed ? "You're subscribed." : "Go further.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
+                    .flowIn(1)
 
                 Text(blurb)
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
                     .padding(.top, 10)
+                    .flowIn(2)
 
                 if store.entitlement.credits > 0 {
                     Plate {
@@ -96,6 +99,7 @@ struct PaywallView: View {
                 } label: {
                     Kicker(text: "Restore purchases", size: 10)
                 }
+                .buttonStyle(.press)
                 .padding(.top, 28)
 
                 Text("Payment is charged to your Apple Account. Subscriptions renew unless cancelled at least 24 hours before the period ends; manage them in Settings.")
@@ -105,6 +109,11 @@ struct PaywallView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 40)
             }
+            // What you own changes what this screen offers; a purchase or a
+            // restore should redraw it in one movement rather than three.
+            .animation(Theme.Motion.flow, value: store.lastError)
+            .animation(Theme.Motion.flow, value: store.entitlement.isSubscribed)
+            .animation(Theme.Motion.flow, value: store.entitlement.credits)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
@@ -165,7 +174,7 @@ struct PaywallView: View {
             .padding(.vertical, 15)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressRow)
         .disabled(store.isWorking)
     }
 }

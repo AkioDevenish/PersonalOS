@@ -79,27 +79,37 @@ struct BriefingView: View {
         let b = Briefing.compose(from: snapshot)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // The briefing is the one screen that is purely something to
+                // read, so it's written onto the page a line at a time rather
+                // than handed over whole. The stagger is the same 50ms step
+                // the metric grid uses; the paragraphs continue the count so
+                // the whole page reads as one movement down.
                 Kicker(text: "Morning briefing · \(dateLine)", color: Theme.amber)
                     .padding(.top, 12)
+                    .flowIn(0)
 
                 Text(b.headline)
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.ink)
                     .lineSpacing(2)
                     .padding(.top, 10)
+                    .flowIn(1)
 
-                ForEach(b.paragraphs, id: \.self) { p in
+                ForEach(Array(b.paragraphs.enumerated()), id: \.element) { i, p in
                     Text(p)
                         .font(Theme.serifBody(18))
                         .foregroundStyle(Theme.ink)
                         .lineSpacing(7)
                         .padding(.top, 16)
+                        .flowIn(2 + i)
                 }
 
                 Ornament()
                     .padding(.vertical, 26)
+                    .flowIn(2 + b.paragraphs.count)
 
                 Kicker(text: "Spend today on")
+                    .flowIn(3 + b.paragraphs.count)
 
                 ForEach(Array(b.suggestions.enumerated()), id: \.offset) { i, s in
                     HStack(alignment: .firstTextBaseline, spacing: 14) {
@@ -113,6 +123,7 @@ struct BriefingView: View {
                             .lineSpacing(5)
                     }
                     .padding(.top, 14)
+                    .flowIn(4 + b.paragraphs.count + i)
                 }
 
                 Spacer(minLength: 40)

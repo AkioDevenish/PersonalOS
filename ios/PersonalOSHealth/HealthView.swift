@@ -29,11 +29,13 @@ struct HealthView: View {
                     }
                 }
                 .padding(.top, 8)
+                .flowIn(0)
 
                 Text("The day so far.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.ink)
                     .padding(.top, 8)
+                    .flowIn(0)
 
                 NavigationLink {
                     BriefingView(snapshot: snapshot)
@@ -53,11 +55,13 @@ struct HealthView: View {
                         }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressRow)
                 .padding(.top, 22)
+                .flowIn(1)
 
                 SectionRule(text: "Consult")
                     .padding(.top, 30)
+                    .flowIn(2)
 
                 // One ruled list rather than a grid of plates. Boxes inside
                 // boxes fought the hairline vocabulary the rest of the app uses,
@@ -65,13 +69,13 @@ struct HealthView: View {
                 // edges to do it.
                 VStack(spacing: 0) {
                     Rule()
-                    consultRow("Trends", "Steps, sleep, heart rate over time") { TrendsView() }
+                    consultRow("Trends", "Steps, sleep, heart rate over time", 3) { TrendsView() }
                     Rule()
-                    consultRow("Correlations", "Does one metric follow another?") { CorrelationView() }
+                    consultRow("Correlations", "Does one metric follow another?", 4) { CorrelationView() }
                     Rule()
-                    consultRow("Nutrition", "What to eat next") { NutritionView() }
+                    consultRow("Nutrition", "What to eat next", 5) { NutritionView() }
                     Rule()
-                    consultRow("Specialists", "Read by an expert") { ExpertsView() }
+                    consultRow("Specialists", "Read by an expert", 6) { ExpertsView() }
                     Rule()
                 }
                 .padding(.top, 16)
@@ -117,9 +121,14 @@ struct HealthView: View {
     }
 
     /// A door to one of the engines, in the ledger's list idiom.
+    ///
+    /// The rows arrive on the same stagger as the metric grid — the screen
+    /// writes itself down the page — and press in under the finger, which on a
+    /// list with no fill is the only sign a tap landed before the push begins.
     private func consultRow<D: View>(
         _ title: String,
         _ subtitle: String,
+        _ index: Int,
         @ViewBuilder destination: @escaping () -> D
     ) -> some View {
         NavigationLink { destination() } label: {
@@ -138,7 +147,8 @@ struct HealthView: View {
             .padding(.vertical, 15)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressRow)
+        .flowIn(index)
     }
 
     private func load() async {
@@ -150,7 +160,7 @@ struct HealthView: View {
         }
         // Drives the glyph stagger. Set after the read so the icons animate in
         // alongside their numbers rather than over an empty grid.
-        withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+        withAnimation(Theme.Motion.flow) { appeared = true }
     }
 
     static func grouped(_ v: Double) -> String {

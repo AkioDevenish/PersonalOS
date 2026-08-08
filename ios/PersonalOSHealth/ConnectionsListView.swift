@@ -102,7 +102,7 @@ struct ConnectionsListView: View {
                         } label: {
                             row(c)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressRow)
                         Rule()
                     }
                 }
@@ -116,6 +116,8 @@ struct ConnectionsListView: View {
 
                 Spacer(minLength: 40)
             }
+            .animation(Theme.Motion.flow, value: status)
+            .animation(Theme.Motion.flow, value: wearables.map(\.id))
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
@@ -202,7 +204,10 @@ private struct SourceDetailView: View {
                             .padding(.vertical, 15)
                             .background(Theme.ink)
                             .clipShape(Capsule())
+                            .contentTransition(.opacity)
+                            .animation(Theme.Motion.flow, value: isBusy)
                     }
+                    .buttonStyle(.press)
                     .disabled(isBusy)
                     .padding(.top, 22)
 
@@ -251,6 +256,7 @@ private struct SourceDetailView: View {
 
                 Spacer(minLength: 40)
             }
+            .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
