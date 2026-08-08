@@ -10,7 +10,13 @@ struct NutritionView: View {
     @State private var latest = ""
     @State private var status = ""
     @State private var isBusy = false
-    @State private var context = "next meal"
+    /// Breakfast, not "next meal".
+    ///
+    /// The default used to be a fifth value that wasn't in the pills, so the
+    /// row of choices showed nothing selected while the button quietly asked
+    /// for something else — you could generate a meal you had never chosen.
+    /// Every state the screen can be in is now one you can see.
+    @State private var context = "breakfast"
 
     private let contexts = ["breakfast", "lunch", "dinner", "snack"]
 
@@ -150,10 +156,7 @@ struct NutritionView: View {
 
                 if !latest.isEmpty && !isBusy {
                     Plate {
-                        Text(latest)
-                            .font(Theme.serifBody(17))
-                            .foregroundStyle(Theme.ink)
-                            .lineSpacing(6)
+                        TypedText(runs: MealReading.runs(for: MealReading.parse(latest)))
                     }
                     .padding(.top, 18)
                 }
@@ -166,7 +169,7 @@ struct NutritionView: View {
                                 Kicker(text: c, size: 9)
                             }
                             ForEach(r.meals, id: \.self) { m in
-                                Text("· \(m)")
+                                Text("· \(MealReading.clean(m))")
                                     .font(Theme.serifBody(16))
                                     .foregroundStyle(Theme.ink)
                             }
@@ -367,10 +370,13 @@ struct ExpertsView: View {
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
                             Kicker(text: "Written on this iPhone", size: 9)
-                            Text(localReport)
-                                .font(Theme.serifBody(16.5))
-                                .foregroundStyle(Theme.ink)
-                                .lineSpacing(6)
+                            TypedText(runs: [
+                                TypedRun(
+                                    text: MealReading.clean(localReport),
+                                    font: Theme.serifBody(16.5),
+                                    color: Theme.ink
+                                )
+                            ], duration: 3.2)
                         }
                     }
                     .padding(.top, 16)
@@ -380,7 +386,7 @@ struct ExpertsView: View {
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
                             if let c = r.created_at { Kicker(text: c.prefix(16).description, size: 9) }
-                            Text(r.report_text ?? "")
+                            Text(MealReading.clean(r.report_text ?? ""))
                                 .font(Theme.serifBody(16.5))
                                 .foregroundStyle(Theme.ink)
                                 .lineSpacing(6)

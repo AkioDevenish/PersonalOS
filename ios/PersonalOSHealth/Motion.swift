@@ -271,6 +271,124 @@ struct Composing: View {
     }
 }
 
+// MARK: - Writing
+
+/// One run of type in a generated reading.
+///
+/// Deliberately not Identifiable by UUID. The runs are rebuilt from the parsed
+/// reading every time the view's body runs, so a fresh id per rebuild would
+/// hand SwiftUI a different identity for the same paragraph several times a
+/// second — the list churns and the text flickers while it is being written.
+/// Position is the identity here, which is stable because the order is.
+struct TypedRun {
+    let text: String
+    var font: Font = Theme.serifBody(17)
+    var color: Color = Theme.ink
+    var tracking: CGFloat = 0
+    var lineSpacing: CGFloat = 6
+    var topPadding: CGFloat = 0
+    var uppercased: Bool = false
+
+    var rendered: String { uppercased ? text.uppercased() : text }
+}
+
+/// A reading, written out rather than posted up.
+///
+/// Two things happen at once, and both are about the same idea: the text
+/// arrives as something being written, not as a block that was already
+/// finished and briefly hidden.
+///
+/// It appears a character at a time, across the runs in the order a person
+/// would read them aloud — the name lands, then the reason, then the numbers.
+/// And while it is being written the type carries a slow travelling wash of
+/// amber and sage instead of its settled colour, so you can see the difference
+/// between a sentence still arriving and one that has landed. When the last
+/// character is down the wash resolves into ink and the page goes quiet.
+///
+/// The colours are the ones this app already owns. A rainbow would say "a
+/// machine wrote this" in a vocabulary borrowed from somewhere else.
+struct TypedText: View {
+    let runs: [TypedRun]
+    /// Roughly how long the whole thing should take, whatever its length. A
+    /// per-character delay reads well for a sentence and takes half a minute
+    /// for three meals.
+    var duration: Double = 2.6
+
+    @State private var revealed = 0
+
+    private var total: Int { runs.reduce(0) { $0 + $1.text.count } }
+    /// Two different readings can run to the same number of characters, so the
+    /// count is not enough to know the text has changed.
+    private var signature: String { runs.map(\.text).joined(separator: "\u{1}") }
+    private var typing: Bool { revealed < total }
+
+    var body: some View {
+        Group {
+            if typing && !Theme.Motion.reduced {
+                // Redrawn each frame only while the wash is moving; once the
+                // text has landed this collapses to plain, static type.
+                TimelineView(.animation) { context in
+                    stack.foregroundStyle(wash(at: context.date))
+                }
+            } else {
+                stack
+            }
+        }
+        .task(id: signature) { await write() }
+    }
+
+    private var stack: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(runs.enumerated()), id: \.offset) { index, run in
+                let start = offset(before: index)
+                let visible = min(max(revealed - start, 0), run.text.count)
+                if visible > 0 {
+                    Text(String(run.rendered.prefix(visible)))
+                        .font(run.font)
+                        .tracking(run.tracking)
+                        .lineSpacing(run.lineSpacing)
+                        .foregroundStyle(typing && !Theme.Motion.reduced ? Color.clear : run.color)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, run.topPadding)
+                }
+            }
+        }
+    }
+
+    private func offset(before index: Int) -> Int {
+        runs.prefix(index).reduce(0) { $0 + $1.text.count }
+    }
+
+    /// Steps in chunks on a 25ms tick rather than one character per frame:
+    /// sixty state changes a second through a growing text layout is a lot of
+    /// work to make a paragraph appear, and at reading distance the difference
+    /// is invisible.
+    private func write() async {
+        revealed = 0
+        guard total > 0 else { return }
+        guard !Theme.Motion.reduced else { revealed = total; return }
+
+        let tick = 0.025
+        let step = max(1, Int(Double(total) * tick / duration))
+        while revealed < total {
+            try? await Task.sleep(for: .seconds(tick))
+            if Task.isCancelled { revealed = total; return }
+            revealed = min(total, revealed + step)
+        }
+    }
+
+    /// Amber through sage and back, travelling slowly across the text.
+    private func wash(at date: Date) -> LinearGradient {
+        let t = date.timeIntervalSinceReferenceDate
+        let shift = CGFloat(sin(t * 0.9)) * 0.45
+        return LinearGradient(
+            colors: [Theme.amber, Theme.sage, Theme.mid, Theme.amber],
+            startPoint: UnitPoint(x: shift - 0.3, y: 0),
+            endPoint: UnitPoint(x: shift + 1.3, y: 1)
+        )
+    }
+}
+
 /// The ❧ that marks the chosen row in a ruled list.
 ///
 /// Scales in from nothing on the bouncy spring rather than appearing, so the
