@@ -4,11 +4,17 @@ import SwiftUI
 ///
 /// The glyph does two things. It arrives on a stagger with its neighbours, so
 /// the grid assembles rather than appearing all at once — the same idea as the
-/// splash, and it makes a dense screen legible for the second it takes to
-/// land. Then metrics that describe something continuously happening keep a
-/// slow pulse: a heart beats, a flame burns, a drop falls. Metrics that are
-/// counts of finished things — steps taken, flights climbed — stay still,
-/// because a step count that throbs is decoration rather than information.
+/// splash, and it makes a dense screen legible for the second it takes to land.
+/// Then it keeps moving the way its own measurement moves: a heart beats, a
+/// flame breathes, a sun turns, footprints wiggle.
+///
+/// Only four of them used to move at all, on the reasoning that a step count
+/// which throbs is decoration rather than information. The worry behind that
+/// was right — nineteen icons pulsing in unison is a light show — but holding
+/// most of them still was the wrong fix. What keeps this quiet is timing, not
+/// stillness: the continuous effects belong to the handful of things that
+/// genuinely never stop, everything else moves on a long period, and each
+/// tile's period is offset by its position so no two glyphs ever move together.
 struct MetricTile: View {
     let spec: MetricSpec
     let snapshot: HealthSnapshot?
@@ -16,13 +22,11 @@ struct MetricTile: View {
     let index: Int
     let appeared: Bool
 
-    /// Which glyphs earn a continuous animation. Kept deliberately short —
-    /// fifteen pulsing icons is a light show, not a dashboard.
-    private var isLive: Bool {
-        ["resting_hr", "active_energy", "glucose", "sleep"].contains(spec.id)
-    }
-
     private var delay: Double { Double(index) * 0.06 }
+
+    /// Far apart, and never the same for two tiles. Movement you notice on
+    /// glance and stop seeing while you read.
+    private var period: Double { 3.5 + Double(index % 7) * 0.9 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -58,18 +62,27 @@ struct MetricTile: View {
         let base = Image(systemName: spec.symbol)
             .font(.system(size: 12, weight: .light))
             .foregroundStyle(Theme.amber)
+            .scaleEffect(appeared ? 1 : 0.6)
+            .animation(Theme.Motion.pop.delay(delay), value: appeared)
 
-        if isLive {
+        // Reduce Motion means no idle movement at all. A glyph that never
+        // stops is exactly what that setting exists to turn off, so the
+        // entrance stays and the loop doesn't start.
+        if Theme.Motion.reduced {
             base
-                .symbolEffect(.pulse.byLayer, options: .repeat(.continuous))
-                .scaleEffect(appeared ? 1 : 0.6)
-                .animation(Theme.Motion.pop.delay(delay), value: appeared)
         } else {
-            base
-                // A single bounce as it lands, then still.
-                .symbolEffect(.bounce, options: .nonRepeating, value: appeared)
-                .scaleEffect(appeared ? 1 : 0.6)
-                .animation(Theme.Motion.pop.delay(delay), value: appeared)
+            switch spec.motion {
+            case .beat:
+                base.symbolEffect(.pulse.byLayer, options: .repeat(.continuous))
+            case .breathing:
+                base.symbolEffect(.breathe, options: .repeat(.continuous))
+            case .periodicWiggle:
+                base.symbolEffect(.wiggle, options: .repeat(.periodic(delay: period)))
+            case .periodicRotate:
+                base.symbolEffect(.rotate, options: .repeat(.periodic(delay: period)))
+            case .periodicBounce:
+                base.symbolEffect(.bounce, options: .repeat(.periodic(delay: period)))
+            }
         }
     }
 }

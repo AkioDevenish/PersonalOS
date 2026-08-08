@@ -370,8 +370,14 @@ enum InsightPrompts {
         """
     }
 
-    /// Meal suggestions, from the same local data.
-    static func meals(snapshots: [HealthSnapshot], context: String) -> String {
+    /// Meal suggestions, from the same local data, cooked where you live.
+    ///
+    /// The country is not decoration. Without it a model reaches for the same
+    /// handful of Californian wellness food every time — and a suggestion you
+    /// cannot buy the ingredients for is not a suggestion. Named twice on
+    /// purpose: once as the place, once as the constraint, because a 3B model
+    /// will drop a single mention by the third meal.
+    static func meals(snapshots: [HealthSnapshot], context: String, country: String) -> String {
         let recent = snapshots.suffix(7)
         let lines = recent.compactMap { snap -> String? in
             let keys = ["glucose", "carbs", "sleep", "active_energy", "steps"]
@@ -383,9 +389,18 @@ enum InsightPrompts {
             return "· " + parts.joined(separator: ", ")
         }
 
+        let place = country == "Anywhere" || country.isEmpty
+            ? ""
+            : """
+
+
+        I cook and shop in \(country). Suggest dishes eaten there, using \
+        ingredients sold there. Do not suggest anything I would have to import.
+        """
+
         return """
         Recent metabolic and activity signals:
-        \(lines.isEmpty ? "· no recent readings" : lines.joined(separator: "\n"))
+        \(lines.isEmpty ? "· no recent readings" : lines.joined(separator: "\n"))\(place)
 
         Suggest 3 options for \(context). For each:
         **Name:** <name>
@@ -403,7 +418,8 @@ enum InsightPrompts {
 
     Rules:
     - Address them as "you".
-    - Suggest ordinary food a person can actually buy and cook.
+    - Suggest ordinary food a person can actually buy and cook where they live.
+    - If they name a country, every suggestion is food eaten in that country.
     - Never name a medical condition. Never mention medication or supplements.
     - Never write an introduction. Your first word begins the first suggestion.
     """

@@ -50,6 +50,15 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const userQuery = body.query || ''
     const mealContext = body.context || '' // e.g. "breakfast", "pre-workout", "snack"
+    /**
+     * Where the person cooks and shops.
+     *
+     * Without it the model reaches for the same handful of Californian
+     * wellness food every time, and a meal you can't buy the ingredients for
+     * is not a recommendation. Sent as a display name rather than a code so
+     * the prompt reads as English.
+     */
+    const country = typeof body.country === 'string' ? body.country.trim() : ''
 
     const db = new Database(dbPath)
 
@@ -169,7 +178,8 @@ export async function POST(request: Request) {
     const prompt = `You are a Senior Sports Nutritionist & Diabetic Meal Planning Specialist. You have deep expertise in glycemic index optimization, macronutrient timing, and performance nutrition. You are creative and never repeat yourself.
 
 CURRENT TIME: ${timeStr} on ${dayStr}
-MEAL TIMING: ${mealTiming}
+MEAL TIMING: ${mealTiming}${country ? `
+WHERE THEY EAT: ${country}. Every recommendation must be a dish eaten in ${country}, built from ingredients ordinarily sold there. Use the local name for the dish where it has one. Do not recommend anything that would have to be imported or specially ordered.` : ''}
 
 CONTEXT — Today's Metabolic Events:
 ${eventsContext}
@@ -198,8 +208,8 @@ RULES:
 - If 30-day avg glucose is trending higher than 7-day, note the improvement or call out the regression.
 - If sleep is chronically low (< 7hrs avg over 30 days), recommend sleep-promoting nutrients.
 - Account for the time of day when recommending meals vs snacks.
-- Be CREATIVE and DIVERSE. Use foods from various cuisines.
-- Consider foods that are seasonal and practical.
+- Be CREATIVE and DIVERSE${country ? ` within the food of ${country} — vary the dish, the protein and the method, not the country` : '. Use foods from various cuisines'}.
+- Consider foods that are seasonal and practical${country ? ` in ${country}` : ''}.
 
 FORMAT each recommendation exactly like this:
 [MEAL_REC]

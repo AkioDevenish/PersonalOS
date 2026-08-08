@@ -14,6 +14,10 @@ struct NutritionView: View {
 
     private let contexts = ["breakfast", "lunch", "dinner", "snack"]
 
+    /// Persisted: where you cook is a standing fact, not a per-meal choice.
+    @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
+    @State private var choosingCountry = false
+
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
 
@@ -44,7 +48,9 @@ struct NutritionView: View {
                     .padding(.top, 8)
                     .flowIn(1)
 
-                Text("Read from your recent glucose, sleep and activity — not a generic meal plan.")
+                Text(country.isEmpty
+                     ? "Read from your recent glucose, sleep and activity — not a generic meal plan."
+                     : "Read from your recent glucose, sleep and activity, and cooked with what you can actually buy in \(Cuisine.name(for: country)).")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
@@ -80,6 +86,25 @@ struct NutritionView: View {
                     .flowIn(3)
                 }
 
+                Button {
+                    choosingCountry = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Kicker(text: "Cooking in", size: 9)
+                        Spacer()
+                        Text(Cuisine.name(for: country))
+                            .font(Theme.serif(19))
+                            .foregroundStyle(country.isEmpty ? Theme.dust : Theme.ink)
+                            .contentTransition(.opacity)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                    }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressRow)
+                .padding(.top, 14)
+                .flowIn(4)
+
                 PillPicker(
                     values: contexts,
                     selection: $context,
@@ -87,8 +112,8 @@ struct NutritionView: View {
                     tracking: 1.4,
                     padding: 12
                 ) { $0 }
-                    .padding(.top, 22)
-                    .flowIn(4)
+                    .padding(.top, 8)
+                    .flowIn(5)
 
                 Button {
                     Task { await generate() }
@@ -169,6 +194,9 @@ struct NutritionView: View {
         .background(Theme.linen)
         .task { await loadSignals() }
         .task { await loadHistory() }
+        .sheet(isPresented: $choosingCountry) {
+            CountryPicker(code: $country)
+        }
     }
 
     private func loadHistory() async {
@@ -191,11 +219,18 @@ struct NutritionView: View {
                 let snaps = try await health.fetchHistoricalSnapshots(days: 7)
                 latest = try await OnDeviceInsights.generate(
                     instructions: InsightPrompts.mealInstructions,
-                    prompt: InsightPrompts.meals(snapshots: snaps, context: context),
+                    prompt: InsightPrompts.meals(
+                        snapshots: snaps,
+                        context: context,
+                        country: Cuisine.name(for: country)
+                    ),
                     temperature: 0.8
                 )
             } else {
-                latest = try await InsightsClient().generateMeals(context: context)
+                latest = try await InsightsClient().generateMeals(
+                    context: context,
+                    country: country.isEmpty ? nil : Cuisine.name(for: country)
+                )
                 await loadHistory()
             }
         } catch {

@@ -39,9 +39,12 @@ struct InsightsClient {
         return (try? JSONDecoder().decode(HistoryResponse.self, from: data))?.history ?? []
     }
 
-    /// Asks the engine for three new suggestions for the given moment.
-    func generateMeals(context: String) async throws -> String {
-        let data = try await post("/api/well-being/nutrition-ai", body: ["mealContext": context])
+    /// Asks the engine for three new suggestions for the given moment, cooked
+    /// where the person actually lives.
+    func generateMeals(context: String, country: String?) async throws -> String {
+        var body: [String: Any] = ["mealContext": context, "context": context]
+        if let country { body["country"] = country }
+        let data = try await post("/api/well-being/nutrition-ai", body: body)
         // The route streams prose; take whatever text field it lands in.
         if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             for key in ["recommendation", "text", "result", "message"] {
