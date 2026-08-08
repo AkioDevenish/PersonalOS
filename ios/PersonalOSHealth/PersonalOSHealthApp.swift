@@ -10,6 +10,9 @@ struct PersonalOSHealthApp: App {
     /// purchase made on another device — and the listener has to be running to
     /// catch them.
     @State private var store = Store()
+    /// Owned at app level so the notification delegate is set before any
+    /// notification can arrive, and so a tap can route the app from anywhere.
+    @StateObject private var notifier = Notifier.shared
 
     var body: some Scene {
         WindowGroup {
@@ -26,8 +29,10 @@ struct PersonalOSHealthApp: App {
                 }
             }
             .environmentObject(health)
+            .environmentObject(notifier)
             .environment(store)
             .environment(clerk)
+            .onAppear { notifier.start() }
         }
     }
 }

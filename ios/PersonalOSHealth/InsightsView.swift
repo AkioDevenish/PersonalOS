@@ -201,8 +201,13 @@ struct NutritionView: View {
 /// Expert reports — the personas the analyze route already knows how to be.
 struct ExpertsView: View {
     @EnvironmentObject var health: HealthKitManager
+    @EnvironmentObject private var notifier: Notifier
     @State private var expert = InsightPrompts.experts[0].key
-    @State private var period = "daily"
+    /// Hourly, not daily. The daily report reads the *previous* completed day,
+    /// so opening this screen at nine in the morning offered you a reading of
+    /// yesterday as the default — the least current thing on the list. Hourly
+    /// reads the last thirty hours, which is the day you are actually in.
+    @State private var period = "hourly"
     @State private var reports: [InsightsClient.Report] = []
     @State private var status = ""
     @State private var isBusy = false
@@ -367,15 +372,20 @@ struct ExpertsView: View {
         experts.first { $0.key == expert }?.label ?? "specialist"
     }
 
+    /// How far back this period reaches, in words. Pulled out of the summary
+    /// so the notification can say the same thing the screen does.
+    private var requestWindow: String {
+        switch period {
+        case "hourly": return "the last thirty hours"
+        case "weekly": return "the last two weeks"
+        case "monthly": return "the last two months"
+        default: return "the last week"
+        }
+    }
+
     /// Spells out the whole request: who, over what window, on which engine.
     private var requestSummary: String {
-        let window: String
-        switch period {
-        case "hourly": window = "the last couple of days"
-        case "weekly": window = "the last two weeks"
-        case "monthly": window = "the last two months"
-        default: window = "the last week"
-        }
+        let window = requestWindow
         let engine = ModelChoice.isOnDevice
             ? "on this iPhone"
             // The model name is the useful half — "by claude-sonnet-4-6" tells
@@ -398,6 +408,11 @@ struct ExpertsView: View {
         isBusy = true
         defer { isBusy = false }
 
+        // Asked here, at the one moment it is about to be useful, rather than
+        // at launch. A minute of waiting is the reason the permission exists,
+        // so the prompt arrives with that minute rather than before it.
+        let mayNotify = await notifier.permitted()
+
         if ModelChoice.isOnDevice, #available(iOS 26.0, *) {
             status = "Reading your telemetry on this iPhone…"
             do {
@@ -415,6 +430,7 @@ struct ExpertsView: View {
                     )
                 )
                 status = ""
+                announce(localReport, if: mayNotify)
             } catch {
                 status = error.localizedDescription
             }
@@ -425,8 +441,21 @@ struct ExpertsView: View {
         do {
             try await InsightsClient().generateReport(period: period, expert: expert)
             await load()
+            announce(reports.first?.report_text ?? "", if: mayNotify)
         } catch {
             status = error.localizedDescription
         }
+    }
+
+    /// Says the reading is ready. Only ever after one you asked for, and only
+    /// with something in it — a notification announcing an empty report is a
+    /// worse outcome than no notification.
+    private func announce(_ report: String, if permitted: Bool) {
+        guard permitted, !report.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        notifier.readingReady(
+            specialist: expertLabel,
+            window: requestWindow,
+            opening: Notifier.opening(of: report)
+        )
     }
 }

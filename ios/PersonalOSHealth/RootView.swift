@@ -133,6 +133,7 @@ enum Route: Hashable {
 
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
+    @EnvironmentObject private var notifier: Notifier
     @State private var tab: Tab = .health
     /// Which way the last tap moved, so the screens drift the way your thumb
     /// went rather than always the same way.
@@ -219,6 +220,16 @@ struct RootView: View {
             .background(Theme.linen)
         }
         .background(Theme.linen)
+        // A tapped notification should land on the thing it announced, not on
+        // whatever screen the app was last showing.
+        .onChange(of: notifier.opened) { _, route in
+            guard let route else { return }
+            withAnimation(Theme.Motion.flow) {
+                tab = .health
+                path = [route]
+            }
+            notifier.opened = nil
+        }
     }
 
     private func select(_ t: Tab) {
