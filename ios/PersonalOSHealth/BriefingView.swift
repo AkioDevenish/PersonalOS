@@ -228,10 +228,27 @@ struct Briefing {
     }
 }
 
+/// One metric's line in the full breakdown.
+struct Reading: Identifiable {
+    let spec: MetricSpec
+    /// The figure the eye goes to: today's value, or the window's average.
+    let figure: String
+    /// The rest of what's worth knowing, in one line of small type.
+    let detail: String
+    /// Up, down or level across the window — nil when there isn't enough to say.
+    let direction: Int?
+
+    var id: String { spec.id }
+}
+
 struct BriefingView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var period: BriefingPeriod = .daily
+    /// The window's completed days. For a daily briefing this is still the
+    /// trailing week, because "8,431 steps" means nothing without knowing
+    /// whether that is a lot for you.
     @State private var snapshots: [HealthSnapshot] = []
+    @State private var today: HealthSnapshot?
     @State private var loading = true
 
     private var dateLine: String {
@@ -244,8 +261,121 @@ struct BriefingView: View {
         period == .daily ? "\(period.label) · \(dateLine)" : "\(period.label) · \(period.window)"
     }
 
+    // MARK: The breakdown
+
+    /// Every metric that has a reading in this window, grouped as the ledger
+    /// groups them.
+    ///
+    /// The prose above picks four or five things worth a sentence. This is the
+    /// rest of it — every measurement the app holds, one line each, so the
+    /// briefing is a summary of something rather than a selection you have to
+    /// take on trust. An empty group is left out; a section reading "—" four
+    /// times is not information.
+    private var breakdown: [(group: MetricSpec.Group, rows: [Reading])] {
+        MetricSpec.Group.allCases.compactMap { group in
+            let rows = Metrics.inGroup(group).compactMap(reading(for:))
+            return rows.isEmpty ? nil : (group, rows)
+        }
+    }
+
+    private func reading(for spec: MetricSpec) -> Reading? {
+        let history = snapshots.compactMap { spec.value($0) }
+
+        if period == .daily {
+            // Today against the days behind it. Without the comparison the
+            // daily breakdown is just the home screen again.
+            guard let today, let now = spec.value(today) else { return nil }
+            var detail = "no earlier days recorded"
+            var direction: Int?
+            if let baseline = mean(history), baseline > 0 {
+                let delta = now - baseline
+                let share = abs(delta) / baseline
+                direction = share < 0.05 ? 0 : (delta > 0 ? 1 : -1)
+                detail = share < 0.05
+                    ? "in line with your \(history.count)-day average"
+                    : "\(spec.format(abs(delta)))\(unit(spec)) \(delta > 0 ? "above" : "below") your \(history.count)-day average"
+            }
+            return Reading(spec: spec, figure: spec.format(now) + unit(spec), detail: detail, direction: direction)
+        }
+
+        guard !history.isEmpty, let avg = mean(history) else { return nil }
+        var parts: [String] = []
+        if spec.cumulative {
+            parts.append("a day · \(spec.format(history.reduce(0, +)))\(unit(spec)) in all")
+        } else if let lo = history.min(), let hi = history.max(), hi > lo {
+            parts.append("average · \(spec.format(lo))–\(spec.format(hi))")
+        } else {
+            parts.append("average")
+        }
+        parts.append("\(history.count) \(history.count == 1 ? "day" : "days")")
+
+        return Reading(
+            spec: spec,
+            figure: spec.format(avg) + unit(spec),
+            detail: parts.joined(separator: " · "),
+            direction: drift(history).map { d in
+                guard let base = mean(history), base > 0 else { return 0 }
+                let share = abs(d) / base
+                return share < 0.05 ? 0 : (d > 0 ? 1 : -1)
+            }
+        )
+    }
+
+    private func unit(_ spec: MetricSpec) -> String {
+        spec.unit.isEmpty ? "" : " \(spec.unit)"
+    }
+
+    private func mean(_ values: [Double]) -> Double? {
+        values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+    }
+
+    /// Later half minus earlier half — the same test the prose uses, so the
+    /// arrow and the sentence can never disagree.
+    private func drift(_ values: [Double]) -> Double? {
+        guard values.count >= 4 else { return nil }
+        let half = values.count / 2
+        guard let early = mean(Array(values.prefix(half))),
+              let late = mean(Array(values.suffix(half))) else { return nil }
+        return late - early
+    }
+
+    private func readingRow(_ r: Reading) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: r.spec.symbol)
+                .font(.system(size: 11, weight: .light))
+                .foregroundStyle(Theme.amber)
+                .frame(width: 15, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(r.spec.label)
+                    .font(Theme.sans(11))
+                    .foregroundStyle(Theme.mid)
+                Text(r.detail)
+                    .font(Theme.sans(9.5))
+                    .foregroundStyle(Theme.dust)
+            }
+
+            Spacer()
+
+            // The arrow is the only place in the app amber marks a direction
+            // rather than a selection, so it stays small and only appears when
+            // the movement is worth a glance — under 5% is noise.
+            if let d = r.direction, d != 0 {
+                Image(systemName: d > 0 ? "arrow.up.right" : "arrow.down.right")
+                    .font(.system(size: 9, weight: .light))
+                    .foregroundStyle(Theme.dust)
+            }
+
+            Text(r.figure)
+                .font(Theme.serif(19))
+                .foregroundStyle(Theme.ink)
+                .contentTransition(.numericText())
+        }
+        .padding(.vertical, 11)
+    }
+
     var body: some View {
-        let b = Briefing.compose(period: period, snapshots: snapshots)
+        let b = Briefing.compose(period: period, snapshots: period == .daily ? [today].compactMap { $0 } : snapshots)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 // The briefing is the one screen that is purely something to
@@ -278,12 +408,36 @@ struct BriefingView: View {
                         .flowIn(3 + i)
                 }
 
+                // The evidence, after the read and before what to do about it.
+                ForEach(Array(breakdown.enumerated()), id: \.element.group) { i, section in
+                    SectionRule(text: section.group.rawValue)
+                        .padding(.top, i == 0 ? 30 : 26)
+                        .flowIn(3 + b.paragraphs.count + i)
+
+                    VStack(spacing: 0) {
+                        Rule()
+                        ForEach(section.rows) { r in
+                            readingRow(r)
+                            Rule()
+                        }
+                    }
+                    .padding(.top, 12)
+                    .flowIn(3 + b.paragraphs.count + i)
+                }
+
+                if breakdown.isEmpty && !loading {
+                    Text("Nothing measurable recorded in this window.")
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.dust)
+                        .padding(.top, 26)
+                }
+
                 Ornament()
                     .padding(.vertical, 26)
-                    .flowIn(3 + b.paragraphs.count)
+                    .flowIn(4 + b.paragraphs.count + breakdown.count)
 
                 Kicker(text: period.spend)
-                    .flowIn(4 + b.paragraphs.count)
+                    .flowIn(5 + b.paragraphs.count + breakdown.count)
 
                 ForEach(Array(b.suggestions.enumerated()), id: \.offset) { i, s in
                     HStack(alignment: .firstTextBaseline, spacing: 14) {
@@ -297,7 +451,7 @@ struct BriefingView: View {
                             .lineSpacing(5)
                     }
                     .padding(.top, 14)
-                    .flowIn(5 + b.paragraphs.count + i)
+                    .flowIn(6 + b.paragraphs.count + breakdown.count + i)
                 }
 
                 Spacer(minLength: 40)
@@ -318,13 +472,17 @@ struct BriefingView: View {
         defer { loading = false }
         do {
             try await health.requestAuthorization()
-            // A day still reads from today's live snapshot rather than
+            // Both, always. A day reads from today's live snapshot rather than
             // yesterday's stored one — the morning briefing is about a day in
-            // progress, and the history read only holds completed days.
-            snapshots = period == .daily
-                ? [try await health.fetchTodaySnapshot()]
-                : try await health.fetchHistoricalSnapshots(days: period.days)
+            // progress, and the history read only holds completed days — but
+            // the breakdown needs the days behind it either way, to say
+            // whether today's figure is a lot for you or not.
+            today = try await health.fetchTodaySnapshot()
+            snapshots = try await health.fetchHistoricalSnapshots(
+                days: max(period.days, 7)
+            )
         } catch {
+            today = nil
             snapshots = []
         }
     }

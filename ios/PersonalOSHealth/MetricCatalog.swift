@@ -33,13 +33,21 @@ struct MetricSpec: Identifiable, Hashable {
     static func == (a: MetricSpec, b: MetricSpec) -> Bool { a.id == b.id }
     func hash(into h: inout Hasher) { h.combine(id) }
 
-    /// Formats for display, or an em dash when the day holds nothing.
-    func display(_ s: HealthSnapshot) -> String? {
-        guard let v = value(s), v.isFinite else { return nil }
+    /// Formats a figure to this metric's own precision. Takes a bare number
+    /// rather than a snapshot, because averages and totals over a window are
+    /// figures nobody's day actually held.
+    func format(_ v: Double) -> String {
+        guard v.isFinite else { return "—" }
         if precision == 0 {
             return v >= 1000 ? MetricSpec.grouped(v) : String(Int(v.rounded()))
         }
         return String(format: "%.\(precision)f", v)
+    }
+
+    /// Formats for display, or nil when the day holds nothing.
+    func display(_ s: HealthSnapshot) -> String? {
+        guard let v = value(s), v.isFinite else { return nil }
+        return format(v)
     }
 
     static func grouped(_ v: Double) -> String {
