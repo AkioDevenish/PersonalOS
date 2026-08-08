@@ -144,17 +144,111 @@ enum OnDeviceInsights {
 /// the engine differs.
 enum InsightPrompts {
 
-    static let experts: [(key: String, label: String, persona: String)] = [
-        ("general", "Health architect", "Senior Principal Health Architect"),
-        ("endocrinologist", "Endocrinologist", "Senior Endocrinologist"),
-        ("nutritionist", "Nutritionist", "Senior Nutritionist"),
-        ("strength_coach", "Strength coach", "Senior Strength Coach"),
-        ("data_scientist", "Data scientist", "Senior Data Scientist"),
+    /// The four specialists, each with the measurements they read and the
+    /// question they are the right person to answer.
+    ///
+    /// "Health architect" used to head this list and is gone. It was allowed
+    /// every finding the other four were, so its report was their union and
+    /// read as none of them — and having "all of the above" first made the
+    /// real specialists look like filters on one report rather than four
+    /// different readings.
+    struct Expert {
+        let key: String
+        let label: String
+        let persona: String
+        /// Which measurements this one reads. The prompt is built from these,
+        /// so a strength coach is handed gait and load, and an endocrinologist
+        /// is handed glucose and sleep timing — they are not looking at the
+        /// same table and calling it a different job.
+        let metrics: [String]
+        /// The request itself, in that specialist's terms.
+        let asks: String
+        /// A worked observation in that voice. Belongs to a fictional other
+        /// person, and uses metrics the real table won't contain, because an
+        /// earlier version's example came back verbatim as observation one.
+        let example: String
+    }
+
+    static let experts: [Expert] = [
+        Expert(
+            key: "endocrinologist",
+            label: "Endocrinologist",
+            persona: "Senior Endocrinologist",
+            metrics: ["glucose", "carbs", "insulin", "sleep", "resting_hr", "active_energy"],
+            asks: """
+            Write 3 observations about your metabolic and circadian picture. Look at \
+            glucose level and how much it varies, carbohydrates against glucose, and \
+            sleep length against resting heart rate. How regular the timing is counts \
+            as much as the amounts.
+            """,
+            example: """
+            "Your glucose sat highest on the nights you slept least. On 04 Mar you \
+            slept 5.4 hours and averaged 118 mg/dL, against 7.9 hours and 96 mg/dL on \
+            07 Mar. Short nights look like the thing moving your morning readings."
+            """
+        ),
+        Expert(
+            key: "nutritionist",
+            label: "Nutritionist",
+            persona: "Senior Nutritionist",
+            metrics: ["carbs", "glucose", "active_energy", "basal_energy", "sleep", "steps"],
+            asks: """
+            Write 3 observations about what your eating appears to be doing. Work \
+            forward from carbohydrates to glucose, energy and the next day's activity. \
+            End each with a change in ordinary food or timing — never a supplement, \
+            never a named diet.
+            """,
+            example: """
+            "Your heaviest carbohydrate days were followed by your quietest ones. On \
+            04 Mar you took 310 g and walked 4,100 steps the next day, against 180 g \
+            and 9,600 steps after 07 Mar. Moving some of that intake earlier in the \
+            day is worth a week's trial."
+            """
+        ),
+        Expert(
+            key: "strength_coach",
+            label: "Strength coach",
+            persona: "Senior Strength Coach",
+            metrics: ["active_energy", "steps", "flights", "sleep", "resting_hr",
+                      "walking_speed", "steadiness", "asymmetry", "double_support", "stair_speed"],
+            asks: """
+            Write 3 observations about load and readiness. Read activity and energy \
+            against sleep, resting heart rate and the gait measures. Say plainly \
+            whether this is a week to push or a week to back off, and what the next \
+            session should be.
+            """,
+            example: """
+            "Your walking speed dropped on the days after your hardest ones. On 04 Mar \
+            you burned 890 kcal and walked at 4.9 km/h the next day, against 410 kcal \
+            and 5.6 km/h after 07 Mar. That is a fatigue signal, not a fitness one — \
+            keep the next session easy."
+            """
+        ),
+        Expert(
+            key: "data_scientist",
+            label: "Data scientist",
+            persona: "Senior Data Scientist",
+            metrics: [],   // empty means the whole table; correlation is the job
+            asks: """
+            Write 3 observations about relationships between measurements, each about a \
+            different pair. Quantify every claim — how much, over how many days. For \
+            each, name the other explanation the same numbers would fit, and say which \
+            of the two this data cannot separate.
+            """,
+            example: """
+            "Your daylight time moved with your stair speed across 9 of 12 days. On \
+            04 Mar you spent 92 minutes outside and climbed at 0.51 m/s, against 11 \
+            minutes and 0.38 m/s on 06 Mar. Both also track the weekend, which this \
+            window is too short to rule out."
+            """
+        ),
     ]
 
-    static func persona(for expert: String) -> String {
-        experts.first { $0.key == expert }?.persona ?? "Senior Data Scientist"
+    static func expert(_ key: String) -> Expert {
+        experts.first { $0.key == key } ?? experts[experts.count - 1]
     }
+
+    static func persona(for expert: String) -> String { self.expert(expert).persona }
 
     /// The system half: who the model is and what it may not do.
     ///
@@ -204,23 +298,49 @@ enum InsightPrompts {
     /// No prompt rule reliably stops a model this size filling a gap it has
     /// been asked to fill. So the gap is never presented: unless the data can
     /// support the question, the question is not asked.
-    static func canReport(snapshots: [HealthSnapshot]) -> Bool {
+    /// Asked per specialist, because each reads its own columns. An
+    /// endocrinologist with a fortnight of step counts and no glucose has
+    /// nothing to read, however full the table looks overall — and a model
+    /// asked about glucose anyway will supply some.
+    static func canReport(snapshots: [HealthSnapshot], expert: String) -> Bool {
+        let e = self.expert(expert)
+        let specs = e.metrics.isEmpty ? Metrics.all : e.metrics.compactMap { Metrics.by(id: $0) }
+
         let withData = snapshots.filter { snap in
-            Metrics.all.contains { $0.value(snap) != nil }
+            specs.contains { $0.value(snap) != nil }
         }
         guard withData.count >= 3 else { return false }
 
         // Three distinct metrics, each present on at least two days — enough
         // for three observations about different pairs without reaching.
-        let usable = Metrics.all.filter { spec in
+        let usable = specs.filter { spec in
             withData.filter { spec.value($0) != nil }.count >= 2
         }
         return usable.count >= 3
     }
 
+    /// The specialist's own request, over the measurements that specialist reads.
+    ///
+    /// This used to take `expert` and never use it: every specialist was handed
+    /// the whole table and the identical instruction to find three pairs that
+    /// moved together. The persona was one line of the system prompt over an
+    /// otherwise identical request, and a ~3B model given the same question
+    /// four times answers it the same way four times — which is exactly what a
+    /// reader sees when the endocrinologist and the strength coach hand back
+    /// the same report under different headings.
+    ///
+    /// Now the lens is in the data as well as the words: each specialist gets
+    /// their own columns, their own question and their own worked example. The
+    /// data scientist keeps the whole table, because relating everything to
+    /// everything is that one's actual job.
     static func report(snapshots: [HealthSnapshot], expert: String, rangeLabel: String) -> String {
+        let e = self.expert(expert)
+        let specs = e.metrics.isEmpty
+            ? Metrics.all
+            : e.metrics.compactMap { Metrics.by(id: $0) }
+
         let rows = snapshots.compactMap { snap -> String? in
-            let parts = Metrics.all.compactMap { spec -> String? in
+            let parts = specs.compactMap { spec -> String? in
                 guard let shown = spec.display(snap) else { return nil }
                 return "\(spec.label) \(shown)\(spec.unit.isEmpty ? "" : " " + spec.unit)"
             }
@@ -234,19 +354,17 @@ enum InsightPrompts {
 
         \(rows.joined(separator: "\n"))
 
-        Write exactly 3 observations, each about a different pair of measurements.
+        \(e.asks)
 
         Every observation is exactly three sentences:
-        Sentence 1 names which two measurements moved together.
-        Sentence 2 quotes two dates with the numbers for both measurements.
-        Sentence 3 says what that might mean for you.
+        Sentence 1 names which measurements you are reading together.
+        Sentence 2 quotes two dates with the numbers for both.
+        Sentence 3 says what that means for you, as a \(e.persona.lowercased()) would put it.
 
         For tone only, here is an observation written for a DIFFERENT person whose
         numbers are not above. Do not repeat it and do not use its numbers:
 
-        "Your daylight time moved with your stair speed. On 04 Mar you spent 92 \
-        minutes outside and climbed at 0.51 m/s, against 11 minutes and 0.38 m/s \
-        on 06 Mar. Time outdoors looks connected to how briskly you took stairs."
+        \(e.example)
 
         Begin.
         """

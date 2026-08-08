@@ -14,6 +14,23 @@ struct NutritionView: View {
 
     private let contexts = ["breakfast", "lunch", "dinner", "snack"]
 
+    /// Today's snapshot, held only so the screen can show what it's reading.
+    @State private var today: HealthSnapshot?
+
+    /// The metabolic and activity signals the suggestion is built from — the
+    /// same metric ids the prompt uses, so this can't drift from what the
+    /// model was actually handed.
+    private var signals: [(label: String, value: String, symbol: String)] {
+        guard let today else { return [] }
+        return ["glucose", "carbs", "sleep", "active_energy", "steps"]
+            .compactMap { Metrics.by(id: $0) }
+            .compactMap { spec in
+                guard let shown = spec.display(today) else { return nil }
+                let unit = spec.unit.isEmpty ? "" : " \(spec.unit)"
+                return (spec.label, shown + unit, spec.symbol)
+            }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -34,6 +51,35 @@ struct NutritionView: View {
                     .padding(.top, 10)
                     .flowIn(2)
 
+                // The claim above is that this reads your data. Showing the
+                // readings it is holding is the cheapest way to make that
+                // checkable, and it's the difference between a suggestion you
+                // trust and one that could have come from anywhere.
+                if !signals.isEmpty {
+                    Plate {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Kicker(text: "Reading right now", size: 9)
+                            ForEach(signals, id: \.label) { s in
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Image(systemName: s.symbol)
+                                        .font(.system(size: 11, weight: .light))
+                                        .foregroundStyle(Theme.amber)
+                                        .frame(width: 14, alignment: .leading)
+                                    Text(s.label)
+                                        .font(Theme.sans(11))
+                                        .foregroundStyle(Theme.mid)
+                                    Spacer()
+                                    Text(s.value)
+                                        .font(Theme.serif(17))
+                                        .foregroundStyle(Theme.ink)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 20)
+                    .flowIn(3)
+                }
+
                 PillPicker(
                     values: contexts,
                     selection: $context,
@@ -42,7 +88,7 @@ struct NutritionView: View {
                     padding: 12
                 ) { $0 }
                     .padding(.top, 22)
-                    .flowIn(3)
+                    .flowIn(4)
 
                 Button {
                     Task { await generate() }
@@ -107,14 +153,25 @@ struct NutritionView: View {
 
                 Spacer(minLength: 40)
             }
+            // A suggestion arriving pushes the history down the page; it
+            // should slide rather than jump.
+            .animation(Theme.Motion.flow, value: latest)
+            .animation(Theme.Motion.flow, value: status)
+            .animation(Theme.Motion.flow, value: signals.count)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
+        .task { await loadSignals() }
         .task { await loadHistory() }
     }
 
     private func loadHistory() async {
         history = (try? await InsightsClient().mealHistory()) ?? []
+    }
+
+    private func loadSignals() async {
+        try? await health.requestAuthorization()
+        today = try? await health.fetchTodaySnapshot()
     }
 
     private func generate() async {
@@ -144,7 +201,7 @@ struct NutritionView: View {
 /// Expert reports — the personas the analyze route already knows how to be.
 struct ExpertsView: View {
     @EnvironmentObject var health: HealthKitManager
-    @State private var expert = "general"
+    @State private var expert = InsightPrompts.experts[0].key
     @State private var period = "daily"
     @State private var reports: [InsightsClient.Report] = []
     @State private var status = ""
@@ -153,15 +210,10 @@ struct ExpertsView: View {
     /// session. Persisting them is a separate job from generating them.
     @State private var localReport = ""
 
-    /// Mirrors EXPERTS in api/well-being/analyze — each has its own persona
-    /// and its own allowed findings, so the reports genuinely differ.
-    private let experts: [(key: String, label: String)] = [
-        ("general", "Health architect"),
-        ("endocrinologist", "Endocrinologist"),
-        ("nutritionist", "Nutritionist"),
-        ("strength_coach", "Strength coach"),
-        ("data_scientist", "Data scientist"),
-    ]
+    /// One list, in InsightPrompts, shared by the screen and by the on-device
+    /// prompts. It was duplicated here, which is how the retired "Health
+    /// architect" survived in the picker after the server stopped writing it.
+    private var experts: [InsightPrompts.Expert] { InsightPrompts.experts }
 
     var body: some View {
         ScrollView {
@@ -326,7 +378,9 @@ struct ExpertsView: View {
         }
         let engine = ModelChoice.isOnDevice
             ? "on this iPhone"
-            : "by \(ModelChoice.provider)"
+            // The model name is the useful half — "by claude-sonnet-4-6" tells
+            // you what wrote it, where "by anthropic" tells you who to invoice.
+            : "by \(ModelChoice.model.isEmpty ? ModelChoice.provider : ModelChoice.model)"
         return "Reads \(window) of your telemetry as a \(expertLabel.lowercased()), written \(engine)."
     }
 
@@ -349,7 +403,7 @@ struct ExpertsView: View {
             do {
                 let snaps = try await health.fetchHistoricalSnapshots(days: daysForPeriod)
                 // Refuse before asking rather than let the model fill the gap.
-                guard InsightPrompts.canReport(snapshots: snaps) else {
+                guard InsightPrompts.canReport(snapshots: snaps, expert: expert) else {
                     throw OnDeviceInsights.OnDeviceError.notEnoughData
                 }
                 localReport = try await OnDeviceInsights.generate(

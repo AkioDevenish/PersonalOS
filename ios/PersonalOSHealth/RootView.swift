@@ -121,23 +121,44 @@ enum Tab: CaseIterable {
     var index: Int { Tab.allCases.firstIndex(of: self) ?? 0 }
 }
 
+/// Everywhere you can go from a tab's root.
+///
+/// The pushes used to be view-based — `NavigationLink { TrendsView() }` — which
+/// works until something other than a back button needs to move you. A stack
+/// driven by a path can be emptied from anywhere, which is what makes tapping
+/// the tab you're already on take you home.
+enum Route: Hashable {
+    case briefing, history, nutrition, specialists, paywall
+}
+
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
     @State private var tab: Tab = .health
     /// Which way the last tap moved, so the screens drift the way your thumb
     /// went rather than always the same way.
     @State private var forward = true
+    /// One stack serves both tabs, so it empties when you change tab. Left
+    /// alone, tapping Settings while three screens deep into Health left you
+    /// looking at the specialist you were reading, under the wrong tab.
+    @State private var path: [Route] = []
     @Namespace private var mark
 
     var body: some View {
         VStack(spacing: 0) {
-            // Each pillar keeps its own stack, so drilling into a specialist
-            // and switching tabs doesn't unwind where you were.
-            NavigationStack {
+            NavigationStack(path: $path) {
                 Group {
                     switch tab {
                     case .health: HealthView()
                     case .settings: ConnectionsView()
+                    }
+                }
+                .navigationDestination(for: Route.self) { route in
+                    switch route {
+                    case .briefing:     BriefingView()
+                    case .history:      TrendsView()
+                    case .nutrition:    NutritionView()
+                    case .specialists:  ExpertsView()
+                    case .paywall:      PaywallView()
                     }
                 }
                 // The identity changes with the tab, which is what lets one
@@ -201,9 +222,20 @@ struct RootView: View {
     }
 
     private func select(_ t: Tab) {
-        guard t != tab else { return }
+        // Tapping the tab you are already on means "take me back" — the
+        // gesture every iOS app has, and the only way out of a drill-down
+        // that doesn't involve reaching for the top-left corner.
+        guard t != tab else {
+            guard !path.isEmpty else { return }
+            Haptics.tap()
+            withAnimation(Theme.Motion.flow) { path.removeAll() }
+            return
+        }
         Haptics.select()
         forward = t.index > tab.index
-        withAnimation(Theme.Motion.flow) { tab = t }
+        withAnimation(Theme.Motion.flow) {
+            path.removeAll()
+            tab = t
+        }
     }
 }

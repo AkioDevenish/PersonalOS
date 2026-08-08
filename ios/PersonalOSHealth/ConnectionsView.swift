@@ -89,7 +89,7 @@ struct ConnectionsView: View {
                     .padding(.top, 32)
                     .flowIn(3)
 
-                NavigationLink { PaywallView() } label: {
+                NavigationLink(value: Route.paywall) {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(planTitle)

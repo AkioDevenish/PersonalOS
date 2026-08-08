@@ -42,8 +42,17 @@ export const PROVIDERS: ProviderSpec[] = [
      * served rather than "unknown provider".
      */
     id: "apple",
-    label: "Apple Intelligence",
-    aka: "on this iPhone",
+    /**
+     * Named for the phone, not for Apple. Sitting in a list beside Anthropic
+     * and OpenAI, "Apple Intelligence" reads as a ninth vendor you could pick
+     * on any device — which invites the fair question of what the equivalent
+     * is on an Android phone. There isn't one to pick: this entry is whatever
+     * on-device engine the hardware in your hand provides, and on an iPhone
+     * that is Apple Intelligence. The label says the device; the subtitle says
+     * which engine that turns out to be.
+     */
+    label: "This iPhone",
+    aka: "Apple Intelligence",
     dialect: "device",
     baseURL: "",
     needsKey: false,

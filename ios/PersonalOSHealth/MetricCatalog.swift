@@ -20,6 +20,11 @@ struct MetricSpec: Identifiable, Hashable {
     let unit: String
     /// Decimal places when shown. Steps want none, walking speed wants two.
     let precision: Int
+    /// Whether the number is a total that accumulates over a day (steps,
+    /// energy) rather than a level that is true at a moment (heart rate,
+    /// walking speed). A total reads as a bar and a level reads as a line, and
+    /// getting that backwards makes a chart lie about what it is showing.
+    var cumulative: Bool = false
     /// SF Symbol for the tile. Kept here rather than in the view so a metric
     /// stays one entry — the grid, the charts and the picker all read from it.
     let symbol: String
@@ -53,12 +58,12 @@ enum Metrics {
 
     static let all: [MetricSpec] = [
         // — Physical activity —
-        .init(id: "steps", label: "Steps", group: .activity, unit: "", precision: 0, symbol: "figure.walk") { $0.steps },
-        .init(id: "distance", label: "Distance", group: .activity, unit: "km", precision: 2, symbol: "location") { $0.distanceKm },
-        .init(id: "flights", label: "Flights", group: .activity, unit: "", precision: 0, symbol: "figure.stairs") { $0.flightsClimbed },
-        .init(id: "active_energy", label: "Active energy", group: .activity, unit: "kcal", precision: 0, symbol: "flame") { $0.activeEnergyBurned },
-        .init(id: "basal_energy", label: "Basal energy", group: .activity, unit: "kcal", precision: 0, symbol: "bolt") { $0.basalEnergyBurned },
-        .init(id: "daylight", label: "Daylight", group: .activity, unit: "min", precision: 0, symbol: "sun.max") { $0.timeInDaylight },
+        .init(id: "steps", label: "Steps", group: .activity, unit: "", precision: 0, cumulative: true, symbol: "figure.walk") { $0.steps },
+        .init(id: "distance", label: "Distance", group: .activity, unit: "km", precision: 2, cumulative: true, symbol: "location") { $0.distanceKm },
+        .init(id: "flights", label: "Flights", group: .activity, unit: "", precision: 0, cumulative: true, symbol: "figure.stairs") { $0.flightsClimbed },
+        .init(id: "active_energy", label: "Active energy", group: .activity, unit: "kcal", precision: 0, cumulative: true, symbol: "flame") { $0.activeEnergyBurned },
+        .init(id: "basal_energy", label: "Basal energy", group: .activity, unit: "kcal", precision: 0, cumulative: true, symbol: "bolt") { $0.basalEnergyBurned },
+        .init(id: "daylight", label: "Daylight", group: .activity, unit: "min", precision: 0, cumulative: true, symbol: "sun.max") { $0.timeInDaylight },
 
         // — Mobility & gait —
         .init(id: "walking_speed", label: "Walking speed", group: .gait, unit: "km/h", precision: 2, symbol: "speedometer") { $0.walkingSpeedKmh },
@@ -71,13 +76,13 @@ enum Metrics {
         // — Recovery & environment —
         .init(id: "sleep", label: "Sleep", group: .recovery, unit: "hrs", precision: 1, symbol: "moon.stars", value: sleep),
         .init(id: "resting_hr", label: "Resting HR", group: .recovery, unit: "bpm", precision: 0, symbol: "heart") { $0.restingHeartRate },
-        .init(id: "mindful", label: "Mindfulness", group: .recovery, unit: "min", precision: 0, symbol: "brain.head.profile") { $0.mindfulSessionMins },
+        .init(id: "mindful", label: "Mindfulness", group: .recovery, unit: "min", precision: 0, cumulative: true, symbol: "brain.head.profile") { $0.mindfulSessionMins },
         .init(id: "audio", label: "Audio exposure", group: .recovery, unit: "dB", precision: 0, symbol: "ear") { $0.headphoneAudioExposure },
 
         // — Metabolic —
         .init(id: "glucose", label: "Blood glucose", group: .metabolic, unit: "mg/dL", precision: 0, symbol: "drop") { $0.avgBloodGlucoseMgdl },
-        .init(id: "carbs", label: "Carbohydrates", group: .metabolic, unit: "g", precision: 0, symbol: "fork.knife") { $0.dietaryCarbohydratesG },
-        .init(id: "insulin", label: "Insulin", group: .metabolic, unit: "IU", precision: 1, symbol: "syringe") { $0.insulinDeliveryIu },
+        .init(id: "carbs", label: "Carbohydrates", group: .metabolic, unit: "g", precision: 0, cumulative: true, symbol: "fork.knife") { $0.dietaryCarbohydratesG },
+        .init(id: "insulin", label: "Insulin", group: .metabolic, unit: "IU", precision: 1, cumulative: true, symbol: "syringe") { $0.insulinDeliveryIu },
     ]
 
     static func inGroup(_ g: MetricSpec.Group) -> [MetricSpec] {

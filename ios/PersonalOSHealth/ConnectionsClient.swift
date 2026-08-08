@@ -23,6 +23,13 @@ final class ConnectionsClient: NSObject {
     struct Connection: Decodable, Identifiable, Hashable {
         let key: String
         let label: String
+        /// cloud | device. A device provider is one whose data arrives from an
+        /// app on a phone rather than over OAuth — Apple Health here, Health
+        /// Connect and Samsung Health on Android. The registry is shared with
+        /// the web, so this list arrives holding all three.
+        let kind: String?
+        /// device providers only: which phone has to be doing the pushing.
+        let platform: String?
         let status: String            // connected | pending | disconnected
         let last_sync_at: Double?
         let last_error: String?
@@ -44,9 +51,19 @@ final class ConnectionsClient: NSObject {
         let error: String?
     }
 
+    /// The providers this phone can actually offer to link.
+    ///
+    /// The route returns every connectable provider the product knows about,
+    /// because the same registry serves the web. Two kinds of row in that list
+    /// are wrong on an iPhone: Apple Health, which the app draws itself from
+    /// what HealthKit reports rather than from a server row — it appeared
+    /// twice otherwise — and the Android device providers, which no amount of
+    /// tapping here can connect. Filtered at the transport so every caller
+    /// sees the same honest list.
     func list() async throws -> [Connection] {
         let data = try await send(try await request("/api/health/connections", method: "GET"))
-        return try JSONDecoder().decode(ListResponse.self, from: data).connections
+        let all = try JSONDecoder().decode(ListResponse.self, from: data).connections
+        return all.filter { $0.kind != "device" }
     }
 
     /// Opens the provider's login, returns once the callback lands.

@@ -8,18 +8,66 @@ import {
 import { getRequestActor, type RequestActor } from '@/lib/request-actor'
 import { generateForUser, requireCaller, type Caller } from '@/lib/ai/user-model'
 const PERIODS = new Set(['daily', 'weekly', 'monthly', 'hourly'])
-const EXPERTS = ['general', 'data_scientist', 'endocrinologist', 'nutritionist', 'strength_coach'] as const
+/**
+ * 'general' — the "Health architect" — is gone. It was a persona in name only:
+ * it was allowed every tag in the dictionary, so its report was the union of
+ * the other four and read as none of them. A specialist list whose first entry
+ * is "all of the above" also makes the other four look like filters on one
+ * report rather than four different readings, which is what they are.
+ *
+ * Reports already stored under 'general' still render; nothing new is written
+ * under it.
+ */
+const EXPERTS = ['data_scientist', 'endocrinologist', 'nutritionist', 'strength_coach'] as const
 
 function sqlString(value: string) {
   return `'${value.replaceAll("'", "''")}'`
 }
 
 const EXPERT_PERSONAS: Record<string, string> = {
-  general: 'Senior Principal Health Architect',
+  general: 'Senior Principal Health Architect',   // retired; kept so old rows still name themselves
   data_scientist: 'Senior Data Scientist',
   endocrinologist: 'Senior Endocrinologist',
   nutritionist: 'Senior Nutritionist',
   strength_coach: 'Senior Strength Coach',
+}
+
+/**
+ * What each specialist actually looks at, and what a reading from them is.
+ *
+ * Naming the persona in the first line and then handing every one of them the
+ * same request produced four reports that differed only in their tag. A job
+ * title is not a lens: an endocrinologist and a strength coach reading the
+ * same fortnight should disagree about which numbers matter, and should be
+ * asked different questions to get there.
+ */
+const EXPERT_LENS: Record<string, string> = {
+  data_scientist: `
+Read this as a data scientist. Work on the relationships between series, not on
+any single reading: lead and lag, dispersion, days that break the pattern.
+Quantify every claim — how much, over how many days, with what spread. Name the
+confounder that would explain the same shape, and say which of the two the data
+cannot yet separate.`,
+  endocrinologist: `
+Read this as an endocrinologist. Work on the metabolic and circadian picture:
+glucose level and variability, carbohydrate timing, sleep timing and duration,
+resting heart rate as a load signal. Regularity of timing is the finding here as
+often as the amounts are. Never name a condition and never mention medication —
+describe the pattern and what would move it.`,
+  nutritionist: `
+Read this as a nutritionist. Work forward from intake to output: carbohydrates
+and glucose against energy, sleep and next-day activity. Say what the eating
+pattern appears to be doing, and give changes as ordinary food and timing a
+person can act on this week — never supplements, never a named diet.`,
+  strength_coach: `
+Read this as a strength coach. Work on load and readiness: activity and energy
+against sleep, resting heart rate and the gait measures — walking speed,
+steadiness, asymmetry, double support, stair speed. Say plainly whether this is
+a week to push or a week to back off, and what the next session should be.`,
+}
+
+function lensFor(expert?: string) {
+  return (expert && EXPERT_LENS[expert]) || EXPERT_LENS.data_scientist
 }
 
 const EXPERT_TAGS: Record<string, string[]> = {
@@ -40,11 +88,23 @@ const EXPERT_TAGS: Record<string, string[]> = {
     '[SENSOR OUTLIER]: Hardware data anomaly',
     '[ENVIRONMENTAL LOAD]: Audio/daylight impact'
   ],
+  /**
+   * These two had a single allowed tag each, and the prompt asks for 3-5
+   * patterns — so every line of an endocrinologist's report opened with the
+   * same four words, which is what a form looks like rather than a reading.
+   * Each specialist now has a handful of tags inside their own domain.
+   */
   endocrinologist: [
-    '[METABOLIC PATTERN]: Non-diagnostic glucose, nutrition, or energy pattern'
+    '[METABOLIC PATTERN]: Non-diagnostic glucose, nutrition, or energy pattern',
+    '[CIRCADIAN PATTERN]: Sleep and meal timing, and how regular either is',
+    '[RECOVERY SIGNAL]: Strain, sleep, or rest signal worth watching',
+    '[OPTIMIZATION OPTION]: Non-medical routine adjustment to test'
   ],
   nutritionist: [
-    '[NUTRITION PATTERN]: Nutrition-adjacent pattern correlated with output'
+    '[NUTRITION PATTERN]: Nutrition-adjacent pattern correlated with output',
+    '[METABOLIC PATTERN]: Non-diagnostic glucose, nutrition, or energy pattern',
+    '[BEHAVIORAL PATTERN]: Meaningful change in behavior or routine',
+    '[OPTIMIZATION OPTION]: Non-medical routine adjustment to test'
   ],
   strength_coach: [
     '[MOVEMENT TREND]: Asymmetry, steadiness, mobility, or movement change',
@@ -58,8 +118,9 @@ function buildPrompt(period: string, summary: string, expert?: string, targetLab
   const allowedTags = expert && EXPERT_TAGS[expert] ? EXPERT_TAGS[expert].join('\n') : Object.values(EXPERT_TAGS).flat().join('\n')
 
   return `
-You are a ${persona} analyzing personal wellness telemetry. Extract high-signal patterns without making diagnoses or treatment claims.
+You are a ${persona} reading one person's health telemetry. Extract high-signal patterns without making diagnoses or treatment claims.
 Do NOT use conversational language. No greetings. No encouragement. No markdown headers.
+${lensFor(expert)}
 
 Analyze the following health telemetry for the ${targetLabel || period}:
 ${summary}
@@ -69,8 +130,8 @@ ${allowedTags}
 
 Format exactly like this for each anomaly:
 [TAG_NAME]
-Write a fluid paragraph explaining the observation and your data-driven hypothesis.
-Then, provide a simple bulleted list of actions or key takeaways.
+Write a fluid paragraph explaining the observation and your data-driven hypothesis, in the terms a ${persona} would use.
+Then, provide a simple bulleted list of actions or key takeaways, each one something a ${persona} is the right person to advise on.
 `
 }
 
@@ -306,8 +367,9 @@ function buildHourlyPrompt(summaryJson: string, expert?: string) {
   const allowedTags = expert && EXPERT_TAGS[expert] ? EXPERT_TAGS[expert].join('\n') : Object.values(EXPERT_TAGS).flat().join('\n')
 
   return `
-You are a ${persona} analyzing personal wellness telemetry. Extract high-signal patterns without making diagnoses or treatment claims.
+You are a ${persona} reading one person's health telemetry. Extract high-signal patterns without making diagnoses or treatment claims.
 Do NOT use conversational language. No greetings. No encouragement. No markdown headers.
+${lensFor(expert)}
 
 The current time is: ${currentTime}.
 Analyze the following intraday health telemetry snapshots from the last 30 hours:

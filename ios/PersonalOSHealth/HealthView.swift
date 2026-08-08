@@ -37,9 +37,7 @@ struct HealthView: View {
                     .padding(.top, 8)
                     .flowIn(0)
 
-                NavigationLink {
-                    BriefingView(snapshot: snapshot)
-                } label: {
+                NavigationLink(value: Route.briefing) {
                     Plate {
                         VStack(alignment: .leading, spacing: 10) {
                             Kicker(text: "Morning briefing", size: 9.5)
@@ -69,13 +67,11 @@ struct HealthView: View {
                 // edges to do it.
                 VStack(spacing: 0) {
                     Rule()
-                    consultRow("Trends", "Steps, sleep, heart rate over time", 3) { TrendsView() }
+                    consultRow("History", "Any measurement over time — or two against each other", 3, .history)
                     Rule()
-                    consultRow("Correlations", "Does one metric follow another?", 4) { CorrelationView() }
+                    consultRow("Nutrition", "What to eat next, from your own readings", 4, .nutrition)
                     Rule()
-                    consultRow("Nutrition", "What to eat next", 5) { NutritionView() }
-                    Rule()
-                    consultRow("Specialists", "Read by an expert", 6) { ExpertsView() }
+                    consultRow("Specialists", "Read by an expert", 5, .specialists)
                     Rule()
                 }
                 .padding(.top, 16)
@@ -125,13 +121,13 @@ struct HealthView: View {
     /// The rows arrive on the same stagger as the metric grid — the screen
     /// writes itself down the page — and press in under the finger, which on a
     /// list with no fill is the only sign a tap landed before the push begins.
-    private func consultRow<D: View>(
+    private func consultRow(
         _ title: String,
         _ subtitle: String,
         _ index: Int,
-        @ViewBuilder destination: @escaping () -> D
+        _ route: Route
     ) -> some View {
-        NavigationLink { destination() } label: {
+        NavigationLink(value: route) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
