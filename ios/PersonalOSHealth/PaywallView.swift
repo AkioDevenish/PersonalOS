@@ -61,10 +61,8 @@ struct PaywallView: View {
                 if !store.entitlement.isSubscribed {
                     SectionRule(text: "Subscription").padding(.top, 30)
                     VStack(spacing: 0) {
-                        Rule()
                         ForEach(store.subscriptions(), id: \.id) { p in
                             purchaseRow(p, note: p.subscription.map(periodLabel) ?? "")
-                            Rule()
                         }
                     }
                     .padding(.top, 14)
@@ -78,10 +76,8 @@ struct PaywallView: View {
                     .padding(.top, 10)
 
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(store.creditPacks(), id: \.id) { p in
                         purchaseRow(p, note: "one-off")
-                        Rule()
                     }
                 }
                 .padding(.top, 14)

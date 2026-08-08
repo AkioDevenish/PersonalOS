@@ -66,13 +66,9 @@ struct HealthView: View {
                 // and a rule between rows says "list" without drawing four more
                 // edges to do it.
                 VStack(spacing: 0) {
-                    Rule()
                     consultRow("History", "Any measurement over time — or two against each other", 3, .history)
-                    Rule()
                     consultRow("Nutrition", "What to eat next, from your own readings", 4, .nutrition)
-                    Rule()
                     consultRow("Specialists", "Read by an expert", 5, .specialists)
-                    Rule()
                 }
                 .padding(.top, 16)
 
@@ -109,7 +105,7 @@ struct HealthView: View {
     private func grid(for group: MetricSpec.Group) -> some View {
         let columns = [GridItem(.flexible(), spacing: 18), GridItem(.flexible(), spacing: 18)]
         let specs = Metrics.inGroup(group).filter { snapshot.flatMap($0.value) != nil }
-        return LazyVGrid(columns: columns, spacing: 20) {
+        return LazyVGrid(columns: columns, spacing: 26) {
             ForEach(Array(specs.enumerated()), id: \.element.id) { index, m in
                 MetricTile(spec: m, snapshot: snapshot, index: index, appeared: appeared)
             }

@@ -196,6 +196,81 @@ struct PillPicker<Value: Hashable>: View {
     }
 }
 
+// MARK: - Working
+
+/// The app writing something.
+///
+/// A reading takes a minute on the phone and longer through the Mac, and the
+/// only sign that anything was happening was a button whose label had changed
+/// to "Consulting…". A disabled button and a still screen is also what a hung
+/// request looks like, so there was no way to tell working from broken.
+///
+/// This is the shape of the thing being written — lines of type of the length
+/// they will be — with a slow warm sweep travelling down them. It sits exactly
+/// where the report will appear, so the finished text replaces it in place
+/// rather than arriving somewhere else on the page.
+struct Composing: View {
+    var lines: Int = 5
+
+    /// Ragged, like a paragraph. Every line the same length reads as a loading
+    /// bar; a short line among them reads as prose.
+    private let widths: [CGFloat] = [1, 0.96, 0.99, 0.92, 0.58, 0.86, 0.74]
+    private let barHeight: CGFloat = 11
+    private let gap: CGFloat = 13
+
+    @State private var sweep: CGFloat = -220
+
+    /// Measured once, and the bars laid out from that width.
+    ///
+    /// The first version sized each bar with `containerRelativeFrame` and then
+    /// used the same stack as its own mask — asking the layout for a width that
+    /// depends on the thing being measured. The screen came up blank. One
+    /// GeometryReader, one width, explicit frames: nothing here asks a question
+    /// whose answer depends on the answer.
+    var body: some View {
+        GeometryReader { geo in
+            bars(width: geo.size.width)
+                .overlay(alignment: .leading) {
+                    if !Theme.Motion.reduced {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: Theme.amber.opacity(0.45), location: 0.5),
+                                .init(color: .clear, location: 1),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 190)
+                        .offset(x: sweep)
+                    }
+                }
+                // Masked by the same shape it decorates, so the sweep only ever
+                // paints on the lines and never on the linen behind them.
+                .mask(bars(width: geo.size.width))
+                .onAppear {
+                    guard !Theme.Motion.reduced else { return }
+                    withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                        sweep = geo.size.width + 200
+                    }
+                }
+        }
+        .frame(height: CGFloat(lines) * barHeight + CGFloat(max(lines - 1, 0)) * gap)
+        .accessibilityLabel("Writing your reading")
+    }
+
+    private func bars(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: gap) {
+            ForEach(0..<lines, id: \.self) { i in
+                Capsule()
+                    .fill(Theme.ink.opacity(0.09))
+                    .frame(width: max(width * widths[i % widths.count], 1), height: barHeight)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// The ❧ that marks the chosen row in a ruled list.
 ///
 /// Scales in from nothing on the bouncy spring rather than appearing, so the

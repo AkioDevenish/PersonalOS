@@ -43,9 +43,11 @@ struct MetricTile: View {
                         .foregroundStyle(Theme.dust)
                 }
             }
-
-            Rule()
         }
+        // The hairline under each figure used to stretch the tile across its
+        // grid column; without it the content shrank to its own width and got
+        // centred, so a column of figures no longer lined up with anything.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
         .animation(Theme.Motion.flow.delay(delay), value: appeared)

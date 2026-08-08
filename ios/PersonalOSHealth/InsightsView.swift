@@ -117,7 +117,13 @@ struct NutritionView: View {
                         .padding(.top, 14)
                 }
 
-                if !latest.isEmpty {
+                if isBusy {
+                    Composing(lines: 5)
+                        .padding(.top, 22)
+                        .transition(.opacity)
+                }
+
+                if !latest.isEmpty && !isBusy {
                     Plate {
                         Text(latest)
                             .font(Theme.serifBody(17))
@@ -147,7 +153,6 @@ struct NutritionView: View {
                             }
                         }
                         .padding(.vertical, 14)
-                        Rule()
                     }
                 }
 
@@ -156,6 +161,7 @@ struct NutritionView: View {
             // A suggestion arriving pushes the history down the page; it
             // should slide rather than jump.
             .animation(Theme.Motion.flow, value: latest)
+            .animation(Theme.Motion.flow, value: isBusy)
             .animation(Theme.Motion.flow, value: status)
             .animation(Theme.Motion.flow, value: signals.count)
             .padding(.horizontal, 24)
@@ -241,7 +247,6 @@ struct ExpertsView: View {
                     .flowIn(2)
 
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(experts, id: \.key) { e in
                         Button {
                             guard expert != e.key else { return }
@@ -262,7 +267,6 @@ struct ExpertsView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.pressRow)
-                        Rule()
                     }
                 }
                 .padding(.top, 22)
@@ -285,7 +289,9 @@ struct ExpertsView: View {
                 Button {
                     Task { await generate() }
                 } label: {
-                    Text(isBusy ? "Consulting…" : "Ask the \(expertLabel.lowercased()) for a \(period) reading")
+                    Text(isBusy
+                         ? "Consulting…"
+                         : "Ask the \(expertLabel.lowercased()) for \(indefiniteArticle(for: period)) \(period) reading")
                         .font(Theme.sans(13, medium: true))
                         .foregroundStyle(Theme.warm)
                         .frame(maxWidth: .infinity)
@@ -316,7 +322,13 @@ struct ExpertsView: View {
                         .padding(.top, 14)
                 }
 
-                if !localReport.isEmpty {
+                if isBusy {
+                    Composing(lines: 6)
+                        .padding(.top, 22)
+                        .transition(.opacity)
+                }
+
+                if !localReport.isEmpty && !isBusy {
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
                             Kicker(text: "Written on this iPhone", size: 9)
@@ -329,7 +341,7 @@ struct ExpertsView: View {
                     .padding(.top, 16)
                 }
 
-                ForEach(reports) { r in
+                ForEach(isBusy ? [] : reports) { r in
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
                             if let c = r.created_at { Kicker(text: c.prefix(16).description, size: 9) }
@@ -351,6 +363,11 @@ struct ExpertsView: View {
 
                 Spacer(minLength: 40)
             }
+            // The writing state and the finished reading swap in place, so the
+            // page settles rather than jumping when a report lands.
+            .animation(Theme.Motion.flow, value: isBusy)
+            .animation(Theme.Motion.flow, value: status)
+            .animation(Theme.Motion.flow, value: localReport)
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
@@ -391,7 +408,7 @@ struct ExpertsView: View {
             // The model name is the useful half — "by claude-sonnet-4-6" tells
             // you what wrote it, where "by anthropic" tells you who to invoice.
             : "by \(ModelChoice.model.isEmpty ? ModelChoice.provider : ModelChoice.model)"
-        return "Reads \(window) of your telemetry as a \(expertLabel.lowercased()), written \(engine)."
+        return "Reads \(window) of your telemetry as \(indefiniteArticle(for: expertLabel)) \(expertLabel.lowercased()), written \(engine)."
     }
 
     /// How many days of history each period should hand the model.

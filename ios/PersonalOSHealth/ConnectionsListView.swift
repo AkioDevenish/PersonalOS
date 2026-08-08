@@ -70,7 +70,6 @@ struct ConnectionsListView: View {
                 SectionRule(text: "Sources").padding(.top, 30)
 
                 VStack(spacing: 0) {
-                    Rule()
                     // Apple Health isn't a link — it's the device you're
                     // holding, and there's nothing to authorise.
                     HStack {
@@ -86,14 +85,12 @@ struct ConnectionsListView: View {
                         Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.sage)
                     }
                     .padding(.vertical, 15)
-                    Rule()
 
                     if loading && wearables.isEmpty {
                         Text("Reading…")
                             .font(Theme.sans(12))
                             .foregroundStyle(Theme.dust)
                             .padding(.vertical, 18)
-                        Rule()
                     }
 
                     ForEach(wearables) { c in
@@ -103,7 +100,6 @@ struct ConnectionsListView: View {
                             row(c)
                         }
                         .buttonStyle(.pressRow)
-                        Rule()
                     }
                 }
                 .padding(.top, 16)

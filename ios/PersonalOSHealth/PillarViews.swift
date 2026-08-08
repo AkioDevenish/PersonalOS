@@ -48,7 +48,6 @@ struct BusinessView: View {
             if let contacts = payload?.contacts, !contacts.isEmpty {
                 SectionRule(text: "Contacts").padding(.top, 30)
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(contacts) { c in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
@@ -68,7 +67,6 @@ struct BusinessView: View {
                             }
                         }
                         .padding(.vertical, 14)
-                        Rule()
                     }
                 }
                 .padding(.top, 16)
@@ -114,7 +112,6 @@ struct CreativeView: View {
             if let posts = payload?.posts, !posts.isEmpty {
                 SectionRule(text: "Recent").padding(.top, 30)
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(posts) { p in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 8) {
@@ -138,7 +135,6 @@ struct CreativeView: View {
                                 .lineLimit(4)
                         }
                         .padding(.vertical, 14)
-                        Rule()
                     }
                 }
                 .padding(.top, 16)
@@ -184,7 +180,6 @@ struct DataView: View {
             if let projects = payload?.projects, !projects.isEmpty {
                 SectionRule(text: "Projects").padding(.top, 28)
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(projects) { p in
                         VStack(alignment: .leading, spacing: 5) {
                             HStack {
@@ -213,7 +208,6 @@ struct DataView: View {
                             }
                         }
                         .padding(.vertical, 14)
-                        Rule()
                     }
                 }
                 .padding(.top, 16)

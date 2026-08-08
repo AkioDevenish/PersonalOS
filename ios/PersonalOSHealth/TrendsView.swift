@@ -94,11 +94,9 @@ struct TrendsView: View {
 
     private var pickers: some View {
         VStack(spacing: 0) {
-            Rule()
             pickerRow(label: "Reading", metric: primary.label, colour: Theme.ink) {
                 picking = .primary
             }
-            Rule()
             pickerRow(
                 label: "Compare with",
                 metric: against?.label ?? "Nothing",
@@ -106,7 +104,6 @@ struct TrendsView: View {
             ) {
                 picking = .against
             }
-            Rule()
         }
     }
 
@@ -404,11 +401,9 @@ struct MetricPicker: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if clearable {
-                        Rule()
                         row(label: "Nothing", unit: "", marked: selected == nil) {
                             onPick(nil)
                         }
-                        Rule()
                     }
 
                     ForEach(MetricSpec.Group.allCases, id: \.self) { g in
@@ -417,7 +412,6 @@ struct MetricPicker: View {
                             row(label: m.label, unit: m.unit, marked: selected?.id == m.id) {
                                 onPick(m)
                             }
-                            Rule()
                         }
                     }
                     Spacer(minLength: 30)

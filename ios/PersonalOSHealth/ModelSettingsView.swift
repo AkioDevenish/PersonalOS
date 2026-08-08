@@ -62,7 +62,6 @@ struct ModelSettingsView: View {
                         .padding(.top, 20)
                 } else {
                     VStack(spacing: 0) {
-                        Rule()
                         ForEach(settings?.providers ?? []) { p in
                             NavigationLink {
                                 ProviderDetailView(
@@ -75,7 +74,6 @@ struct ModelSettingsView: View {
                                 row(p)
                             }
                             .buttonStyle(.pressRow)
-                            Rule()
                         }
                     }
                     .padding(.top, 16)
@@ -192,7 +190,6 @@ private struct ProviderDetailView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding(.vertical, 6)
-                        Rule()
                     }
                     .padding(.top, 16)
 
@@ -250,7 +247,6 @@ private struct ProviderDetailView: View {
                 SectionRule(text: "Models").padding(.top, 32)
 
                 VStack(spacing: 0) {
-                    Rule()
                     ForEach(provider.models, id: \.self) { m in
                         Button {
                             guard !isCurrent(m) else { return }
@@ -272,7 +268,6 @@ private struct ProviderDetailView: View {
                         .buttonStyle(.pressRow)
                         .disabled(!hasKey || isBusy)
                         .opacity(hasKey ? 1 : 0.4)
-                        Rule()
                     }
                 }
                 .padding(.top, 16)
