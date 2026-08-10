@@ -324,7 +324,7 @@ struct TypedText: View {
 
     var body: some View {
         Group {
-            if typing && !Theme.Motion.reduced {
+            if washing {
                 // Redrawn each frame only while the wash is moving; once the
                 // text has landed this collapses to plain, static type.
                 TimelineView(.animation) { context in
@@ -337,21 +337,40 @@ struct TypedText: View {
         .task(id: signature) { await write() }
     }
 
+    private var washing: Bool { typing && !Theme.Motion.reduced }
+
     private var stack: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(runs.enumerated()), id: \.offset) { index, run in
                 let start = offset(before: index)
                 let visible = min(max(revealed - start, 0), run.text.count)
                 if visible > 0 {
-                    Text(String(run.rendered.prefix(visible)))
-                        .font(run.font)
-                        .tracking(run.tracking)
-                        .lineSpacing(run.lineSpacing)
-                        .foregroundStyle(typing && !Theme.Motion.reduced ? Color.clear : run.color)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, run.topPadding)
+                    line(run, visible: visible)
                 }
             }
+        }
+    }
+
+    /// While the wash is running the runs set no colour of their own.
+    ///
+    /// They used to set `.clear` and rely on the gradient applied to the whole
+    /// stack to paint them — but a foreground style set on the text wins over
+    /// one set on its container, so the type was genuinely transparent for the
+    /// whole write and then appeared, finished, in ink. The gradient only
+    /// reaches the text if nothing closer to the text has an opinion.
+    @ViewBuilder
+    private func line(_ run: TypedRun, visible: Int) -> some View {
+        let body = Text(String(run.rendered.prefix(visible)))
+            .font(run.font)
+            .tracking(run.tracking)
+            .lineSpacing(run.lineSpacing)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, run.topPadding)
+
+        if washing {
+            body
+        } else {
+            body.foregroundStyle(run.color)
         }
     }
 

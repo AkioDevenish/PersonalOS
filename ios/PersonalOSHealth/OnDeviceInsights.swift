@@ -377,7 +377,12 @@ enum InsightPrompts {
     /// cannot buy the ingredients for is not a suggestion. Named twice on
     /// purpose: once as the place, once as the constraint, because a 3B model
     /// will drop a single mention by the third meal.
-    static func meals(snapshots: [HealthSnapshot], context: String, country: String) -> String {
+    static func meals(
+        snapshots: [HealthSnapshot],
+        context: String,
+        country: String,
+        dishes: [String]
+    ) -> String {
         let recent = snapshots.suffix(7)
         let lines = recent.compactMap { snap -> String? in
             let keys = ["glucose", "carbs", "sleep", "active_energy", "steps"]
@@ -389,14 +394,31 @@ enum InsightPrompts {
             return "· " + parts.joined(separator: ", ")
         }
 
-        let place = country == "Anywhere" || country.isEmpty
-            ? ""
-            : """
+        var place = ""
+        if !(country == "Anywhere" || country.isEmpty) {
+            place = """
 
 
-        I cook and shop in \(country). Suggest dishes eaten there, using \
-        ingredients sold there. Do not suggest anything I would have to import.
-        """
+            I cook and shop in \(country). Suggest dishes eaten there, using \
+            ingredients sold there. Do not suggest anything I would have to import.
+            """
+        }
+
+        // The list is the whole point. Asked to recall a country's everyday
+        // food, a small model invents names that sound right; handed the names,
+        // it only has to choose. Where people have told us what they eat, that
+        // is what it chooses from.
+        if !dishes.isEmpty {
+            place += """
+
+
+            These are dishes people actually eat in \(country):
+            \(dishes.map { "· \($0)" }.joined(separator: "\n"))
+
+            Pick from that list. Use the name exactly as written above. Only go \
+            outside it if nothing on it suits the readings, and say so if you do.
+            """
+        }
 
         return """
         Recent metabolic and activity signals:
@@ -412,6 +434,30 @@ enum InsightPrompts {
         [NUTRITION_INSIGHT] <a single sentence about the current pattern>
         """
     }
+
+    /// Asks for a country's everyday food, once, so the first person to pick a
+    /// country isn't handed an empty vocabulary.
+    ///
+    /// Deliberately asks for ordinary and cheap rather than notable: the answer
+    /// wanted is what people eat on a Tuesday, not what a tourist board would
+    /// put on a poster.
+    static func starterDishes(country: String) -> String {
+        """
+        Name 20 dishes ordinarily eaten at home in \(country).
+
+        Everyday food, not restaurant or festival food. Breakfast, lunch, \
+        dinner and street food are all fine. Use the name people there use for \
+        it, in the local spelling.
+
+        One dish a line. No numbering, no description, no other words.
+        """
+    }
+
+    static let starterInstructions = """
+    You list food. You answer with names only, one a line, and nothing else.
+    If you are unsure a dish is genuinely eaten in that country, leave it out —
+    a short honest list is worth more than a long invented one.
+    """
 
     static let mealInstructions = """
     You are a Senior Nutritionist suggesting meals from someone's health measurements.

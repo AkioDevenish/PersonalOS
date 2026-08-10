@@ -226,6 +226,31 @@ export default defineSchema({
    * Which platform and model this user's insights should run on. One row per
    * user; absent means fall back to whatever the server has configured.
    */
+  /**
+   * What people in a country actually eat, and who said so.
+   *
+   * One row per person per dish rather than a dish with a counter, because a
+   * counter cannot be audited, cannot be undone, and cannot stop the same
+   * person voting twice. The count is derived by reading the rows.
+   *
+   * Deliberately global: this is the one table in the app that is not scoped
+   * to a single user, because its whole purpose is that ten people saying
+   * "doubles" means more than one person saying it. Nothing here is health
+   * data — it is the name of a dish and the country it belongs to.
+   */
+  cuisine_dishes: defineTable({
+    country: v.string(),        // ISO region code, e.g. "TT"
+    dish: v.string(),           // as typed, for display
+    key: v.string(),            // normalised, for counting: lowercased, trimmed
+    userId: v.string(),         // one vote each; also lets a person take it back
+    /** True for the model-written starter list, which nobody voted for. */
+    seeded: v.optional(v.boolean()),
+    created_at: v.number(),
+  })
+    .index("by_country", ["country"])
+    .index("by_country_key", ["country", "key"])
+    .index("by_country_user", ["country", "userId"]),
+
   ai_preferences: defineTable({
     userId: v.string(),
     provider: v.string(),

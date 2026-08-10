@@ -14,6 +14,7 @@ import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as business from "../business.js";
 import type * as datascience from "../datascience.js";
 import type * as health_connections from "../health/connections.js";
+import type * as health_cuisine from "../health/cuisine.js";
 import type * as health_metrics from "../health/metrics.js";
 import type * as health_providers from "../health/providers.js";
 import type * as health_resolve from "../health/resolve.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   business: typeof business;
   datascience: typeof datascience;
   "health/connections": typeof health_connections;
+  "health/cuisine": typeof health_cuisine;
   "health/metrics": typeof health_metrics;
   "health/providers": typeof health_providers;
   "health/resolve": typeof health_resolve;

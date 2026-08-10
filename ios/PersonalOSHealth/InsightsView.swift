@@ -24,6 +24,12 @@ struct NutritionView: View {
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
     @State private var choosingCountry = false
 
+    /// What people say they eat here. The reason the model stops inventing
+    /// dish names: it chooses from this rather than recalling from nothing.
+    @State private var book = CuisineClient.Book.empty
+    @State private var newDish = ""
+    @State private var seeding = false
+
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
 
@@ -161,6 +167,63 @@ struct NutritionView: View {
                     .padding(.top, 18)
                 }
 
+                if !country.isEmpty {
+                    SectionRule(text: "What people eat here").padding(.top, 34)
+
+                    Text(book.all.isEmpty
+                         ? (seeding
+                            ? "Writing a starter list for \(Cuisine.name(for: country))…"
+                            : "Nothing named yet. Add the first dish and it goes into your suggestions straight away.")
+                         : "Named by people who eat in \(Cuisine.name(for: country)). Once \(book.threshold) people name a dish it goes into everyone's suggestions here — yours count for you immediately.")
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+                        .lineSpacing(3)
+                        .padding(.top, 10)
+
+                    VStack(spacing: 0) {
+                        ForEach(book.all) { d in
+                            Button {
+                                Task { await vote(d.dish) }
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Text(d.dish)
+                                        .font(Theme.serif(18))
+                                        .foregroundStyle(d.mine ? Theme.amber : Theme.ink)
+                                    Spacer()
+                                    Text(voteLine(d))
+                                        .font(Theme.sans(9.5))
+                                        .tracking(1.2)
+                                        .foregroundStyle(Theme.dust)
+                                    if d.mine { SelectionMark(size: 12) }
+                                }
+                                .padding(.vertical, 12)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.pressRow)
+                        }
+                    }
+                    .padding(.top, 6)
+
+                    HStack(spacing: 12) {
+                        TextField("Name a dish", text: $newDish)
+                            .font(Theme.serif(18))
+                            .foregroundStyle(Theme.ink)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .onSubmit { Task { await add() } }
+
+                        Button {
+                            Task { await add() }
+                        } label: {
+                            Kicker(text: "Add", color: Theme.amber, size: 10)
+                        }
+                        .buttonStyle(.press)
+                        .disabled(newDish.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    .padding(.vertical, 14)
+                }
+
                 if !history.isEmpty {
                     SectionRule(text: "Recently suggested").padding(.top, 32)
                     ForEach(history) { r in
@@ -197,6 +260,12 @@ struct NutritionView: View {
         .background(Theme.linen)
         .task { await loadSignals() }
         .task { await loadHistory() }
+        .task { await loadBook() }
+        .onChange(of: country) { _, _ in
+            book = .empty
+            Task { await loadBook() }
+        }
+        .animation(Theme.Motion.flow, value: book.all)
         .sheet(isPresented: $choosingCountry) {
             CountryPicker(code: $country)
         }
@@ -204,6 +273,62 @@ struct NutritionView: View {
 
     private func loadHistory() async {
         history = (try? await InsightsClient().mealHistory()) ?? []
+    }
+
+    /// "NAMED BY 4" — and for a starter-list dish nobody has vouched for yet,
+    /// say so rather than showing a zero, which reads as a rejection.
+    private func voteLine(_ d: CuisineClient.Dish) -> String {
+        if d.votes == 0 { return d.seeded ? "suggested" : "" }
+        return d.votes == 1 ? "named by 1" : "named by \(d.votes)"
+    }
+
+    private func loadBook() async {
+        guard !country.isEmpty else { book = .empty; return }
+        book = (try? await CuisineClient().book(country: country)) ?? .empty
+        await seedIfEmpty()
+    }
+
+    /// Writes a starter list for a country nobody has named anything for.
+    ///
+    /// Only from the on-device model, which is both the default engine and the
+    /// one that most needs the help — a hosted model asked for Trinidadian food
+    /// already knows. The starter list carries no votes, so the first real
+    /// person to disagree with it outranks it by simply saying so.
+    private func seedIfEmpty() async {
+        guard book.all.isEmpty, !country.isEmpty, !seeding else { return }
+        guard ModelChoice.isOnDevice, #available(iOS 26.0, *) else { return }
+        seeding = true
+        defer { seeding = false }
+
+        let name = Cuisine.name(for: country)
+        guard let written = try? await OnDeviceInsights.generate(
+            instructions: InsightPrompts.starterInstructions,
+            prompt: InsightPrompts.starterDishes(country: name),
+            temperature: 0.4
+        ) else { return }
+
+        let dishes = written
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .map { $0.replacingOccurrences(of: "^[-·*\\d.\\s]+", with: "", options: .regularExpression) }
+            .filter { !$0.isEmpty && $0.count <= 60 }
+        guard dishes.count >= 5 else { return }
+
+        try? await CuisineClient().seed(country: country, dishes: dishes)
+        book = (try? await CuisineClient().book(country: country)) ?? .empty
+    }
+
+    private func vote(_ dish: String) async {
+        Haptics.select()
+        try? await CuisineClient().suggest(country: country, dish: dish)
+        book = (try? await CuisineClient().book(country: country)) ?? book
+    }
+
+    private func add() async {
+        let dish = newDish.trimmingCharacters(in: .whitespaces)
+        guard !dish.isEmpty else { return }
+        newDish = ""
+        await vote(dish)
     }
 
     private func loadSignals() async {
@@ -225,14 +350,16 @@ struct NutritionView: View {
                     prompt: InsightPrompts.meals(
                         snapshots: snaps,
                         context: context,
-                        country: Cuisine.name(for: country)
+                        country: Cuisine.name(for: country),
+                        dishes: book.canon
                     ),
                     temperature: 0.8
                 )
             } else {
                 latest = try await InsightsClient().generateMeals(
                     context: context,
-                    country: country.isEmpty ? nil : Cuisine.name(for: country)
+                    country: country.isEmpty ? nil : Cuisine.name(for: country),
+                    dishes: book.canon
                 )
                 await loadHistory()
             }

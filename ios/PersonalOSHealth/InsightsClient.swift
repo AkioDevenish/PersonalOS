@@ -41,9 +41,10 @@ struct InsightsClient {
 
     /// Asks the engine for three new suggestions for the given moment, cooked
     /// where the person actually lives.
-    func generateMeals(context: String, country: String?) async throws -> String {
+    func generateMeals(context: String, country: String?, dishes: [String] = []) async throws -> String {
         var body: [String: Any] = ["mealContext": context, "context": context]
         if let country { body["country"] = country }
+        if !dishes.isEmpty { body["dishes"] = dishes }
         let data = try await post("/api/well-being/nutrition-ai", body: body)
         // The route streams prose; take whatever text field it lands in.
         if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

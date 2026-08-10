@@ -59,6 +59,19 @@ export async function POST(request: Request) {
      * the prompt reads as English.
      */
     const country = typeof body.country === 'string' ? body.country.trim() : ''
+    /**
+     * The dishes people who eat there have actually named.
+     *
+     * Recalling a country's everyday food is the hard version of the task, and
+     * the one models get wrong by inventing plausible-sounding names. Choosing
+     * from a list is the easy version — and this list is built by the people
+     * doing the eating.
+     */
+    const dishes: string[] = Array.isArray(body.dishes)
+      ? body.dishes
+          .filter((d: unknown): d is string => typeof d === 'string' && d.trim() !== '')
+          .slice(0, 40)
+      : []
 
     const db = new Database(dbPath)
 
@@ -179,7 +192,9 @@ export async function POST(request: Request) {
 
 CURRENT TIME: ${timeStr} on ${dayStr}
 MEAL TIMING: ${mealTiming}${country ? `
-WHERE THEY EAT: ${country}. Every recommendation must be a dish eaten in ${country}, built from ingredients ordinarily sold there. Use the local name for the dish where it has one. Do not recommend anything that would have to be imported or specially ordered.` : ''}
+WHERE THEY EAT: ${country}. Every recommendation must be a dish eaten in ${country}, built from ingredients ordinarily sold there. Use the local name for the dish where it has one. Do not recommend anything that would have to be imported or specially ordered.` : ''}${dishes.length ? `
+DISHES PEOPLE THERE ACTUALLY EAT — choose from these and use the names exactly as written. Only go outside this list if nothing on it suits the readings, and say so if you do:
+${dishes.map((d) => `  - ${d}`).join('\n')}` : ''}
 
 CONTEXT — Today's Metabolic Events:
 ${eventsContext}
