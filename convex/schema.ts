@@ -227,6 +227,42 @@ export default defineSchema({
    * user; absent means fall back to whatever the server has configured.
    */
   /**
+   * A conversation with a nutritionist.
+   *
+   * One row per consultation, with the messages beside it. `status` is what the
+   * person waiting is actually asking about — has a human seen this yet — so it
+   * is derived from real events (a reply exists) rather than set optimistically
+   * when the request is sent.
+   *
+   * `shared` records exactly which readings the person agreed to hand over.
+   * Health data going to another human being is the most consequential thing
+   * this app does, so what was shared is stored as text on the consultation
+   * rather than read live: the nutritionist sees the numbers as they were when
+   * consent was given, and nothing more.
+   */
+  consults: defineTable({
+    userId: v.string(),
+    topic: v.string(),
+    status: v.string(),          // waiting | answered | closed
+    /** The readings shared at the moment of asking, as shown to the user. */
+    shared: v.optional(v.string()),
+    country: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"]),
+
+  consult_messages: defineTable({
+    consultId: v.id("consults"),
+    /** "you" or "nutritionist" — who the message reads as, not who wrote it. */
+    from: v.string(),
+    authorId: v.string(),
+    body: v.string(),
+    created_at: v.number(),
+  }).index("by_consult", ["consultId"]),
+
+  /**
    * What people in a country actually eat, and who said so.
    *
    * One row per person per dish rather than a dish with a counter, because a
