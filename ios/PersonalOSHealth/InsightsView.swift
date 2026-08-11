@@ -29,6 +29,7 @@ struct NutritionView: View {
     @State private var book = CuisineClient.Book.empty
     @State private var newDish = ""
     @State private var seeding = false
+    @State private var consulting = false
 
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
@@ -258,6 +259,30 @@ struct NutritionView: View {
             .padding(.horizontal, 24)
         }
         .background(Theme.linen)
+        // Pinned rather than scrolled away with the content: the whole point
+        // of it is being reachable from anywhere on a long page, and a button
+        // you have to scroll back up to find is a link.
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                Haptics.tap()
+                consulting = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Theme.ink)
+                        .frame(width: 56, height: 56)
+                        .shadow(color: Theme.ink.opacity(0.18), radius: 12, y: 4)
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 18, weight: .light))
+                        .foregroundStyle(Theme.warm)
+                }
+            }
+            .buttonStyle(.press)
+            .accessibilityLabel("Ask a nutritionist")
+            .padding(.trailing, 22)
+            .padding(.bottom, 26)
+        }
+        .sheet(isPresented: $consulting) { ConsultView() }
         .task { await loadSignals() }
         .task { await loadHistory() }
         .task { await loadBook() }

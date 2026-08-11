@@ -240,8 +240,33 @@ export default defineSchema({
    * rather than read live: the nutritionist sees the numbers as they were when
    * consent was given, and nothing more.
    */
+  /**
+   * A nutritionist people can choose to ask.
+   *
+   * Written by the professional themselves — the allowlist in the Convex
+   * environment says who is one, and this row says who they are. Country is on
+   * the profile because it is the thing a person actually wants to know before
+   * asking about food: someone who eats what you eat gives different advice
+   * from someone who has read about it.
+   */
+  nutritionists: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    country: v.string(),          // ISO region code
+    credentials: v.string(),      // "RD, MSc Nutrition" — as they state it
+    bio: v.string(),
+    /** What one consultation costs, in credits. */
+    price_credits: v.number(),
+    active: v.boolean(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_active", ["active"]),
+
   consults: defineTable({
     userId: v.string(),
+    /** Which professional was asked, when one was chosen. */
+    nutritionistId: v.optional(v.string()),
     topic: v.string(),
     status: v.string(),          // waiting | answered | closed
     /** The readings shared at the moment of asking, as shown to the user. */

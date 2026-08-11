@@ -31,11 +31,12 @@ export async function GET(request: Request) {
       return NextResponse.json(thread)
     }
 
-    const [consults, staffed] = await Promise.all([
+    const [consults, staffed, professionals] = await Promise.all([
       convex.query(api.health.consult.mine, {}),
       convex.query(api.health.consult.staffed, {}),
+      convex.query(api.health.consult.professionals, {}),
     ])
-    return NextResponse.json({ consults, ...staffed })
+    return NextResponse.json({ consults, professionals, ...staffed })
   } catch (error) {
     console.error("[well-being/consult] read failed:", error)
     const message = error instanceof Error ? error.message : "Failed to read consultations"
@@ -71,6 +72,8 @@ export async function POST(request: Request) {
     const result = await convex.mutation(api.health.consult.start, {
       topic: typeof body?.topic === "string" ? body.topic : "Nutrition",
       question,
+      nutritionistId:
+        typeof body?.nutritionistId === "string" ? body.nutritionistId : undefined,
       shared: typeof body?.shared === "string" ? body.shared : undefined,
       country: typeof body?.country === "string" ? body.country : undefined,
     })

@@ -30,6 +30,118 @@ function isStaff(userId: string) {
   return staff().includes(userId)
 }
 
+/**
+ * The nutritionists a person can choose from.
+ *
+ * Only those who have written a profile and marked it active: being on the
+ * allowlist makes you able to answer, not visible to ask. Someone who hasn't
+ * said who they are shouldn't appear on a list of people you might trust with
+ * your glucose.
+ */
+export const professionals = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const rows = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_active", (q) => q.eq("active", true))
+      .collect()
+
+    return rows
+      .filter((r) => staff().includes(r.userId))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => ({
+        id: r.userId,
+        name: r.name,
+        country: r.country,
+        credentials: r.credentials,
+        bio: r.bio,
+        price_credits: r.price_credits,
+      }))
+  },
+})
+
+/**
+ * A nutritionist writing their own profile.
+ *
+ * Their own, and only their own: the allowlist decides who may answer, and
+ * this decides nothing except how they introduce themselves.
+ */
+export const upsertProfile = mutation({
+  args: {
+    name: v.string(),
+    country: v.string(),
+    credentials: v.string(),
+    bio: v.string(),
+    price_credits: v.number(),
+    active: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+    if (!isStaff(identity.subject)) throw new Error("Not a nutritionist")
+
+    const existing = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first()
+
+    const doc = {
+      userId: identity.subject,
+      name: args.name.trim(),
+      country: args.country.trim().toUpperCase(),
+      credentials: args.credentials.trim(),
+      bio: args.bio.trim(),
+      price_credits: Math.max(0, Math.floor(args.price_credits)),
+      active: args.active,
+      updated_at: Date.now(),
+    }
+    if (existing) {
+      await ctx.db.patch(existing._id, doc)
+      return existing._id
+    }
+    return await ctx.db.insert("nutritionists", doc)
+  },
+})
+
+/**
+ * Charges for a consultation, the same way the rest of the app charges.
+ *
+ * A subscription covers it; otherwise it costs credits, and the ledger records
+ * the spend so a balance can always be explained. Enforced here rather than in
+ * the app, because a price the client can decide not to charge is not a price.
+ */
+async function charge(ctx: any, userId: string, amount: number, reason: string) {
+  if (amount <= 0) return
+
+  const row = await ctx.db
+    .query("entitlements")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .first()
+
+  const subscribed =
+    row?.subscription_status === "active" &&
+    (typeof row.expires_at !== "number" || row.expires_at > Date.now())
+  if (subscribed) return
+
+  const balance = row?.credits ?? 0
+  if (balance < amount) {
+    throw new Error(
+      `This consultation costs ${amount} ${amount === 1 ? "credit" : "credits"}. Subscribe or add credits to send it.`
+    )
+  }
+
+  await ctx.db.patch(row._id, { credits: balance - amount, updated_at: Date.now() })
+  await ctx.db.insert("ai_credit_ledger", {
+    userId,
+    delta: -amount,
+    reason,
+    created_at: Date.now(),
+  })
+}
+
 /** Whether anyone is actually on the other end. The app says so plainly. */
 export const staffed = query({
   args: {},
@@ -122,6 +234,7 @@ export const start = mutation({
   args: {
     topic: v.string(),
     question: v.string(),
+    nutritionistId: v.optional(v.string()),
     shared: v.optional(v.string()),
     country: v.optional(v.string()),
   },
@@ -134,9 +247,24 @@ export const start = mutation({
     if (!question) throw new Error("A question needs asking")
     if (question.length > 4000) throw new Error("That is longer than a question")
 
+    // Charged before anything is written. A consultation that exists but was
+    // never paid for is worse than one that was refused: the person waits for
+    // an answer that isn't coming.
+    let price = 0
+    if (args.nutritionistId) {
+      const profile = await ctx.db
+        .query("nutritionists")
+        .withIndex("by_user", (q) => q.eq("userId", args.nutritionistId!))
+        .first()
+      if (!profile || !profile.active) throw new Error("That nutritionist isn't taking questions")
+      price = profile.price_credits
+    }
+    await charge(ctx, identity.subject, price, `consult:${args.nutritionistId ?? "any"}`)
+
     const now = Date.now()
     const id = await ctx.db.insert("consults", {
       userId: identity.subject,
+      nutritionistId: args.nutritionistId,
       topic: topic || "Nutrition",
       status: "waiting",
       shared: args.shared,

@@ -37,12 +37,33 @@ struct ConsultClient {
         let messages: [Message]
     }
 
+    /// A nutritionist you can choose to ask.
+    struct Professional: Decodable, Identifiable, Hashable {
+        let id: String
+        let name: String
+        let country: String         // ISO region code
+        let credentials: String
+        let bio: String
+        let price_credits: Int
+
+        /// The country in words — the thing you actually want to know before
+        /// asking someone about food.
+        var place: String { Cuisine.name(for: country) }
+
+        var price: String {
+            price_credits == 0
+                ? "Free"
+                : "\(price_credits) \(price_credits == 1 ? "credit" : "credits")"
+        }
+    }
+
     struct Inbox: Decodable {
         let consults: [Summary]
         /// Whether anyone is actually on the other end. The screen says so.
         let staffed: Bool
+        let professionals: [Professional]
 
-        static let empty = Inbox(consults: [], staffed: false)
+        static let empty = Inbox(consults: [], staffed: false, professionals: [])
     }
 
     func inbox() async throws -> Inbox {
@@ -59,9 +80,16 @@ struct ConsultClient {
     /// agreed to hand over — sent as shown, so what the nutritionist reads is
     /// what was consented to.
     @discardableResult
-    func start(topic: String, question: String, shared: String?, country: String?) async throws -> String {
+    func start(
+        topic: String,
+        question: String,
+        nutritionistId: String?,
+        shared: String?,
+        country: String?
+    ) async throws -> String {
         struct Started: Decodable { let id: String }
         var body: [String: Any] = ["topic": topic, "question": question]
+        if let nutritionistId, !nutritionistId.isEmpty { body["nutritionistId"] = nutritionistId }
         if let shared, !shared.isEmpty { body["shared"] = shared }
         if let country, !country.isEmpty { body["country"] = country }
         let data = try await send(try await request("/api/well-being/consult", method: "POST", body: body))

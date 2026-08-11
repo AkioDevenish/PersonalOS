@@ -22,6 +22,9 @@ struct ConsultView: View {
     @State private var sending = false
     @State private var status = ""
     @State private var open: ConsultClient.Summary?
+    /// Who you are asking. Nil until you pick, because "a nutritionist" is not
+    /// a person and the price depends on which one.
+    @State private var chosen: ConsultClient.Professional?
 
     /// The readings that would travel with the question, exactly as the
     /// nutritionist will see them.
@@ -50,14 +53,63 @@ struct ConsultView: View {
                     .padding(.top, 8)
                     .flowIn(1)
 
-                Text(inbox.staffed
-                     ? "A person reads these — not a model. Answers come back here."
-                     : "Nobody is staffing this yet. You can write your question and it will be waiting for the first nutritionist who is.")
+                Text(inbox.professionals.isEmpty
+                     ? "No nutritionist has taken this on yet. You can write your question and it will be waiting for the first one who does."
+                     : "A person reads these — not a model. Answers come back here.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
+
+                // MARK: Who you're asking
+
+                if !inbox.professionals.isEmpty {
+                    SectionRule(text: "Who you're asking").padding(.top, 30)
+
+                    VStack(spacing: 0) {
+                        ForEach(inbox.professionals) { pro in
+                            Button {
+                                Haptics.select()
+                                withAnimation(Theme.Motion.bouncy) {
+                                    chosen = chosen?.id == pro.id ? nil : pro
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    HStack(spacing: 10) {
+                                        Text(pro.name)
+                                            .font(Theme.serif(20))
+                                            .foregroundStyle(chosen?.id == pro.id ? Theme.amber : Theme.ink)
+                                        Spacer()
+                                        Text(pro.price)
+                                            .font(Theme.sans(9.5))
+                                            .tracking(1.2)
+                                            .foregroundStyle(Theme.dust)
+                                        if chosen?.id == pro.id { SelectionMark(size: 12) }
+                                    }
+                                    Text([pro.credentials, pro.place]
+                                            .filter { !$0.isEmpty }
+                                            .joined(separator: " · "))
+                                        .font(Theme.sans(10.5))
+                                        .foregroundStyle(Theme.dust)
+                                    if !pro.bio.isEmpty {
+                                        Text(pro.bio)
+                                            .font(Theme.serifBody(15.5))
+                                            .foregroundStyle(Theme.mid)
+                                            .lineSpacing(4)
+                                            .multilineTextAlignment(.leading)
+                                            .padding(.top, 2)
+                                    }
+                                }
+                                .padding(.vertical, 14)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.pressRow)
+                        }
+                    }
+                    .padding(.top, 6)
+                    .flowIn(3)
+                }
 
                 // MARK: Asking
 
@@ -112,18 +164,18 @@ struct ConsultView: View {
                 Button {
                     Task { await ask() }
                 } label: {
-                    Text(sending ? "Sending…" : "Send to a nutritionist")
+                    Text(sendLabel)
                         .font(Theme.sans(13, medium: true))
                         .foregroundStyle(Theme.warm)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(question.trimmingCharacters(in: .whitespaces).isEmpty ? Theme.dust : Theme.ink)
+                        .background(canSend ? Theme.ink : Theme.dust)
                         .clipShape(Capsule())
                         .contentTransition(.opacity)
                         .animation(Theme.Motion.flow, value: sending)
                 }
                 .buttonStyle(.press)
-                .disabled(sending || question.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(sending || !canSend)
                 .padding(.top, 14)
                 .flowIn(5)
 
@@ -188,6 +240,22 @@ struct ConsultView: View {
         }
     }
 
+    /// Names the person and the price, so nothing is spent by surprise.
+    private var sendLabel: String {
+        if sending { return "Sending…" }
+        guard let chosen else {
+            return inbox.professionals.isEmpty ? "Leave the question" : "Choose a nutritionist"
+        }
+        return chosen.price_credits == 0
+            ? "Send to \(chosen.name)"
+            : "Send to \(chosen.name) · \(chosen.price)"
+    }
+
+    private var canSend: Bool {
+        !question.trimmingCharacters(in: .whitespaces).isEmpty
+            && (chosen != nil || inbox.professionals.isEmpty)
+    }
+
     private func load() async {
         try? await health.requestAuthorization()
         today = try? await health.fetchTodaySnapshot()
@@ -203,13 +271,14 @@ struct ConsultView: View {
             _ = try await ConsultClient().start(
                 topic: "Nutrition",
                 question: text,
+                nutritionistId: chosen?.id,
                 shared: shareReadings ? readings : nil,
                 country: country.isEmpty ? nil : Cuisine.name(for: country)
             )
             question = ""
-            status = inbox.staffed
-                ? "Sent. The answer arrives here."
-                : "Saved. It goes to the first nutritionist who takes it."
+            status = chosen == nil
+                ? "Saved. It goes to the first nutritionist who takes it."
+                : "Sent to \(chosen!.name). The answer arrives here."
             await load()
         } catch {
             status = error.localizedDescription

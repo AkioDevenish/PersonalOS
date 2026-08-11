@@ -98,14 +98,13 @@ struct HistoryView: View {
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
 enum Tab: CaseIterable {
-    case health, consult, settings
+    case health, settings
 
     /// Icons carry the meaning; there are no labels, so these have to read at
     /// a glance. Light weight keeps them in the same register as the type.
     var symbol: String {
         switch self {
         case .health: return "heart"
-        case .consult: return "bubble.left"
         case .settings: return "person"   // replaced by the avatar when present
         }
     }
@@ -113,19 +112,9 @@ enum Tab: CaseIterable {
     var title: String {
         switch self {
         case .health: return "Health"
-        case .consult: return "Ask a nutritionist"
         case .settings: return "Settings"
         }
     }
-
-    /// The middle one is drawn as a filled circle rather than a bare glyph.
-    ///
-    /// Everything else in this app is a model reading numbers; this is the one
-    /// place a person answers, and it is worth more than a third identical
-    /// icon. A filled circle in ink is the only solid shape in the tab bar, so
-    /// the eye finds it without a label — which matters, because this bar has
-    /// no labels.
-    var isAction: Bool { self == .consult }
 
     /// Position in the bar, which is what the content drifts along when you
     /// move between them.
@@ -161,7 +150,6 @@ struct RootView: View {
                 Group {
                     switch tab {
                     case .health: HealthView()
-                    case .consult: ConsultView()
                     case .settings: ConnectionsView()
                     }
                 }
@@ -190,18 +178,7 @@ struct RootView: View {
                     } label: {
                         VStack(spacing: 7) {
                             Group {
-                                if t.isAction {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Theme.ink)
-                                            .frame(width: 38, height: 38)
-                                        Image(systemName: t.symbol)
-                                            .font(.system(size: 15, weight: .light))
-                                            .foregroundStyle(Theme.warm)
-                                    }
-                                    .frame(height: 22)
-                                    .opacity(tab == t ? 1 : 0.82)
-                                } else if t == .settings {
+                                if t == .settings {
                                     Avatar(user: clerk.user, size: 22)
                                         .opacity(tab == t ? 1 : 0.55)
                                 } else {
@@ -238,10 +215,8 @@ struct RootView: View {
                 }
             }
             .animation(Theme.Motion.pop, value: tab)
-            // The circle is taller than a glyph and sits proud of the rule, so
-            // the bar carries a little more air than it did with two icons.
-            .padding(.top, 16)
-            .padding(.bottom, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
             .background(Theme.linen)
         }
         .background(Theme.linen)
