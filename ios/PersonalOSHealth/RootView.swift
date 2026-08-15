@@ -109,6 +109,15 @@ enum Tab: CaseIterable {
         }
     }
 
+    /// The selected form of the same glyph.
+    ///
+    /// Selection fills the shape rather than putting a mark under it. A dot
+    /// beneath an outline is two objects saying one thing, and the smaller of
+    /// them was carrying the meaning — the heart went amber and you still had
+    /// to look below it to be sure. A filled heart is unmistakable at a glance
+    /// and needs nothing beside it.
+    var filled: String { symbol + ".fill" }
+
     var title: String {
         switch self {
         case .health: return "Health"
@@ -142,7 +151,6 @@ struct RootView: View {
     /// alone, tapping Settings while three screens deep into Health left you
     /// looking at the specialist you were reading, under the wrong tab.
     @State private var path: [Route] = []
-    @Namespace private var mark
 
     var body: some View {
         VStack(spacing: 0) {
@@ -176,15 +184,29 @@ struct RootView: View {
                     Button {
                         select(t)
                     } label: {
-                        VStack(spacing: 7) {
+                        VStack(spacing: 0) {
                             Group {
                                 if t == .settings {
+                                    // A photograph can't be filled, so the
+                                    // selected state is a ring drawn round it
+                                    // — the same idea as a solid heart: the
+                                    // thing itself changes, nothing is added
+                                    // underneath.
                                     Avatar(user: clerk.user, size: 22)
-                                        .opacity(tab == t ? 1 : 0.55)
+                                        .opacity(tab == t ? 1 : 0.5)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Theme.amber, lineWidth: tab == t ? 1.5 : 0)
+                                                .padding(-3)
+                                        )
                                 } else {
-                                    Image(systemName: t.symbol)
-                                        .font(.system(size: 17, weight: .light))
+                                    Image(systemName: tab == t ? t.filled : t.symbol)
+                                        .font(.system(size: 18, weight: .light))
                                         .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
+                                        // The outline doesn't swap for the
+                                        // solid — it becomes it, which is the
+                                        // whole animation.
+                                        .contentTransition(.symbolEffect(.replace.downUp))
                                         .frame(height: 22)
                                 }
                             }
@@ -193,19 +215,7 @@ struct RootView: View {
                             // bounce. Anything larger and the bar wobbles.
                             .scaleEffect(tab == t ? 1.14 : 1)
 
-                            // Amber is punctuation in this design, so the
-                            // selected tab gets a full stop. One dot for the
-                            // whole bar, matched between positions, so it
-                            // slides across rather than blinking on and off.
-                            ZStack {
-                                Circle().fill(.clear).frame(width: 4, height: 4)
-                                if tab == t {
-                                    Circle()
-                                        .fill(Theme.amber)
-                                        .frame(width: 4, height: 4)
-                                        .matchedGeometryEffect(id: "tab-mark", in: mark)
-                                }
-                            }
+
                         }
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())

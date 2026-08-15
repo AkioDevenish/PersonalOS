@@ -13,9 +13,33 @@ struct HealthView: View {
         return f.string(from: Date())
     }
 
+    /// The three figures a day is actually judged on.
+    ///
+    /// A grid of nineteen equal numbers is a table, and a table has no opinion.
+    /// These three lead because they are what a person checks first — how you
+    /// slept, how much you moved, and what your heart made of it — and they are
+    /// set large enough to be read from a pocket rather than studied.
+    private var lead: [MetricSpec] {
+        ["sleep", "steps", "resting_hr"]
+            .compactMap { Metrics.by(id: $0) }
+            .filter { spec in snapshot.flatMap { spec.value($0) } != nil }
+    }
+
+    /// The groups, minus anything already shown large above it.
+    private func rest(_ group: MetricSpec.Group) -> [MetricSpec] {
+        Metrics.inGroup(group).filter { spec in
+            snapshot.flatMap { spec.value($0) } != nil && !lead.contains(spec)
+        }
+    }
+
     var body: some View {
-        ScrollView {
+        let briefing = Briefing.compose(from: snapshot)
+
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+
+                // MARK: The day
+
                 HStack(spacing: 10) {
                     Kicker(text: dateKicker, color: Theme.amber, size: 11)
                     if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
@@ -31,52 +55,101 @@ struct HealthView: View {
                 .padding(.top, 8)
                 .flowIn(0)
 
-                Text("The day so far.")
-                    .font(Theme.serif(34))
+                // The briefing's own headline is the page's headline. It used
+                // to say "The day so far." over a summary that then said what
+                // sort of day it was — two titles, one of them generic. The
+                // page now leads with the sentence that actually knows
+                // something: "A short night, steady heart."
+                Text(briefing.headline)
+                    .font(Theme.serif(38))
                     .foregroundStyle(Theme.ink)
-                    .padding(.top, 8)
-                    .flowIn(0)
+                    .lineSpacing(1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 10)
+                    .flowIn(1)
+
+                // MARK: The read
 
                 NavigationLink(value: Route.briefing) {
-                    Plate {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Kicker(text: "Morning briefing", size: 9.5)
-                            Text(Briefing.compose(from: snapshot).summary)
-                                .font(Theme.serifBody(19))
-                                .foregroundStyle(Theme.ink)
-                                .lineSpacing(6)
+                    VStack(alignment: .leading, spacing: 12) {
+                        // More than the one line it used to show. Two
+                        // paragraphs is the length at which the briefing reads
+                        // as something written rather than a status field.
+                        ForEach(Array(briefing.paragraphs.prefix(2).enumerated()), id: \.element) { _, p in
+                            Text(p)
+                                .font(Theme.serifBody(18))
+                                .foregroundStyle(Theme.mid)
+                                .lineSpacing(7)
                                 .multilineTextAlignment(.leading)
-                            Text("READ THE FULL BRIEFING  →")
-                                .font(Theme.sans(10, medium: true))
-                                .tracking(1.8)
-                                .foregroundStyle(Theme.amber)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+
+                        if let first = briefing.suggestions.first {
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                Text("I")
+                                    .font(Theme.serif(15))
+                                    .foregroundStyle(Theme.amber)
+                                Text(first)
+                                    .font(Theme.serifBody(16.5))
+                                    .foregroundStyle(Theme.ink)
+                                    .lineSpacing(5)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.top, 2)
+                        }
+
+                        Text("READ THE FULL BRIEFING  →")
+                            .font(Theme.sans(10, medium: true))
+                            .tracking(1.8)
+                            .foregroundStyle(Theme.amber)
+                            .padding(.top, 2)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.pressRow)
-                .padding(.top, 22)
-                .flowIn(1)
+                .padding(.top, 20)
+                .flowIn(2)
 
-                SectionRule(text: "Consult")
-                    .padding(.top, 30)
-                    .flowIn(2)
+                // MARK: The three that matter
 
-                // One ruled list rather than a grid of plates. Boxes inside
-                // boxes fought the hairline vocabulary the rest of the app uses,
-                // and a rule between rows says "list" without drawing four more
-                // edges to do it.
-                VStack(spacing: 0) {
-                    consultRow("History", "Any measurement over time — or two against each other", 3, .history)
-                    consultRow("Nutrition", "What to eat next, from your own readings", 4, .nutrition)
-                    consultRow("Specialists", "Read by an expert", 5, .specialists)
+                if !lead.isEmpty {
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(Array(lead.enumerated()), id: \.element.id) { i, spec in
+                            VStack(alignment: .leading, spacing: 7) {
+                                Kicker(text: spec.label, size: 8.5)
+                                    .lineLimit(1)
+                                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                    Text(snapshot.flatMap { spec.display($0) } ?? "—")
+                                        .font(Theme.serif(34))
+                                        .foregroundStyle(Theme.ink)
+                                        .contentTransition(.numericText())
+                                    if !spec.unit.isEmpty {
+                                        Text(spec.unit)
+                                            .font(Theme.sans(9.5))
+                                            .foregroundStyle(Theme.dust)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .flowIn(3 + i)
+                        }
+                    }
+                    .padding(.top, 34)
                 }
-                .padding(.top, 16)
 
-                ForEach(Metrics.populatedGroups(snapshot), id: \.self) { group in
-                    SectionRule(text: group.rawValue)
-                        .padding(.top, 30)
-                    grid(for: group)
-                        .padding(.top, 16)
+                // MARK: Everything else recorded
+
+                ForEach(Array(Metrics.populatedGroups(snapshot).enumerated()), id: \.element) { i, group in
+                    let specs = rest(group)
+                    if !specs.isEmpty {
+                        SectionRule(text: group.rawValue)
+                            .padding(.top, i == 0 ? 40 : 34)
+                            .flowIn(6 + i)
+                        grid(specs)
+                            .padding(.top, 16)
+                            .flowIn(6 + i)
+                    }
                 }
 
                 if snapshot != nil && Metrics.populatedGroups(snapshot).isEmpty {
@@ -86,7 +159,25 @@ struct HealthView: View {
                         .padding(.top, 26)
                 }
 
-                Spacer(minLength: 24)
+                // MARK: Where to go next
+                //
+                // At the bottom, not between the briefing and the figures. It
+                // was interrupting the read: three doors to other screens
+                // stood between what today looks like and what today's numbers
+                // are. Somewhere to go next belongs after you have read.
+
+                SectionRule(text: "Go deeper")
+                    .padding(.top, 46)
+                    .flowIn(11)
+
+                VStack(spacing: 0) {
+                    consultRow("Records", "Any measurement over time — or two against each other", 12, .history)
+                    consultRow("Nutrition", "What to eat next, from your own readings", 13, .nutrition)
+                    consultRow("Specialists", "Read by an expert", 14, .specialists)
+                }
+                .padding(.top, 8)
+
+                Spacer(minLength: 32)
             }
             .padding(.horizontal, 24)
         }
@@ -102,9 +193,8 @@ struct HealthView: View {
     /// than a number written on it — and fifteen of them turned the screen
     /// into a grid of tiles. The numbers now sit directly on the ground with a
     /// hairline under each, the same mark the rest of the app uses.
-    private func grid(for group: MetricSpec.Group) -> some View {
+    private func grid(_ specs: [MetricSpec]) -> some View {
         let columns = [GridItem(.flexible(), spacing: 18), GridItem(.flexible(), spacing: 18)]
-        let specs = Metrics.inGroup(group).filter { snapshot.flatMap($0.value) != nil }
         return LazyVGrid(columns: columns, spacing: 26) {
             ForEach(Array(specs.enumerated()), id: \.element.id) { index, m in
                 MetricTile(spec: m, snapshot: snapshot, index: index, appeared: appeared)
