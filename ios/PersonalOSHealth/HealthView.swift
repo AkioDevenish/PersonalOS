@@ -176,25 +176,6 @@ struct HealthView: View {
                         .padding(.top, 26)
                 }
 
-                // MARK: Where to go next
-                //
-                // At the bottom, not between the briefing and the figures. It
-                // was interrupting the read: three doors to other screens
-                // stood between what today looks like and what today's numbers
-                // are. Somewhere to go next belongs after you have read.
-
-                SectionRule(text: "Go deeper")
-                    .padding(.top, 46)
-                    .flowIn(11)
-
-                VStack(spacing: 0) {
-                    consultRow("Records", "Any measurement over time, or two against each other", 12, .history)
-                    consultRow("Nutrition", "What to eat next, from your own readings", 13, .nutrition)
-                    consultRow("Specialists", "Read by an expert", 14, .specialists)
-                    consultRow("Goals", goalsSubtitle, 15, .goals)
-                }
-                .padding(.top, 8)
-
                 Spacer(minLength: 32)
             }
             .padding(.horizontal, 24)
@@ -218,48 +199,6 @@ struct HealthView: View {
                 MetricTile(spec: m, snapshot: snapshot, index: index, appeared: appeared)
             }
         }
-    }
-
-    /// A door to one of the engines, in the ledger's list idiom.
-    ///
-    /// The rows arrive on the same stagger as the metric grid — the screen
-    /// writes itself down the page — and press in under the finger, which on a
-    /// list with no fill is the only sign a tap landed before the push begins.
-    private func consultRow(
-        _ title: String,
-        _ subtitle: String,
-        _ index: Int,
-        _ route: Route
-    ) -> some View {
-        NavigationLink(value: route) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(Theme.serif(19))
-                        .foregroundStyle(Theme.ink)
-                    Text(subtitle)
-                        .font(Theme.sans(10.5))
-                        .foregroundStyle(Theme.dust)
-                }
-                Spacer()
-                Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
-            }
-            .padding(.vertical, 15)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.pressRow)
-        .flowIn(index)
-    }
-
-    /// Says where the day stands against them, so the row is worth something
-    /// before it is tapped.
-    private var goalsSubtitle: String {
-        let progress = Goals.progress(on: snapshot)
-        guard !progress.isEmpty else { return "Set what you're aiming at" }
-        let met = progress.filter(\.met).count
-        return met == progress.count
-            ? "All \(progress.count) met today"
-            : "\(met) of \(progress.count) met today"
     }
 
     private func load() async {

@@ -151,8 +151,71 @@ struct RootView: View {
     /// alone, tapping Settings while three screens deep into Health left you
     /// looking at the specialist you were reading, under the wrong tab.
     @State private var path: [Route] = []
+    @State private var drawer = false
+    /// Live finger position while dragging the edge, so the panel tracks the
+    /// thumb instead of waiting for the gesture to finish and then jumping.
+    @State private var dragged: CGFloat = 0
+
+    private var shift: CGFloat {
+        let base = drawer ? LedgerDrawer.width : 0
+        return min(max(base + dragged, 0), LedgerDrawer.width)
+    }
 
     var body: some View {
+        ZStack(alignment: .leading) {
+            // The panel sits underneath and is revealed rather than laid over
+            // the top, so the page moving aside is the whole explanation of
+            // where it went.
+            LedgerDrawer(open: drawer) { route in
+                withAnimation(Theme.Motion.flow) {
+                    drawer = false
+                    tab = .health
+                    path = [route]
+                }
+            }
+
+            page
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: shift > 0 ? 30 : 0, style: .continuous))
+                .scaleEffect(1 - (shift / LedgerDrawer.width) * 0.06, anchor: .center)
+                .offset(x: shift)
+                .shadow(color: Theme.ink.opacity(shift > 0 ? 0.16 : 0), radius: 22, x: -6)
+                .overlay {
+                    // Anywhere on the page closes it, which is what a person
+                    // reaches for first.
+                    if drawer {
+                        Theme.ink.opacity(0.001)
+                            .onTapGesture { withAnimation(Theme.Motion.flow) { drawer = false } }
+                    }
+                }
+                .overlay(alignment: .leading) {
+                    if !drawer { DrawerHandle(open: $drawer) }
+                }
+                .gesture(edgeDrag)
+        }
+        .background(Theme.linen)
+    }
+
+    /// Drag from the left edge to open, drag back to close.
+    private var edgeDrag: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                // Only from the edge when closed, so a swipe inside the page
+                // is still the page's own gesture.
+                guard drawer || value.startLocation.x < 28 else { return }
+                dragged = value.translation.width
+            }
+            .onEnded { value in
+                let travelled = value.translation.width
+                guard drawer || value.startLocation.x < 28 else { return }
+                withAnimation(Theme.Motion.flow) {
+                    if drawer { drawer = travelled > -60 } else { drawer = travelled > 60 }
+                    dragged = 0
+                }
+            }
+    }
+
+    private var page: some View {
         VStack(spacing: 0) {
             NavigationStack(path: $path) {
                 Group {
