@@ -8,10 +8,21 @@ import SwiftUI
 /// name of a thing and the number beside it, and in flat body text those are
 /// exactly as prominent as "across" and "a night".
 ///
-/// So the two things a reader is hunting for are set in the stronger face: the
-/// measurement's name, and every figure. Emphasis here is the Medium cut in
-/// ink against the Regular cut in mid, which is what this design has instead of
-/// bold — a heavier weight of the same serif, not a different voice.
+/// So the two things a reader is hunting for are lifted out of it: the
+/// measurement's name, and every figure.
+///
+/// Weight alone cannot do it here. Both bundled faces are cut from the Light
+/// master, 400 against 500, which on a serif this fine is a difference you have
+/// to be told about before you can see it. Real bold would mean shipping a
+/// heavier Cormorant, which is a decision about the app's typography rather
+/// than about this sentence.
+///
+/// So emphasis is carried by three things at once instead of one: the Medium
+/// cut, a point of extra size, and colour. Names go to ink, which is the
+/// darkest thing on the page. Figures go to amber, the colour this design
+/// already reserves for the part that matters — in a health briefing the
+/// numbers are exactly that, so it is the accent doing its own job rather than
+/// a new rule.
 ///
 /// Done by reading the sentence rather than by marking it up at the source. The
 /// composer stays a producer of plain English, which keeps it testable on a
@@ -44,22 +55,32 @@ enum Emphasis {
         base: Font,
         strong: Font,
         baseColor: Color,
-        strongColor: Color
+        strongColor: Color,
+        figureColor: Color = Theme.amber
     ) -> AttributedString {
         var result = AttributedString()
         var cursor = text.startIndex
 
-        for range in strongRanges(in: text) {
-            if cursor < range.lowerBound {
-                result += run(String(text[cursor..<range.lowerBound]), base, baseColor)
+        for span in strongRanges(in: text) {
+            if cursor < span.range.lowerBound {
+                result += run(String(text[cursor..<span.range.lowerBound]), base, baseColor)
             }
-            result += run(String(text[range]), strong, strongColor)
-            cursor = range.upperBound
+            result += run(
+                String(text[span.range]),
+                strong,
+                span.isFigure ? figureColor : strongColor
+            )
+            cursor = span.range.upperBound
         }
         if cursor < text.endIndex {
             result += run(String(text[cursor...]), base, baseColor)
         }
         return result
+    }
+
+    private struct Span {
+        let range: Range<String.Index>
+        let isFigure: Bool
     }
 
     private static func run(_ s: String, _ font: Font, _ colour: Color) -> AttributedString {
@@ -70,8 +91,8 @@ enum Emphasis {
     }
 
     /// The spans worth setting apart, in order and never overlapping.
-    private static func strongRanges(in text: String) -> [Range<String.Index>] {
-        var found: [Range<String.Index>] = []
+    private static func strongRanges(in text: String) -> [Span] {
+        var found: [Span] = []
         let ns = text as NSString
         let whole = NSRange(location: 0, length: ns.length)
 
@@ -98,7 +119,9 @@ enum Emphasis {
             if end < ns.length, ns.substring(with: NSRange(location: end, length: 1)) == "-" {
                 continue
             }
-            if let converted = Range(r, in: text) { found.append(converted) }
+            if let converted = Range(r, in: text) {
+                found.append(Span(range: converted, isFigure: true))
+            }
         }
 
         // Names of measurements, wherever they appear and however they are cased.
@@ -109,7 +132,9 @@ enum Emphasis {
                 options: [.caseInsensitive],
                 range: searchFrom..<text.endIndex
             ) {
-                if isWholeWord(r, in: text) { found.append(r) }
+                if isWholeWord(r, in: text) {
+                    found.append(Span(range: r, isFigure: false))
+                }
                 searchFrom = r.upperBound
                 if searchFrom >= text.endIndex { break }
             }
@@ -118,19 +143,22 @@ enum Emphasis {
         // A name inside a longer name, or a unit already inside a figure, would
         // otherwise be emphasised twice and split the run.
         let sorted = found.sorted {
-            $0.lowerBound == $1.lowerBound
-                ? $0.upperBound > $1.upperBound
-                : $0.lowerBound < $1.lowerBound
+            $0.range.lowerBound == $1.range.lowerBound
+                ? $0.range.upperBound > $1.range.upperBound
+                : $0.range.lowerBound < $1.range.lowerBound
         }
-        var merged: [Range<String.Index>] = []
-        for r in sorted {
-            if let last = merged.last, r.lowerBound < last.upperBound {
-                if r.upperBound > last.upperBound {
-                    merged[merged.count - 1] = last.lowerBound..<r.upperBound
+        var merged: [Span] = []
+        for span in sorted {
+            if let last = merged.last, span.range.lowerBound < last.range.upperBound {
+                if span.range.upperBound > last.range.upperBound {
+                    merged[merged.count - 1] = Span(
+                        range: last.range.lowerBound..<span.range.upperBound,
+                        isFigure: last.isFigure
+                    )
                 }
                 continue
             }
-            merged.append(r)
+            merged.append(span)
         }
         return merged
     }
@@ -151,7 +179,7 @@ extension Text {
     /// Body text with its measurements and figures set apart.
     init(emphasising sentence: String,
          base: Font = Theme.serifBody(17),
-         strong: Font = Theme.serif(18),
+         strong: Font = Theme.serif(19),
          baseColor: Color = Theme.mid,
          strongColor: Color = Theme.ink) {
         self.init(Emphasis.render(

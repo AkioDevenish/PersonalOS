@@ -55,7 +55,7 @@ struct BriefingView: View {
                     Text(
                         emphasising: p,
                         base: Theme.serifBody(18),
-                        strong: Theme.serif(19),
+                        strong: Theme.serif(20),
                         baseColor: Theme.mid,
                         strongColor: Theme.ink
                     )
@@ -79,7 +79,7 @@ struct BriefingView: View {
                                 Text(
                                     emphasising: line,
                                     base: Theme.serifBody(16.5),
-                                    strong: Theme.serif(17.5)
+                                    strong: Theme.serif(18.5)
                                 )
                                 .lineSpacing(5)
                                 .fixedSize(horizontal: false, vertical: true)

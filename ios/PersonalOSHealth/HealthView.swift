@@ -67,7 +67,7 @@ struct HealthView: View {
                     .foregroundStyle(Theme.ink)
                     .lineSpacing(1)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 10)
+                    .padding(.top, 16)
                     .flowIn(1)
 
                 // A tracked-caps chip in an outlined capsule was the only
@@ -79,14 +79,14 @@ struct HealthView: View {
                     Text(mood.lowercased() + ".")
                         .font(Theme.serifItalic(19))
                         .foregroundStyle(Theme.dust)
-                        .padding(.top, 6)
+                        .padding(.top, 10)
                         .flowIn(1)
                 }
 
                 // MARK: The read
 
                 NavigationLink(value: Route.briefing) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         // More than the one line it used to show. Two
                         // paragraphs is the length at which the briefing reads
                         // as something written rather than a status field.
@@ -94,7 +94,7 @@ struct HealthView: View {
                             Text(
                                 emphasising: p,
                                 base: Theme.serifBody(18),
-                                strong: Theme.serif(19)
+                                strong: Theme.serif(20)
                             )
                             .lineSpacing(7)
                             .multilineTextAlignment(.leading)
@@ -102,32 +102,30 @@ struct HealthView: View {
                         }
 
                         if let first = briefing.suggestions.first {
-                            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                Text("I")
-                                    .font(Theme.serif(15))
-                                    .foregroundStyle(Theme.amber)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Kicker(text: "Still owing", size: 9)
                                 Text(
                                     emphasising: first,
                                     base: Theme.serifBody(16.5),
-                                    strong: Theme.serif(17.5)
+                                    strong: Theme.serif(18.5)
                                 )
                                 .lineSpacing(5)
                                 .fixedSize(horizontal: false, vertical: true)
                             }
-                            .padding(.top, 2)
+                            .padding(.top, 14)
                         }
 
                         Text("READ THE FULL BRIEFING  →")
                             .font(Theme.sans(10, medium: true))
                             .tracking(1.8)
                             .foregroundStyle(Theme.amber)
-                            .padding(.top, 2)
+                            .padding(.top, 18)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.pressRow)
-                .padding(.top, 20)
+                .padding(.top, 30)
                 .flowIn(2)
 
                 // MARK: The three that matter
@@ -154,7 +152,7 @@ struct HealthView: View {
                             .flowIn(3 + i)
                         }
                     }
-                    .padding(.top, 34)
+                    .padding(.top, 42)
                 }
 
                 // MARK: Everything else recorded
