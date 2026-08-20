@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The index of the ledger, kept off to the side.
+/// The index of the app, kept off to the side.
 ///
 /// Built against my own advice, so it is worth writing down what the risk is:
 /// a drawer hides its contents behind a gesture, and the things in this one are
@@ -34,7 +34,7 @@ struct LedgerDrawer: View {
                 .foregroundStyle(Theme.amber)
                 .padding(.top, 72)
 
-            Text("The ledger")
+            Text("Personal OS")
                 .font(Theme.serif(30))
                 .foregroundStyle(Theme.ink)
                 .padding(.top, 14)

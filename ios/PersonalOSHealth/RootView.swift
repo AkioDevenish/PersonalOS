@@ -176,15 +176,17 @@ struct RootView: View {
 
             page
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: shift > 0 ? 30 : 0, style: .continuous))
-                .scaleEffect(1 - (shift / LedgerDrawer.width) * 0.06, anchor: .center)
-                .offset(x: shift)
-                .shadow(color: Theme.ink.opacity(shift > 0 ? 0.16 : 0), radius: 22, x: -6)
+                // Everything that catches a touch has to be applied BEFORE the
+                // offset, and this is why the drawer's entries did nothing when
+                // tapped. `offset` moves what you see, not what the layout
+                // thinks is there, so an overlay added after it is positioned
+                // over the page's original, full-screen frame — including the
+                // 268 points now showing the drawer. The invisible sheet that
+                // closes the drawer was lying across the entries, swallowing
+                // every tap. Inside the offset, it travels with the page.
                 .overlay {
-                    // Anywhere on the page closes it, which is what a person
-                    // reaches for first.
                     if drawer {
-                        Theme.ink.opacity(0.001)
+                        Theme.ink.opacity(0.05)
                             .onTapGesture { withAnimation(Theme.Motion.flow) { drawer = false } }
                     }
                 }
@@ -192,6 +194,10 @@ struct RootView: View {
                     if !drawer { DrawerHandle(open: $drawer) }
                 }
                 .gesture(edgeDrag)
+                .clipShape(RoundedRectangle(cornerRadius: shift > 0 ? 30 : 0, style: .continuous))
+                .scaleEffect(1 - (shift / LedgerDrawer.width) * 0.06, anchor: .center)
+                .offset(x: shift)
+                .shadow(color: Theme.ink.opacity(shift > 0 ? 0.16 : 0), radius: 22, x: -6)
         }
         .background(Theme.linen)
     }
