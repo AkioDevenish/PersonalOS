@@ -32,7 +32,7 @@ enum IngestError: LocalizedError {
         case .invalidURL: return "Invalid server URL"
         case .notSignedIn: return "Sign in to sync your health data"
         case .http(let code, let body):
-            if code == 401 { return "Your session expired — sign in again" }
+            if code == 401 { return "Your session expired. Sign in again" }
             return "HTTP \(code): \(body)"
         case .decode: return "Unexpected server response"
         }

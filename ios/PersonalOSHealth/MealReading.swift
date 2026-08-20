@@ -41,6 +41,11 @@ enum MealReading {
     /// to emit, and the runs of blank lines it likes to leave behind.
     static func clean(_ s: String) -> String {
         var out = s.replacingOccurrences(of: "**", with: "")
+        // Models reach for the em dash constantly and it reads as machine
+        // prose. Cleaned on arrival rather than only asked for in the prompt,
+        // because asking is a request and this is a rule.
+        out = out.replacingOccurrences(of: " — ", with: ", ")
+        out = out.replacingOccurrences(of: "—", with: ", ")
         out = out.replacingOccurrences(of: "[MEAL_REC]", with: "")
         out = out.replacingOccurrences(of: "##", with: "")
         out = out

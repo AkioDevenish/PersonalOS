@@ -62,7 +62,7 @@ struct NutritionView: View {
                     .flowIn(1)
 
                 Text(country.isEmpty
-                     ? "Read from your recent glucose, sleep and activity — not a generic meal plan."
+                     ? "Read from your recent glucose, sleep and activity, not a generic meal plan."
                      : "Read from your recent glucose, sleep and activity, and cooked with what you can actually buy in \(Cuisine.name(for: country)).")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
@@ -429,7 +429,7 @@ struct ExpertsView: View {
                     .padding(.top, 8)
                     .flowIn(1)
 
-                Text("The same telemetry, examined through a different lens. Patterns only — never a diagnosis.")
+                Text("The same telemetry, examined through a different lens. Patterns only, never a diagnosis.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
@@ -647,7 +647,7 @@ struct ExpertsView: View {
             return
         }
 
-        status = "Reading your telemetry — this takes a minute."
+        status = "Reading your telemetry. This takes a minute."
         do {
             try await InsightsClient().generateReport(period: period, expert: expert)
             await load()

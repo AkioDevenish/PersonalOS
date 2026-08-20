@@ -58,6 +58,38 @@ struct Briefing {
 
     var summary: String { paragraphs.first ?? "Connect Apple Health to begin your ledger." }
 
+    // MARK: What the day still owes
+
+    /// The closing list, from the goals the person actually set.
+    ///
+    /// This used to be advice invented from numbers in a source file: under
+    /// four thousand steps meant "the day still owes you a walk", because four
+    /// thousand was hardcoded. That is a guess about a stranger. Now it is
+    /// arithmetic against what they said they were aiming at, and when they
+    /// have set nothing it says so rather than inventing an ambition for them.
+    static func owing(_ snapshot: HealthSnapshot?) -> [String] {
+        let progress = Goals.progress(on: snapshot)
+        guard !progress.isEmpty else { return [] }
+
+        let unmet = progress.filter { !$0.met }
+        guard !unmet.isEmpty else {
+            return ["Every goal you set for today is met."]
+        }
+
+        return unmet.map { p in
+            let spec = p.spec
+            let target = spec.format(p.target) + unitSuffix(spec)
+            guard let actual = p.actual else {
+                return "\(capitalised(spec.spoken)): nothing recorded yet, against \(target)."
+            }
+            let now = spec.format(actual) + unitSuffix(spec)
+            let gap = p.shortfall.map { spec.format($0) + unitSuffix(spec) } ?? ""
+            return spec.goal == .atMost
+                ? "\(capitalised(spec.spoken)): \(now), which is \(gap) over your \(target)."
+                : "\(capitalised(spec.spoken)): \(now) of \(target), \(gap) short."
+        }
+    }
+
     // MARK: A day
 
     static func compose(from s: HealthSnapshot?) -> Briefing {
@@ -77,9 +109,9 @@ struct Briefing {
             let d = HealthView.duration(sleep)
             if sleep < 6.5 {
                 headline = "A short night."
-                var line = "You slept \(d) — on the short side."
+                var line = "You slept \(d), which is on the short side."
                 if let rhr = s.restingHeartRate {
-                    line = "You slept \(d) — on the short side — but your resting heart rate held at \(Int(rhr.rounded()))."
+                    line = "You slept \(d), on the short side, but your resting heart rate held at \(Int(rhr.rounded()))."
                     headline = "A short night,\nsteady heart."
                 }
                 paras.append(line)
@@ -93,10 +125,10 @@ struct Briefing {
         if let steps = s.steps {
             let n = HealthView.grouped(steps)
             if steps < 4000 {
-                paras.append("Steps stand at \(n) so far — the day still owes you a walk.")
+                paras.append("Steps stand at \(n) so far.")
                 sugg.append("An easy 30-minute walk, ideally in daylight")
             } else {
-                paras.append("Steps stand at \(n) so far — the account is filling on its own.")
+                paras.append("Steps stand at \(n) so far, and the account is filling on its own.")
             }
         }
 
@@ -105,10 +137,15 @@ struct Briefing {
         }
 
         if paras.isEmpty {
-            paras.append("No entries yet today — the ledger fills as you move.")
+            paras.append("No entries yet today. The ledger fills as you move.")
         }
-        if sugg.isEmpty {
-            sugg.append("Nothing owed — spend the day as you like")
+        let goals = owing(s)
+        if !goals.isEmpty {
+            // What you set outranks what the app guessed. The invented advice
+            // only survives when there is nothing of your own to say.
+            sugg = goals
+        } else if sugg.isEmpty {
+            sugg.append("No goals set yet. Set some and this list becomes yours.")
         }
         return Briefing(headline: headline, paragraphs: paras, suggestions: sugg)
     }
@@ -147,7 +184,7 @@ struct Briefing {
             if let drift = drift(nights), abs(drift) >= 0.25 {
                 let mins = Int((abs(drift) * 60).rounded())
                 line += ", and \(drift > 0 ? "gained" : "lost") about \(mins) minutes a night as it went on"
-                if drift < 0 { sugg.append("Protect the bedtime that slipped — it's costing you \(mins) minutes") }
+                if drift < 0 { sugg.append("Protect the bedtime that slipped. It is costing you \(mins) minutes") }
             }
             paras.append(line + ".")
 
@@ -166,7 +203,7 @@ struct Briefing {
             line += ", with your best on \(best.date.formatted(.dateTime.day().month(.abbreviated))) at \(HealthView.grouped(best.value))."
             paras.append(line)
             if avgSteps < 5000 {
-                sugg.append("Add a daily walk — the average has room in it")
+                sugg.append("Add a daily walk. The average has room in it")
             }
         }
 
@@ -180,7 +217,7 @@ struct Briefing {
             if let drift = drift(rhr), abs(drift) >= 1 {
                 line += ", drifting \(drift > 0 ? "up" : "down") about \(Int(abs(drift).rounded())) bpm across \(period.window)"
                 if drift > 2 {
-                    sugg.append("A lighter few days — the heart rate has been climbing")
+                    sugg.append("A lighter few days. The heart rate has been climbing")
                 }
             }
             paras.append(line + ".")
@@ -194,7 +231,7 @@ struct Briefing {
             paras.append("Nothing measurable was recorded over \(period.window).")
         }
         if sugg.isEmpty {
-            sugg.append("Nothing owed — the window reads steady")
+            sugg.append("Nothing owed. The window reads steady")
         }
         return Briefing(headline: headline, paragraphs: paras, suggestions: sugg)
     }
@@ -216,11 +253,17 @@ struct Briefing {
     ///
     /// Composed here beside the rest of the prose rather than in the view, so
     /// there is one place where this app decides how to describe a number.
+    /// Returns the sentences rather than a paragraph.
+    ///
+    /// They were joined into one block per group, which is a wall: six
+    /// measurements run together read as an essay about nothing, and there is
+    /// no way to find the one you wanted. One line per measurement, set as a
+    /// list, is scannable and still reads as written English.
     static func breakdown(
         period: BriefingPeriod,
         today: HealthSnapshot?,
         history: [HealthSnapshot]
-    ) -> [(group: MetricSpec.Group, prose: String)] {
+    ) -> [(group: MetricSpec.Group, lines: [String])] {
         MetricSpec.Group.allCases.compactMap { group in
             var sentences: [String] = []
             for spec in Metrics.inGroup(group) {
@@ -234,7 +277,7 @@ struct Briefing {
                     sentences.append(line)
                 }
             }
-            return sentences.isEmpty ? nil : (group, sentences.joined(separator: " "))
+            return sentences.isEmpty ? nil : (group, sentences)
         }
     }
 

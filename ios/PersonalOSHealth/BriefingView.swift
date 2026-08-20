@@ -22,7 +22,7 @@ struct BriefingView: View {
 
     /// Every metric with a reading, as a paragraph per group. The composing
     /// lives in Briefing beside the rest of the prose.
-    private var breakdown: [(group: MetricSpec.Group, prose: String)] {
+    private var breakdown: [(group: MetricSpec.Group, lines: [String])] {
         Briefing.breakdown(period: period, today: today, history: snapshots)
     }
 
@@ -66,12 +66,22 @@ struct BriefingView: View {
                         .padding(.top, i == 0 ? 30 : 26)
                         .flowIn(3 + b.paragraphs.count + i)
 
-                    Text(section.prose)
-                        .font(Theme.serifBody(17))
-                        .foregroundStyle(Theme.mid)
-                        .lineSpacing(6)
-                        .padding(.top, 14)
-                        .flowIn(3 + b.paragraphs.count + i)
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(section.lines, id: \.self) { line in
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Text("·")
+                                    .font(Theme.serif(17))
+                                    .foregroundStyle(Theme.amber)
+                                Text(line)
+                                    .font(Theme.serifBody(16.5))
+                                    .foregroundStyle(Theme.mid)
+                                    .lineSpacing(5)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    .padding(.top, 14)
+                    .flowIn(3 + b.paragraphs.count + i)
                 }
 
                 if breakdown.isEmpty && !loading {
@@ -85,7 +95,9 @@ struct BriefingView: View {
                     .padding(.vertical, 26)
                     .flowIn(4 + b.paragraphs.count + breakdown.count)
 
-                Kicker(text: period.spend)
+                Kicker(text: b.suggestions.count == 1 && b.suggestions[0].hasPrefix("No goals")
+                       ? "Goals"
+                       : period.spend)
                     .flowIn(5 + b.paragraphs.count + breakdown.count)
 
                 ForEach(Array(b.suggestions.enumerated()), id: \.offset) { i, s in

@@ -304,7 +304,7 @@ struct TrendsView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Kicker(text: label, size: 9)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(value.map { format($0) } ?? "—")
+                    Text(value.map { format($0) } ?? "·")
                         .font(Theme.serif(28))
                         .foregroundStyle(Theme.ink)
                         .contentTransition(.numericText())

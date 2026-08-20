@@ -137,7 +137,7 @@ enum Tab: CaseIterable {
 /// driven by a path can be emptied from anywhere, which is what makes tapping
 /// the tab you're already on take you home.
 enum Route: Hashable {
-    case briefing, history, nutrition, specialists, paywall
+    case briefing, history, nutrition, specialists, paywall, goals
 }
 
 struct RootView: View {
@@ -168,6 +168,7 @@ struct RootView: View {
                     case .nutrition:    NutritionView()
                     case .specialists:  ExpertsView()
                     case .paywall:      PaywallView()
+                    case .goals:        GoalsView()
                     }
                 }
                 // The identity changes with the tab, which is what lets one

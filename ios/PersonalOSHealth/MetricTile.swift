@@ -37,7 +37,7 @@ struct MetricTile: View {
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(snapshot.flatMap { spec.display($0) } ?? "—")
+                Text(snapshot.flatMap { spec.display($0) } ?? "·")
                     .font(Theme.serif(30))
                     .foregroundStyle(Theme.ink)
                     .contentTransition(.numericText())

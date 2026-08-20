@@ -104,7 +104,7 @@ struct ConnectionsListView: View {
                 }
                 .padding(.top, 16)
 
-                Text("When two sources report the same thing, we pick one and show you which — never both added together.")
+                Text("When two sources report the same thing, we pick one and show you which. Never both added together.")
                     .font(Theme.sans(11))
                     .foregroundStyle(Theme.dust)
                     .lineSpacing(3)

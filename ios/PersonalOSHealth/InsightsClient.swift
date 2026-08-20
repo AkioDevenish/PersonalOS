@@ -128,7 +128,7 @@ enum InsightsError: LocalizedError {
         case .http(let code, _):
             // The engine lives on the Mac; when it's off, say so plainly.
             if code == 500 { return "The insight engine didn't answer. Is the Mac awake with Ollama running?" }
-            if code == 401 { return "Your session expired — sign in again" }
+            if code == 401 { return "Your session expired. Sign in again" }
             return "Request failed (\(code))"
         }
     }

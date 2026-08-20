@@ -13,16 +13,29 @@ struct HealthView: View {
         return f.string(from: Date())
     }
 
-    /// The three figures a day is actually judged on.
+    /// The two figures a day is actually judged on.
     ///
-    /// A grid of nineteen equal numbers is a table, and a table has no opinion.
-    /// These three lead because they are what a person checks first — how you
-    /// slept, how much you moved, and what your heart made of it — and they are
-    /// set large enough to be read from a pocket rather than studied.
+    /// A grid of equal numbers is a table, and a table has no opinion about
+    /// which of them you opened the app to see. How you slept and what your
+    /// heart made of it lead, set large enough to read from a pocket.
+    ///
+    /// They are also the whole of Recovery & environment worth a heading, which
+    /// is why that section is gone from this page: with these two lifted out it
+    /// was a title over the leftovers. Steps went back to Physical activity for
+    /// the same reason, so that group reads as the whole of your movement
+    /// rather than the parts of it that weren't promoted.
     private var lead: [MetricSpec] {
-        ["sleep", "steps", "resting_hr"]
+        ["sleep", "resting_hr"]
             .compactMap { Metrics.by(id: $0) }
             .filter { spec in snapshot.flatMap { spec.value($0) } != nil }
+    }
+
+    /// Which groups this page prints. Recovery & environment is not one of
+    /// them: its two figures are large at the top, and what remained under the
+    /// heading was mindful minutes and headphone volume, which is not a section
+    /// of a health summary. Both still live in Records and in the briefing.
+    private var shownGroups: [MetricSpec.Group] {
+        Metrics.populatedGroups(snapshot).filter { $0 != .recovery }
     }
 
     /// The groups, minus anything already shown large above it.
@@ -40,20 +53,9 @@ struct HealthView: View {
 
                 // MARK: The day
 
-                HStack(spacing: 10) {
-                    Kicker(text: dateKicker, color: Theme.amber, size: 11)
-                    if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
-                        Text(mood)
-                            .font(Theme.sans(10))
-                            .tracking(1.2)
-                            .foregroundStyle(Theme.mid)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
-                    }
-                }
-                .padding(.top, 8)
-                .flowIn(0)
+                Kicker(text: dateKicker, color: Theme.amber, size: 11)
+                    .padding(.top, 8)
+                    .flowIn(0)
 
                 // The briefing's own headline is the page's headline. It used
                 // to say "The day so far." over a summary that then said what
@@ -67,6 +69,19 @@ struct HealthView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
                     .flowIn(1)
+
+                // A tracked-caps chip in an outlined capsule was the only
+                // bordered object left on the page, and it made "excited and
+                // grateful" look like a build tag. Someone's state of mind is
+                // the softest thing the app knows: it belongs in the italic,
+                // under the headline, with nothing drawn around it.
+                if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
+                    Text(mood.lowercased() + ".")
+                        .font(Theme.serifItalic(19))
+                        .foregroundStyle(Theme.dust)
+                        .padding(.top, 6)
+                        .flowIn(1)
+                }
 
                 // MARK: The read
 
@@ -120,7 +135,7 @@ struct HealthView: View {
                                 Kicker(text: spec.label, size: 8.5)
                                     .lineLimit(1)
                                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                                    Text(snapshot.flatMap { spec.display($0) } ?? "—")
+                                    Text(snapshot.flatMap { spec.display($0) } ?? "·")
                                         .font(Theme.serif(34))
                                         .foregroundStyle(Theme.ink)
                                         .contentTransition(.numericText())
@@ -140,7 +155,7 @@ struct HealthView: View {
 
                 // MARK: Everything else recorded
 
-                ForEach(Array(Metrics.populatedGroups(snapshot).enumerated()), id: \.element) { i, group in
+                ForEach(Array(shownGroups.enumerated()), id: \.element) { i, group in
                     let specs = rest(group)
                     if !specs.isEmpty {
                         SectionRule(text: group.rawValue)
@@ -152,7 +167,7 @@ struct HealthView: View {
                     }
                 }
 
-                if snapshot != nil && Metrics.populatedGroups(snapshot).isEmpty {
+                if snapshot != nil && shownGroups.isEmpty {
                     Text("Nothing recorded yet today.")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.dust)
@@ -171,9 +186,10 @@ struct HealthView: View {
                     .flowIn(11)
 
                 VStack(spacing: 0) {
-                    consultRow("Records", "Any measurement over time — or two against each other", 12, .history)
+                    consultRow("Records", "Any measurement over time, or two against each other", 12, .history)
                     consultRow("Nutrition", "What to eat next, from your own readings", 13, .nutrition)
                     consultRow("Specialists", "Read by an expert", 14, .specialists)
+                    consultRow("Goals", goalsSubtitle, 15, .goals)
                 }
                 .padding(.top, 8)
 
@@ -231,6 +247,17 @@ struct HealthView: View {
         }
         .buttonStyle(.pressRow)
         .flowIn(index)
+    }
+
+    /// Says where the day stands against them, so the row is worth something
+    /// before it is tapped.
+    private var goalsSubtitle: String {
+        let progress = Goals.progress(on: snapshot)
+        guard !progress.isEmpty else { return "Set what you're aiming at" }
+        let met = progress.filter(\.met).count
+        return met == progress.count
+            ? "All \(progress.count) met today"
+            : "\(met) of \(progress.count) met today"
     }
 
     private func load() async {

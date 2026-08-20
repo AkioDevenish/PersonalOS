@@ -121,7 +121,7 @@ enum OnDeviceInsights {
                 case .guardrailViolation, .refusal:
                     // Health telemetry can read as medical content to a safety
                     // filter. Say what happened rather than showing a failure.
-                    return "The on-device model declined to answer this one — health readings sometimes trip its safety filter. A hosted model will usually handle it."
+                    return "The on-device model declined to answer this one. Health readings sometimes trip its safety filter. A hosted model will usually handle it."
                 case .rateLimited, .concurrentRequests:
                     return "The on-device model is busy. Try again in a moment."
                 case .unsupportedLanguageOrLocale:
@@ -195,7 +195,7 @@ enum InsightPrompts {
             asks: """
             Write 3 observations about what your eating appears to be doing. Work \
             forward from carbohydrates to glucose, energy and the next day's activity. \
-            End each with a change in ordinary food or timing — never a supplement, \
+            End each with a change in ordinary food or timing, never a supplement, \
             never a named diet.
             """,
             example: """
@@ -220,7 +220,7 @@ enum InsightPrompts {
             example: """
             "Your walking speed dropped on the days after your hardest ones. On 04 Mar \
             you burned 890 kcal and walked at 4.9 km/h the next day, against 410 kcal \
-            and 5.6 km/h after 07 Mar. That is a fatigue signal, not a fitness one — \
+            and 5.6 km/h after 07 Mar. That is a fatigue signal, not a fitness one, so \
             keep the next session easy."
             """
         ),
@@ -231,7 +231,7 @@ enum InsightPrompts {
             metrics: [],   // empty means the whole table; correlation is the job
             asks: """
             Write 3 observations about relationships between measurements, each about a \
-            different pair. Quantify every claim — how much, over how many days. For \
+            different pair. Quantify every claim: how much, over how many days. For \
             each, name the other explanation the same numbers would fit, and say which \
             of the two this data cannot separate.
             """,
@@ -267,6 +267,7 @@ enum InsightPrompts {
         - If the numbers do not support a claim, do not make the claim.
         - Never name a medical condition. Never mention medication.
         - Write plain sentences. Never use #, *, or bullet characters.
+        - Never use a long dash. A comma or a full stop instead.
         - Never write an introduction. Your first word begins the first observation.
         """
     }
@@ -346,7 +347,7 @@ enum InsightPrompts {
             }
             guard !parts.isEmpty else { return nil }
             let day = snap.recordedAt.formatted(.dateTime.day().month(.abbreviated))
-            return "\(day) — \(parts.joined(separator: ", "))"
+            return "\(day): \(parts.joined(separator: ", "))"
         }
 
         return """
@@ -455,7 +456,7 @@ enum InsightPrompts {
 
     static let starterInstructions = """
     You list food. You answer with names only, one a line, and nothing else.
-    If you are unsure a dish is genuinely eaten in that country, leave it out —
+    If you are unsure a dish is genuinely eaten in that country, leave it out.
     a short honest list is worth more than a long invented one.
     """
 
@@ -468,5 +469,6 @@ enum InsightPrompts {
     - If they name a country, every suggestion is food eaten in that country.
     - Never name a medical condition. Never mention medication or supplements.
     - Never write an introduction. Your first word begins the first suggestion.
+    - Never use a long dash. A comma or a full stop instead.
     """
 }

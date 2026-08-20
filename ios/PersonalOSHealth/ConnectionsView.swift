@@ -107,6 +107,29 @@ struct ConnectionsView: View {
                 .buttonStyle(.pressRow)
                 .padding(.top, 6)
 
+                SectionRule(text: "Goals")
+                    .padding(.top, 32)
+                    .flowIn(4)
+
+                NavigationLink(value: Route.goals) {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("What you're aiming at")
+                                .font(Theme.serif(19))
+                                .foregroundStyle(Theme.ink)
+                            Text("Steps, sleep and the rest. The briefing closes with whatever the day hasn't met.")
+                                .font(Theme.sans(10.5))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        Spacer()
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                    }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressRow)
+                .padding(.top, 6)
+
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
                     .flowIn(4)
@@ -155,7 +178,7 @@ struct ConnectionsView: View {
                 }
 
                 #if DEBUG
-                SectionRule(text: "Debug — not in release")
+                SectionRule(text: "Debug, not in release")
                     .padding(.top, 32)
                 VStack(alignment: .leading, spacing: 10) {
                     TextField("Server URL", text: $debugURL)

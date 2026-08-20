@@ -55,7 +55,7 @@ struct ConsultView: View {
 
                 Text(inbox.professionals.isEmpty
                      ? "No nutritionist has taken this on yet. You can write your question and it will be waiting for the first one who does."
-                     : "A person reads these — not a model. Answers come back here.")
+                     : "A person reads these, not a model. Answers come back here.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(5)
