@@ -52,12 +52,16 @@ struct BriefingView: View {
                     .flowIn(2)
 
                 ForEach(Array(b.paragraphs.enumerated()), id: \.element) { i, p in
-                    Text(p)
-                        .font(Theme.serifBody(18))
-                        .foregroundStyle(Theme.ink)
-                        .lineSpacing(7)
-                        .padding(.top, 16)
-                        .flowIn(3 + i)
+                    Text(
+                        emphasising: p,
+                        base: Theme.serifBody(18),
+                        strong: Theme.serif(19),
+                        baseColor: Theme.mid,
+                        strongColor: Theme.ink
+                    )
+                    .lineSpacing(7)
+                    .padding(.top, 16)
+                    .flowIn(3 + i)
                 }
 
                 // The evidence, after the read and before what to do about it.
@@ -72,11 +76,13 @@ struct BriefingView: View {
                                 Text("·")
                                     .font(Theme.serif(17))
                                     .foregroundStyle(Theme.amber)
-                                Text(line)
-                                    .font(Theme.serifBody(16.5))
-                                    .foregroundStyle(Theme.mid)
-                                    .lineSpacing(5)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(
+                                    emphasising: line,
+                                    base: Theme.serifBody(16.5),
+                                    strong: Theme.serif(17.5)
+                                )
+                                .lineSpacing(5)
+                                .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
@@ -106,9 +112,7 @@ struct BriefingView: View {
                             .font(Theme.serif(17))
                             .foregroundStyle(Theme.amber)
                             .frame(width: 22, alignment: .leading)
-                        Text(s)
-                            .font(Theme.serifBody(17))
-                            .foregroundStyle(Theme.mid)
+                        Text(emphasising: s)
                             .lineSpacing(5)
                     }
                     .padding(.top, 14)

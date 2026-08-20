@@ -91,12 +91,14 @@ struct HealthView: View {
                         // paragraphs is the length at which the briefing reads
                         // as something written rather than a status field.
                         ForEach(Array(briefing.paragraphs.prefix(2).enumerated()), id: \.element) { _, p in
-                            Text(p)
-                                .font(Theme.serifBody(18))
-                                .foregroundStyle(Theme.mid)
-                                .lineSpacing(7)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
+                            Text(
+                                emphasising: p,
+                                base: Theme.serifBody(18),
+                                strong: Theme.serif(19)
+                            )
+                            .lineSpacing(7)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
 
                         if let first = briefing.suggestions.first {
@@ -104,11 +106,13 @@ struct HealthView: View {
                                 Text("I")
                                     .font(Theme.serif(15))
                                     .foregroundStyle(Theme.amber)
-                                Text(first)
-                                    .font(Theme.serifBody(16.5))
-                                    .foregroundStyle(Theme.ink)
-                                    .lineSpacing(5)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(
+                                    emphasising: first,
+                                    base: Theme.serifBody(16.5),
+                                    strong: Theme.serif(17.5)
+                                )
+                                .lineSpacing(5)
+                                .fixedSize(horizontal: false, vertical: true)
                             }
                             .padding(.top, 2)
                         }
