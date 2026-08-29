@@ -66,6 +66,21 @@ enum HealthKitError: LocalizedError {
 final class HealthKitManager: ObservableObject {
     private let store = HKHealthStore()
 
+    /// Whether this build may ask for medications.
+    ///
+    /// iOS 26 put medications behind a restricted entitlement. Without it,
+    /// naming those types in `requestAuthorization` does not fail quietly or
+    /// return a denial: it throws NSInvalidArgumentException, uncaught, and
+    /// the app dies on launch. That is what happened when this shipped, and
+    /// the crash is at start-up rather than at the point of use, so it takes
+    /// the whole app with it and not just the feature.
+    ///
+    /// It stays false until the entitlement exists, which needs the paid
+    /// developer account. The catalogue row survives and simply never
+    /// populates, which is the same thing the app does for a person with no
+    /// glucose writer. Flip this when the entitlement is granted.
+    static let medicationsPermitted = false
+
     private var readTypes: Set<HKObjectType> {
         var types = Set<HKObjectType>()
         if let steps = HKQuantityType.quantityType(forIdentifier: .stepCount) { types.insert(steps) }
@@ -89,14 +104,19 @@ final class HealthKitManager: ObservableObject {
         if let rhr = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) { types.insert(rhr) }
         if let protein = HKQuantityType.quantityType(forIdentifier: .dietaryProtein) { types.insert(protein) }
         if let energyIn = HKQuantityType.quantityType(forIdentifier: .dietaryEnergyConsumed) { types.insert(energyIn) }
+        // The two halves, and only the two halves. Asking for the blood
+        // pressure *correlation* here throws on launch: authorisation is
+        // granted over the quantities, and the correlation query then reads
+        // them. Requesting the correlation type is disallowed outright, and
+        // an uncaught NSException from requestAuthorization takes the whole
+        // app down at start-up rather than degrading.
         if let systolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic) { types.insert(systolic) }
         if let diastolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) { types.insert(diastolic) }
-        if let bp = HKCorrelationType.correlationType(forIdentifier: .bloodPressure) { types.insert(bp) }
         if let flow = HKCategoryType.categoryType(forIdentifier: .menstrualFlow) { types.insert(flow) }
-        // Medications arrived in iOS 26 as their own object types rather than
-        // as samples with an identifier, so they are asked for by type.
-        types.insert(HKObjectType.userAnnotatedMedicationType())
-        types.insert(HKObjectType.medicationDoseEventType())
+        if Self.medicationsPermitted {
+            types.insert(HKObjectType.userAnnotatedMedicationType())
+            types.insert(HKObjectType.medicationDoseEventType())
+        }
         if let sleep = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         if let mindful = HKCategoryType.categoryType(forIdentifier: .mindfulSession) { types.insert(mindful) }
         if #available(iOS 17.0, *) {
@@ -274,10 +294,11 @@ final class HealthKitManager: ObservableObject {
     /// Their nickname wins over the clinical display text, because someone who
     /// has renamed it to "the blue one" has told you what to call it.
     private func medicationNames() async -> [String] {
+        guard Self.medicationsPermitted else { return [] }
         // This query enumerates rather than returning a batch: the handler runs
         // once per medication and once more with `done`. So the names are
         // gathered as they arrive and handed back at the end, exactly once.
-        await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             var names: [String] = []
             var finished = false
             let query = HKUserAnnotatedMedicationQuery(
@@ -300,7 +321,8 @@ final class HealthKitManager: ObservableObject {
     /// reminders are not doses, and counting them would report a day of
     /// medication that did not happen.
     private func medicationDosesTaken(predicate: NSPredicate) async -> Double? {
-        await withCheckedContinuation { continuation in
+        guard Self.medicationsPermitted else { return nil }
+        return await withCheckedContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: HKObjectType.medicationDoseEventType(),
                 predicate: predicate,
