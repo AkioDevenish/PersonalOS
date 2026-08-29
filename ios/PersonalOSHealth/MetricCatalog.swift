@@ -36,6 +36,9 @@ struct MetricSpec: Identifiable, Hashable {
         case gait = "Mobility & gait"
         case recovery = "Recovery & environment"
         case metabolic = "Metabolic"
+        /// Blood pressure, medications, cycle. Things a clinician asks about,
+        /// which are not activity and are not metabolism.
+        case clinical = "Clinical"
     }
 
     let id: String
@@ -60,6 +63,16 @@ struct MetricSpec: Identifiable, Hashable {
     /// congratulate you for a resting heart rate of 90. `none` is for the
     /// measures where more is not better and less is not better either.
     var goal: GoalDirection = .none
+    /// How this reading prints, when a number is the wrong shape for it.
+    ///
+    /// Blood pressure is a pair, cycle flow is a word, and a medication is a
+    /// name. `value` stays numeric for charts, correlations and goals, and this
+    /// says what a person should actually read. Nil means the number is the
+    /// reading, which is true of most of the catalogue.
+    var reading: ((HealthSnapshot) -> String?)? = nil
+    /// Names, for the measurements that are lists rather than quantities. The
+    /// briefing can speak these; a tile cannot hold them.
+    var words: ((HealthSnapshot) -> [String])? = nil
     /// How this metric's glyph moves.
     ///
     /// Every glyph moves now. It used to be four — a heart, a flame, a drop, a
@@ -98,6 +111,7 @@ struct MetricSpec: Identifiable, Hashable {
 
     /// Formats for display, or nil when the day holds nothing.
     func display(_ s: HealthSnapshot) -> String? {
+        if let reading { return reading(s) }
         guard let v = value(s), v.isFinite else { return nil }
         return format(v)
     }
@@ -139,9 +153,62 @@ enum Metrics {
         .init(id: "audio", label: "Audio exposure", group: .recovery, unit: "dB", precision: 0, phrase: "headphone audio exposure", goal: .atMost, motion: .beat, symbol: "ear") { $0.headphoneAudioExposure },
 
         // — Metabolic —
+        // Protein and energy in join carbohydrates, which was already here.
+        // They are read from HealthKit and never written to it: a macro this
+        // app guessed is not a measurement, and writing it back would make it
+        // indistinguishable from one.
+
         .init(id: "glucose", label: "Blood glucose", group: .metabolic, unit: "mg/dL", precision: 0, phrase: "blood glucose", goal: .atMost, motion: .beat, symbol: "drop") { $0.avgBloodGlucoseMgdl },
         .init(id: "carbs", label: "Carbohydrates", group: .metabolic, unit: "g", precision: 0, cumulative: true, goal: .atMost, motion: .periodicBounce, symbol: "fork.knife") { $0.dietaryCarbohydratesG },
         .init(id: "insulin", label: "Insulin", group: .metabolic, unit: "IU", precision: 1, cumulative: true, motion: .periodicBounce, symbol: "syringe") { $0.insulinDeliveryIu },
+        .init(id: "protein", label: "Protein", group: .metabolic, unit: "g", precision: 0, cumulative: true, phrase: "dietary protein", goal: .atLeast, motion: .periodicBounce, symbol: "fish") { $0.dietaryProteinG },
+        // No direction on energy in. Whether a person wants more of it or less
+        // is theirs to know, and a default here would be the app deciding.
+        .init(id: "energy_in", label: "Energy in", group: .metabolic, unit: "kcal", precision: 0, cumulative: true, phrase: "energy eaten", motion: .breathing, symbol: "takeoutbag.and.cup.and.straw") { $0.dietaryEnergyKcal },
+
+        // — Clinical —
+        // Blood pressure is one metric, not two. Systolic alone is a number
+        // nobody reads and either half without the other invites a wrong
+        // conclusion, so the pair prints together and `value` carries systolic
+        // only so the chart has something to draw.
+        .init(
+            id: "blood_pressure", label: "Blood pressure", group: .clinical, unit: "mmHg", precision: 0,
+            phrase: "blood pressure",
+            reading: { s in
+                guard let sys = s.bloodPressureSystolic, let dia = s.bloodPressureDiastolic else { return nil }
+                return "\(Int(sys.rounded()))/\(Int(dia.rounded()))"
+            },
+            motion: .beat, symbol: "heart.text.square"
+        ) { $0.bloodPressureSystolic },
+        // The count is what fits on a tile; the names are what the briefing
+        // says. Absent entirely when nothing is set up, never "you took none".
+        .init(
+            id: "medications", label: "Medications", group: .clinical, unit: "", precision: 0,
+            phrase: "medications",
+            reading: { s in
+                guard !s.medications.isEmpty else { return nil }
+                let taken = Int(s.medicationDosesTaken ?? 0)
+                return taken > 0 ? "\(taken) of \(s.medications.count)" : "\(s.medications.count)"
+            },
+            words: { $0.medications },
+            motion: .periodicBounce, symbol: "pills"
+        ) { s in s.medications.isEmpty ? nil : Double(s.medications.count) },
+        // Flow is a word people use, not a level they think in. The number
+        // exists so the chart can draw it; the word is what is read.
+        .init(
+            id: "cycle_flow", label: "Cycle", group: .clinical, unit: "", precision: 0,
+            phrase: "menstrual flow",
+            reading: { s in
+                switch s.menstrualFlow {
+                case 2: return "light"
+                case 3: return "medium"
+                case 4: return "heavy"
+                case 1: return "recorded"
+                default: return nil
+                }
+            },
+            motion: .breathing, symbol: "drop.circle"
+        ) { $0.menstrualFlow },
     ]
 
     static func inGroup(_ g: MetricSpec.Group) -> [MetricSpec] {

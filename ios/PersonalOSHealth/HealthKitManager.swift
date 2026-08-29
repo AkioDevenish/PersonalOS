@@ -25,6 +25,29 @@ struct HealthSnapshot {
     let restingHeartRate: Double?
     let stateOfMindLabels: String?
     let stateOfMindValence: Double?
+
+    // MARK: Read, never written
+    //
+    // Everything below arrives from whatever app the person already uses:
+    // Libre or Dexcom for glucose, a food app for the macros, Omron for blood
+    // pressure, the Health app itself for medications and cycle. This app is a
+    // reader of that bus. It does not write to HealthKit, and in particular it
+    // never writes a macro it guessed, because a guessed number stored beside
+    // measured ones stops being distinguishable from a measurement.
+    var dietaryProteinG: Double? = nil
+    var dietaryEnergyKcal: Double? = nil
+    /// The pair, from one reading rather than two separate averages: a systolic
+    /// from the morning beside a diastolic from the evening is not a blood
+    /// pressure, it is two numbers.
+    var bloodPressureSystolic: Double? = nil
+    var bloodPressureDiastolic: Double? = nil
+    var bloodPressureAt: Date? = nil
+    /// Names of the medications the person keeps in Health, not archived.
+    var medications: [String] = []
+    /// How many doses were logged as taken today. Absent is not zero.
+    var medicationDosesTaken: Double? = nil
+    /// HKCategoryValueMenstrualFlow: 1 unspecified, 2 light, 3 medium, 4 heavy.
+    var menstrualFlow: Double? = nil
 }
 
 enum HealthKitError: LocalizedError {
@@ -64,6 +87,16 @@ final class HealthKitManager: ObservableObject {
         if let audioEx = HKQuantityType.quantityType(forIdentifier: .headphoneAudioExposure) { types.insert(audioEx) }
         if let daylight = HKQuantityType.quantityType(forIdentifier: .timeInDaylight) { types.insert(daylight) }
         if let rhr = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) { types.insert(rhr) }
+        if let protein = HKQuantityType.quantityType(forIdentifier: .dietaryProtein) { types.insert(protein) }
+        if let energyIn = HKQuantityType.quantityType(forIdentifier: .dietaryEnergyConsumed) { types.insert(energyIn) }
+        if let systolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic) { types.insert(systolic) }
+        if let diastolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) { types.insert(diastolic) }
+        if let bp = HKCorrelationType.correlationType(forIdentifier: .bloodPressure) { types.insert(bp) }
+        if let flow = HKCategoryType.categoryType(forIdentifier: .menstrualFlow) { types.insert(flow) }
+        // Medications arrived in iOS 26 as their own object types rather than
+        // as samples with an identifier, so they are asked for by type.
+        types.insert(HKObjectType.userAnnotatedMedicationType())
+        types.insert(HKObjectType.medicationDoseEventType())
         if let sleep = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         if let mindful = HKCategoryType.categoryType(forIdentifier: .mindfulSession) { types.insert(mindful) }
         if #available(iOS 17.0, *) {
@@ -127,6 +160,12 @@ final class HealthKitManager: ObservableObject {
         async let daylight = cumulative(.timeInDaylight, unit: .minute(), predicate: predicate)
         async let restingHR = average(.restingHeartRate, unit: HKUnit.count().unitDivided(by: .minute()), predicate: predicate)
         
+        async let protein = cumulative(.dietaryProtein, unit: .gram(), predicate: predicate)
+        async let energyIn = cumulative(.dietaryEnergyConsumed, unit: .kilocalorie(), predicate: predicate)
+        async let pressure = latestBloodPressure(predicate: predicate)
+        async let flow = latestCategoryValue(.menstrualFlow, predicate: predicate)
+        async let meds = medicationNames()
+        async let dosesTaken = medicationDosesTaken(predicate: predicate)
         async let sleepSeconds = categoryDurationSum(.sleepAnalysis, predicate: categoryPredicate)
         async let mindfulSeconds = categoryDurationSum(.mindfulSession, predicate: categoryPredicate)
         
@@ -165,8 +204,117 @@ final class HealthKitManager: ObservableObject {
             totalSleepHours: totalSleepHours,
             restingHeartRate: await restingHR,
             stateOfMindLabels: somLabels,
-            stateOfMindValence: somValence
+            stateOfMindValence: somValence,
+            dietaryProteinG: await protein,
+            dietaryEnergyKcal: await energyIn,
+            bloodPressureSystolic: await pressure?.systolic,
+            bloodPressureDiastolic: await pressure?.diastolic,
+            bloodPressureAt: await pressure?.at,
+            medications: await meds,
+            medicationDosesTaken: await dosesTaken,
+            menstrualFlow: await flow
         )
+    }
+
+    /// The last blood pressure of the day, as a pair from one reading.
+    ///
+    /// Read as a correlation rather than as two quantity queries. Averaging
+    /// systolic and diastolic separately across a day would produce a pair that
+    /// nobody's arm ever recorded, and a morning systolic beside an evening
+    /// diastolic is not a blood pressure.
+    private func latestBloodPressure(
+        predicate: NSPredicate
+    ) async -> (systolic: Double, diastolic: Double, at: Date)? {
+        guard let type = HKCorrelationType.correlationType(forIdentifier: .bloodPressure),
+              let systolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic),
+              let diastolicType = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic)
+        else { return nil }
+
+        return await withCheckedContinuation { continuation in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+            let query = HKSampleQuery(
+                sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]
+            ) { _, samples, _ in
+                guard let correlation = samples?.first as? HKCorrelation,
+                      let systolic = correlation.objects(for: systolicType).first as? HKQuantitySample,
+                      let diastolic = correlation.objects(for: diastolicType).first as? HKQuantitySample
+                else { return continuation.resume(returning: nil) }
+
+                let mmHg = HKUnit.millimeterOfMercury()
+                continuation.resume(returning: (
+                    systolic.quantity.doubleValue(for: mmHg),
+                    diastolic.quantity.doubleValue(for: mmHg),
+                    correlation.endDate
+                ))
+            }
+            store.execute(query)
+        }
+    }
+
+    /// The heaviest flow recorded on the day. A day with light in the morning
+    /// and heavy by evening is a heavy day.
+    private func latestCategoryValue(
+        _ identifier: HKCategoryTypeIdentifier,
+        predicate: NSPredicate
+    ) async -> Double? {
+        guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else { return nil }
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil
+            ) { _, samples, _ in
+                let values = (samples as? [HKCategorySample])?.map { Double($0.value) } ?? []
+                continuation.resume(returning: values.max())
+            }
+            store.execute(query)
+        }
+    }
+
+    /// The medications a person keeps in Health, by the name they call them.
+    ///
+    /// Their nickname wins over the clinical display text, because someone who
+    /// has renamed it to "the blue one" has told you what to call it.
+    private func medicationNames() async -> [String] {
+        // This query enumerates rather than returning a batch: the handler runs
+        // once per medication and once more with `done`. So the names are
+        // gathered as they arrive and handed back at the end, exactly once.
+        await withCheckedContinuation { continuation in
+            var names: [String] = []
+            var finished = false
+            let query = HKUserAnnotatedMedicationQuery(
+                predicate: nil,
+                limit: HKObjectQueryNoLimit
+            ) { _, medication, done, _ in
+                if let medication, !medication.isArchived {
+                    let name = medication.nickname ?? medication.medication.displayText
+                    if !name.isEmpty { names.append(name) }
+                }
+                guard done, !finished else { return }
+                finished = true
+                continuation.resume(returning: names.sorted())
+            }
+            store.execute(query)
+        }
+    }
+
+    /// Doses logged as actually taken. Skipped, snoozed and untouched
+    /// reminders are not doses, and counting them would report a day of
+    /// medication that did not happen.
+    private func medicationDosesTaken(predicate: NSPredicate) async -> Double? {
+        await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKObjectType.medicationDoseEventType(),
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                guard let events = samples as? [HKMedicationDoseEvent], !events.isEmpty else {
+                    return continuation.resume(returning: nil)
+                }
+                let taken = events.filter { $0.logStatus == .taken }.count
+                continuation.resume(returning: Double(taken))
+            }
+            store.execute(query)
+        }
     }
 
     private func cumulative(
