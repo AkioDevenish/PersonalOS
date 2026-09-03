@@ -137,14 +137,7 @@ struct Briefing {
         }
 
         if paras.isEmpty {
-            // Only when nothing at all was recorded. A day holding a blood
-            // pressure and two medications is not an empty day, and saying it
-            // is would be the app contradicting its own breakdown three lines
-            // further down the page.
-            let anything = Metrics.all.contains { $0.display(s) != nil }
-            paras.append(anything
-                ? "Nothing moved yet today, though the day has entries."
-                : "No entries yet today. The ledger fills as you move.")
+            paras.append("No entries yet today. The ledger fills as you move.")
         }
         let goals = owing(s)
         if !goals.isEmpty {
@@ -295,82 +288,10 @@ struct Briefing {
         history: [HealthSnapshot],
         opening: Bool
     ) -> String? {
-        // A blood pressure, a medication and a cycle flow are not quantities
-        // to average. "Blood pressure averaged 118, ranging from 112 to 124"
-        // is a trend claim built out of four readings taken whenever somebody
-        // happened to sit down with a cuff, and "cycle averaged 2.6" is not
-        // English. Anything the catalogue prints with its own reading is told
-        // as what was recorded and when, never as a mean.
-        if spec.reading != nil {
-            return period == .daily
-                ? recordedToday(spec: spec, today: today)
-                : recordedOver(spec: spec, history: history, period: period)
-        }
-
         let readings = history.compactMap { spec.value($0) }
         return period == .daily
             ? todaySentence(spec: spec, today: today, readings: readings, opening: opening)
             : windowSentence(spec: spec, readings: readings, period: period, opening: opening)
-    }
-
-    // MARK: Readings rather than quantities
-
-    private static func recordedToday(spec: MetricSpec, today: HealthSnapshot?) -> String? {
-        guard let today, let text = spec.display(today) else { return nil }
-
-        // A list of names reads as a list, not as a figure.
-        if let names = spec.words?(today), !names.isEmpty {
-            var line = "You keep \(names.count == 1 ? "one medication" : "\(spelled(names.count)) medications") in Health: \(list(names))."
-            if let taken = today.medicationDosesTaken, taken > 0 {
-                let n = Int(taken)
-                line += " \(n == 1 ? "One dose was" : "\(capitalised(spelled(n))) doses were") logged as taken today."
-            }
-            return line
-        }
-
-        // One reading, with the time it was taken, and nothing about a trend.
-        if let at = today.bloodPressureAt, spec.id == "blood_pressure" {
-            let f = DateFormatter()
-            f.dateFormat = "HH:mm"
-            return "Your \(spec.spoken) read \(text)\(unitSuffix(spec)) at \(f.string(from: at))."
-        }
-        return "Your \(spec.spoken) read \(text)\(unitSuffix(spec))."
-    }
-
-    private static func recordedOver(
-        spec: MetricSpec,
-        history: [HealthSnapshot],
-        period: BriefingPeriod
-    ) -> String? {
-        let days = history.filter { spec.display($0) != nil }
-        guard !days.isEmpty else { return nil }
-        let of = "\(days.count) of \(history.count) days"
-
-        if let names = spec.words?(days.last!), !names.isEmpty {
-            let logged = history.filter { ($0.medicationDosesTaken ?? 0) > 0 }.count
-            var line = "You keep \(names.count == 1 ? "one medication" : "\(spelled(names.count)) medications") in Health: \(list(names))."
-            line += logged == 0
-                ? " No doses were logged as taken over \(period.window)."
-                : " Doses were logged as taken on \(logged) of \(history.count) days."
-            return line
-        }
-
-        guard let latest = days.last, let text = spec.display(latest) else { return nil }
-        return "\(capitalised(spec.spoken)) was recorded on \(of). The most recent read \(text)\(unitSuffix(spec))."
-    }
-
-    /// Small counts are words. "2 medications" is a field in a form; "two
-    /// medications" is a sentence.
-    private static func spelled(_ n: Int) -> String {
-        let words = ["no", "one", "two", "three", "four", "five", "six", "seven",
-                     "eight", "nine", "ten", "eleven", "twelve"]
-        return n >= 0 && n < words.count ? words[n] : String(n)
-    }
-
-    /// "aspirin, metformin and a statin" rather than a comma-separated dump.
-    private static func list(_ items: [String]) -> String {
-        guard items.count > 1 else { return items.first ?? "" }
-        return items.dropLast().joined(separator: ", ") + " and " + items.last!
     }
 
     // MARK: One day
