@@ -71,9 +71,13 @@ struct Briefing {
         let progress = Goals.progress(on: snapshot)
         guard !progress.isEmpty else { return [] }
 
-        let unmet = progress.filter { !$0.met }
+        // A ceiling with nothing recorded is not something the day owes you.
+        let unmet = progress.filter { $0.state == .missed }
         guard !unmet.isEmpty else {
-            return ["Every goal you set for today is met."]
+            let judged = progress.filter(\.judged)
+            return judged.isEmpty
+                ? ["Nothing measured yet against the goals you set."]
+                : ["Every goal you set for today is met."]
         }
 
         return unmet.map { p in
@@ -137,7 +141,14 @@ struct Briefing {
         }
 
         if paras.isEmpty {
-            paras.append("No entries yet today. The ledger fills as you move.")
+            // This narrative only reads sleep, steps and active energy, so a
+            // day of glucose and carbohydrates and nothing else used to be
+            // called empty while the breakdown three lines below listed both.
+            // Someone wearing a CGM and no watch saw that every morning.
+            let anything = Metrics.all.contains { $0.display(s) != nil }
+            paras.append(anything
+                ? "Nothing moved yet today, though the day has entries."
+                : "No entries yet today. The ledger fills as you move.")
         }
         let goals = owing(s)
         if !goals.isEmpty {
@@ -467,8 +478,14 @@ struct Briefing {
             .max { $0.1 < $1.1 }
     }
 
-    /// Later half minus earlier half. Needs four readings to mean anything —
+    /// Later half minus earlier half. Needs four readings to mean anything:
     /// two points either side, or one day's oddity becomes "a trend".
+    ///
+    /// This depends on the snapshots arriving oldest first, which they now do.
+    /// They used to arrive newest first, so "prefix" was the recent half and
+    /// "suffix" the older one, and every sentence about a direction was
+    /// backwards: a week of worsening sleep reported that you had gained
+    /// minutes as it went on.
     private static func drift(_ values: [Double]) -> Double? {
         guard values.count >= 4 else { return nil }
         let half = values.count / 2

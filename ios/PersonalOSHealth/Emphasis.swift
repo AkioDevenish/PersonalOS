@@ -119,7 +119,11 @@ enum Emphasis {
             if end < ns.length, ns.substring(with: NSRange(location: end, length: 1)) == "-" {
                 continue
             }
-            if let converted = Range(r, in: text) {
+            // And a figure has to stand as its own word, the same test the
+            // names get. Without it the digits inside "A1C" or "COVID19" were
+            // set in amber, pulling the eye to a fragment of a word as though
+            // it were one of the person's own readings.
+            if let converted = Range(r, in: text), isWholeWord(converted, in: text) {
                 found.append(Span(range: converted, isFigure: true))
             }
         }

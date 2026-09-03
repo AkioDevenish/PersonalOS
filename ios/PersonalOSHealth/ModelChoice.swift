@@ -19,10 +19,7 @@ enum ModelChoice {
     private static let modelKey = "personal_os_ai_model"
 
     /// True when this phone can generate without a network or a credential.
-    static var deviceEngineReady: Bool {
-        if #available(iOS 26.0, *) { return OnDeviceInsights.availability.isReady }
-        return false
-    }
+    static var deviceEngineReady: Bool { OnDeviceInsights.availability.isReady }
 
     static var provider: String {
         get {

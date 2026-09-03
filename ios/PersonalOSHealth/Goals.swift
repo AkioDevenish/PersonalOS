@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 /// What you are trying to do, in numbers.
 ///
@@ -38,6 +38,36 @@ enum Goals {
         all = current
     }
 
+    /// Reads a number a person typed, or one this app printed back to them.
+    ///
+    /// `Double("8,000")` is nil, and the goals screen was printing targets with
+    /// a thousands separator and then parsing them back, so simply opening the
+    /// screen deleted every goal of a thousand or more. Grouping separators are
+    /// stripped before parsing, and a locale that writes a comma for the
+    /// decimal point is honoured, so a European "7,5" is seven and a half
+    /// rather than seventy-five.
+    static func number(from text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = .current
+        if let parsed = formatter.number(from: trimmed)?.doubleValue { return parsed }
+
+        // Fall back to the plain reading, for a keypad that gave us a bare
+        // "7.5" in a locale that would not have written it that way.
+        return Double(trimmed.replacingOccurrences(of: ",", with: ""))
+    }
+
+    /// A target as a person should see it in an editable field: no grouping
+    /// separator, because what is printed here has to survive being read back.
+    static func editable(_ spec: MetricSpec, _ value: Double) -> String {
+        spec.precision == 0
+            ? String(Int(value.rounded()))
+            : String(format: "%.\(spec.precision)f", value)
+    }
+
     /// The metrics a goal can be set on, in the order the catalogue lists them.
     static var settable: [MetricSpec] { Metrics.all.filter { $0.goal.isSettable } }
 
@@ -69,14 +99,30 @@ enum Goals {
 
         var id: String { spec.id }
 
-        var met: Bool {
-            guard let actual else { return false }
-            return spec.goal == .atMost ? actual <= target : actual >= target
+        /// Where the day stands against this goal.
+        ///
+        /// Three states, not two. A floor with nothing recorded is genuinely
+        /// missed: no steps taken is no steps taken. A ceiling with nothing
+        /// recorded is neither met nor missed, because nothing was measured
+        /// and so nothing was exceeded. Reporting it as a miss told people
+        /// they had broken a glucose limit on a day they never tested.
+        enum State { case met, missed, unmeasured }
+
+        var state: State {
+            guard let actual else {
+                return spec.goal == .atMost ? .unmeasured : .missed
+            }
+            let ok = spec.goal == .atMost ? actual <= target : actual >= target
+            return ok ? .met : .missed
         }
 
-        /// How far short, in the metric's own units. Nil once it is met.
+        var met: Bool { state == .met }
+        /// Whether the day says anything at all about this goal.
+        var judged: Bool { state != .unmeasured }
+
+        /// How far short, in the metric's own units. Nil unless it was missed.
         var shortfall: Double? {
-            guard !met else { return nil }
+            guard state == .missed else { return nil }
             guard let actual else { return target }
             return spec.goal == .atMost ? actual - target : target - actual
         }
@@ -90,123 +136,15 @@ enum Goals {
             return Progress(spec: spec, target: target, actual: snapshot.flatMap { spec.value($0) })
         }
         .sorted { a, b in
-            if a.met != b.met { return !a.met }
+            func rank(_ p: Progress) -> Int {
+                switch p.state {
+                case .missed: return 0
+                case .unmeasured: return 1
+                case .met: return 2
+                }
+            }
+            if rank(a) != rank(b) { return rank(a) < rank(b) }
             return a.spec.id < b.spec.id
         }
-    }
-}
-
-/// Setting them.
-struct GoalsView: View {
-    @State private var values: [String: String] = [:]
-    @FocusState private var editing: String?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Goals", color: Theme.amber, size: 11)
-                    .padding(.top, 12)
-                    .flowIn(0)
-
-                Text("What you're aiming at.")
-                    .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.top, 8)
-                    .flowIn(1)
-
-                Text("Set as many or as few as you like. The morning briefing closes with whichever ones the day hasn't met yet, so an empty list here means it stops telling you what to do.")
-                    .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
-                    .lineSpacing(5)
-                    .padding(.top, 10)
-                    .flowIn(2)
-
-                ForEach(Array(groups.enumerated()), id: \.element.group) { i, section in
-                    SectionRule(text: section.group.rawValue)
-                        .padding(.top, i == 0 ? 34 : 30)
-                        .flowIn(3 + i)
-
-                    VStack(spacing: 0) {
-                        ForEach(section.specs) { spec in
-                            row(spec)
-                        }
-                    }
-                    .padding(.top, 8)
-                    .flowIn(3 + i)
-                }
-
-                Spacer(minLength: 40)
-            }
-            .padding(.horizontal, 24)
-        }
-        .background(Theme.linen)
-        .toolbarBackground(Theme.linen, for: .navigationBar)
-        .onAppear(perform: read)
-    }
-
-    private var groups: [(group: MetricSpec.Group, specs: [MetricSpec])] {
-        MetricSpec.Group.allCases.compactMap { group in
-            let specs = Goals.settable.filter { $0.group == group }
-            return specs.isEmpty ? nil : (group, specs)
-        }
-    }
-
-    private func row(_ spec: MetricSpec) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(spec.label)
-                    .font(Theme.serif(19))
-                    .foregroundStyle(Theme.ink)
-                // "At least" or "at most" is the whole meaning of the number
-                // beside it, and it is not something a person should have to
-                // infer from which metric it is.
-                Text(spec.goal == .atMost ? "at most" : "at least")
-                    .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
-            }
-
-            Spacer()
-
-            TextField(placeholder(spec), text: binding(for: spec))
-                .font(Theme.serif(22))
-                .foregroundStyle(Theme.ink)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .focused($editing, equals: spec.id)
-                .frame(maxWidth: 110)
-                .onChange(of: values[spec.id] ?? "") { _, new in
-                    Goals.set(spec.id, Double(new))
-                }
-
-            if !spec.unit.isEmpty {
-                Text(spec.unit)
-                    .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
-                    .frame(width: 34, alignment: .leading)
-            } else {
-                Color.clear.frame(width: 34, height: 1)
-            }
-        }
-        .padding(.vertical, 14)
-        .contentShape(Rectangle())
-        .onTapGesture { editing = spec.id }
-    }
-
-    private func placeholder(_ spec: MetricSpec) -> String {
-        Goals.suggestion(for: spec).map { spec.format($0) } ?? "none"
-    }
-
-    private func binding(for spec: MetricSpec) -> Binding<String> {
-        Binding(
-            get: { values[spec.id] ?? "" },
-            set: { values[spec.id] = $0 }
-        )
-    }
-
-    private func read() {
-        let stored = Goals.all
-        values = Dictionary(uniqueKeysWithValues: Goals.settable.compactMap { spec in
-            stored[spec.id].map { (spec.id, spec.format($0)) }
-        })
     }
 }

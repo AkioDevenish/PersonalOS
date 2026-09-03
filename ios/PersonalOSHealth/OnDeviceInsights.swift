@@ -18,7 +18,6 @@ import FoundationModels
 /// parameter model. It writes a decent read of a week. It is not Claude
 /// examining a quarter of correlations. The app offers it as the default that
 /// always works, not as the best available.
-@available(iOS 26.0, *)
 enum OnDeviceInsights {
 
     // MARK: Availability

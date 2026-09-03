@@ -321,7 +321,7 @@ struct NutritionView: View {
     /// person to disagree with it outranks it by simply saying so.
     private func seedIfEmpty() async {
         guard book.all.isEmpty, !country.isEmpty, !seeding else { return }
-        guard ModelChoice.isOnDevice, #available(iOS 26.0, *) else { return }
+        guard ModelChoice.isOnDevice else { return }
         seeding = true
         defer { seeding = false }
 
@@ -368,7 +368,7 @@ struct NutritionView: View {
         do {
             // On-device reads HealthKit here and never leaves the phone; every
             // other engine is reached through the server, which holds the key.
-            if ModelChoice.isOnDevice, #available(iOS 26.0, *) {
+            if ModelChoice.isOnDevice {
                 let snaps = try await health.fetchHistoricalSnapshots(days: 7)
                 latest = try await OnDeviceInsights.generate(
                     instructions: InsightPrompts.mealInstructions,
@@ -623,7 +623,7 @@ struct ExpertsView: View {
         // so the prompt arrives with that minute rather than before it.
         let mayNotify = await notifier.permitted()
 
-        if ModelChoice.isOnDevice, #available(iOS 26.0, *) {
+        if ModelChoice.isOnDevice {
             status = "Reading your telemetry on this iPhone…"
             do {
                 let snaps = try await health.fetchHistoricalSnapshots(days: daysForPeriod)
@@ -651,7 +651,11 @@ struct ExpertsView: View {
         do {
             try await InsightsClient().generateReport(period: period, expert: expert)
             await load()
-            announce(reports.first?.report_text ?? "", if: mayNotify)
+            // Newest, not first: the route's order is its own business, and a
+            // notification quoting last week's reading while the screen shows
+            // this one is worse than no notification.
+            let newest = reports.max { ($0.created_at ?? "") < ($1.created_at ?? "") }
+            announce(newest?.report_text ?? "", if: mayNotify)
         } catch {
             status = error.localizedDescription
         }

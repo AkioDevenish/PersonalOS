@@ -169,7 +169,16 @@ struct HealthView: View {
                     }
                 }
 
-                if snapshot != nil && shownGroups.isEmpty {
+                // A refused read and a quiet day used to render identically, so
+                // someone who had denied Health access saw an empty page and no
+                // reason for it. The flag was being set and never read.
+                if loadFailed {
+                    Text("Health access was refused, so there is nothing to read. Open Settings, then Privacy and Security, then Health, and allow Personal OS.")
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.mid)
+                        .lineSpacing(4)
+                        .padding(.top, 26)
+                } else if snapshot != nil && shownGroups.isEmpty {
                     Text("Nothing recorded yet today.")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.dust)
@@ -205,6 +214,7 @@ struct HealthView: View {
         do {
             try await health.requestAuthorization()
             snapshot = try await health.fetchTodaySnapshot()
+            loadFailed = false
         } catch {
             loadFailed = true
         }

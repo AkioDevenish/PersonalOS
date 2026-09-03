@@ -295,6 +295,8 @@ struct ConsultThreadView: View {
     @State private var thread: ConsultClient.Thread?
     @State private var reply = ""
     @State private var sending = false
+    @State private var failed = ""
+
 
     var body: some View {
         NavigationStack {
@@ -351,6 +353,14 @@ struct ConsultThreadView: View {
                             .disabled(sending || reply.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
                         .padding(.vertical, 18)
+
+                        if !failed.isEmpty {
+                            Text(failed)
+                                .font(Theme.sans(11.5))
+                                .foregroundStyle(Theme.mid)
+                                .lineSpacing(3)
+                                .padding(.bottom, 14)
+                        }
                     } else {
                         Composing(lines: 3).padding(.top, 30)
                     }
@@ -375,10 +385,20 @@ struct ConsultThreadView: View {
         let text = reply.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
         sending = true
+        failed = ""
         defer { sending = false }
-        reply = ""
-        try? await ConsultClient().reply(id: summary.id, body: text)
-        await load()
-        onChange()
+
+        // The composer is not cleared until the message is actually away. It
+        // used to be emptied first and the error swallowed, so a send that
+        // failed looked exactly like a send that worked and took the words
+        // with it.
+        do {
+            try await ConsultClient().reply(id: summary.id, body: text)
+            reply = ""
+            await load()
+            onChange()
+        } catch {
+            failed = error.localizedDescription
+        }
     }
 }

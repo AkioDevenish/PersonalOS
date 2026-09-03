@@ -117,8 +117,7 @@ struct ModelSettingsView: View {
         if p.id == ModelChoice.deviceProvider {
             // The one entry whose readiness is a property of the phone rather
             // than of anything stored on a server.
-            if #available(iOS 26.0, *) { return OnDeviceInsights.availability.explanation }
-            return "Needs iOS 26 or later"
+            return OnDeviceInsights.availability.explanation
         }
         if !p.needsKey { return "Runs on your Mac · no key needed" }
         if let stored { return "Key ending \(stored.last4)" }
@@ -314,8 +313,7 @@ private struct ProviderDetailView: View {
     }
 
     private var unavailableNote: String {
-        if #available(iOS 26.0, *) { return OnDeviceInsights.availability.explanation }
-        return "Needs iOS 26 or later."
+        return OnDeviceInsights.availability.explanation
     }
 
     private func isCurrent(_ model: String) -> Bool {

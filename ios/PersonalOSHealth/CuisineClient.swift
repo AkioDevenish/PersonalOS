@@ -7,9 +7,9 @@ import Foundation
 /// straight away — waiting for strangers to agree before the app will cook
 /// something you said you eat would be absurd.
 struct CuisineClient {
-    private let auth: AuthProvider
+    private let transport: Transport
 
-    init(auth: AuthProvider = Auth.provider) { self.auth = auth }
+    init(auth: AuthProvider = Auth.provider) { transport = Transport(auth: auth) }
 
     struct Dish: Decodable, Identifiable, Hashable {
         let key: String
@@ -32,9 +32,9 @@ struct CuisineClient {
     }
 
     func book(country: String) async throws -> Book {
-        let data = try await send(try await request(
+        let data = try await transport.send(
             "/api/well-being/cuisine?country=\(country)", method: "GET", body: nil
-        ))
+        )
         return try JSONDecoder().decode(Book.self, from: data)
     }
 
@@ -42,10 +42,10 @@ struct CuisineClient {
     @discardableResult
     func suggest(country: String, dish: String) async throws -> Bool {
         struct Result: Decodable { let added: Bool }
-        let data = try await send(try await request(
+        let data = try await transport.send(
             "/api/well-being/cuisine", method: "POST",
             body: ["country": country, "dish": dish]
-        ))
+        )
         return (try? JSONDecoder().decode(Result.self, from: data))?.added ?? false
     }
 
@@ -55,34 +55,10 @@ struct CuisineClient {
     /// country isn't handed an empty vocabulary, and a seeded dish nobody
     /// actually eats stays at zero forever, which is the right fate for it.
     func seed(country: String, dishes: [String]) async throws {
-        _ = try await send(try await request(
+        _ = try await transport.send(
             "/api/well-being/cuisine", method: "POST",
             body: ["country": country, "dishes": dishes]
-        ))
+        )
     }
 
-    // MARK: Transport
-
-    private func request(_ path: String, method: String, body: [String: Any]?) async throws -> URLRequest {
-        guard let url = URL(string: AppConfig.baseURL + path) else { throw InsightsError.badURL }
-        guard let token = await auth.currentToken() else { throw InsightsError.notSignedIn }
-        var r = URLRequest(url: url)
-        r.httpMethod = method
-        r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        r.timeoutInterval = 30
-        if let body {
-            r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            r.httpBody = try JSONSerialization.data(withJSONObject: body)
-        }
-        return r
-    }
-
-    private func send(_ r: URLRequest) async throws -> Data {
-        let (data, response) = try await URLSession.shared.data(for: r)
-        guard let http = response as? HTTPURLResponse else { throw InsightsError.badResponse }
-        guard (200...299).contains(http.statusCode) else {
-            throw InsightsError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
-        }
-        return data
-    }
 }

@@ -66,10 +66,7 @@ final class HealthKitManager: ObservableObject {
         if let rhr = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) { types.insert(rhr) }
         if let sleep = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) { types.insert(sleep) }
         if let mindful = HKCategoryType.categoryType(forIdentifier: .mindfulSession) { types.insert(mindful) }
-        if #available(iOS 17.0, *) {
-            let stateOfMind = HKObjectType.stateOfMindType()
-            types.insert(stateOfMind)
-        }
+        types.insert(HKObjectType.stateOfMindType())
         return types
     }
 
@@ -86,14 +83,44 @@ final class HealthKitManager: ObservableObject {
     /// Fetch snapshots for the last N days (including today). Used for backfilling 7d/30d history.
     func fetchHistoricalSnapshots(days: Int = 30) async throws -> [HealthSnapshot] {
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthKitError.unavailable }
-        var snapshots: [HealthSnapshot] = []
         let calendar = Calendar.current
-        for offset in 0..<days {
-            guard let targetDate = calendar.date(byAdding: .day, value: -offset, to: Date()) else { continue }
-            let snapshot = try await fetchSnapshotForDay(targetDate)
-            snapshots.append(snapshot)
+        let dates = (0..<days).compactMap {
+            calendar.date(byAdding: .day, value: -$0, to: Date())
         }
-        return snapshots
+
+        // The days are independent, so they are read together rather than one
+        // after another. Ninety days used to mean ninety serialised round
+        // trips, which is what kept the history screen saying "Reading your
+        // history" for as long as it did.
+        //
+        // Bounded, though: each day fans out to about twenty queries, and
+        // letting ninety of those go at once asks HealthKit for eighteen
+        // hundred in one breath.
+        let inFlight = 8
+        var snapshots: [HealthSnapshot] = []
+        snapshots.reserveCapacity(dates.count)
+
+        try await withThrowingTaskGroup(of: HealthSnapshot.self) { group in
+            var next = 0
+            while next < min(inFlight, dates.count) {
+                let date = dates[next]
+                next += 1
+                group.addTask { try await self.fetchSnapshotForDay(date) }
+            }
+            while let snapshot = try await group.next() {
+                snapshots.append(snapshot)
+                if next < dates.count {
+                    let date = dates[next]
+                    next += 1
+                    group.addTask { try await self.fetchSnapshotForDay(date) }
+                }
+            }
+        }
+
+        // Oldest first. They came back newest first before, which every caller
+        // that talks about a direction read backwards: Briefing's drift takes
+        // the first half as the earlier one.
+        return snapshots.sorted { $0.recordedAt < $1.recordedAt }
     }
 
     private func fetchSnapshotForDay(_ date: Date) async throws -> HealthSnapshot {
@@ -130,13 +157,7 @@ final class HealthKitManager: ObservableObject {
         async let sleepSeconds = categoryDurationSum(.sleepAnalysis, predicate: categoryPredicate)
         async let mindfulSeconds = categoryDurationSum(.mindfulSession, predicate: categoryPredicate)
         
-        var somLabels: String? = nil
-        var somValence: Double? = nil
-        if #available(iOS 17.0, *) {
-            let som = await fetchStateOfMind(predicate: categoryPredicate)
-            somLabels = som.0
-            somValence = som.1
-        }
+        let (somLabels, somValence) = await fetchStateOfMind(predicate: categoryPredicate)
 
         let distanceKm = await distanceM.map { $0 / 1000.0 }
         let speedKmh = await speed.map { $0 * 3.6 }
@@ -230,7 +251,6 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
-    @available(iOS 17.0, *)
     private func fetchStateOfMind(predicate: NSPredicate) async -> (String?, Double?) {
         let type = HKObjectType.stateOfMindType()
         return await withCheckedContinuation { continuation in

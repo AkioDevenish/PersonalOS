@@ -74,10 +74,18 @@ final class Notifier: NSObject, ObservableObject {
         let flat = report
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let end = flat.firstIndex(of: ".") else {
-            return flat.count > 140 ? "Open to read it." : flat
+        guard !flat.isEmpty else { return "" }
+
+        // Cut on a sentence, not on the first full stop. A decimal point is
+        // the same character, so "You slept 7.2 hours" was being delivered to
+        // a lock screen as "You slept 7." Foundation knows where a sentence
+        // ends; a search for "." does not.
+        var first: String?
+        flat.enumerateSubstrings(in: flat.startIndex..., options: [.bySentences]) { substring, _, _, stop in
+            first = substring?.trimmingCharacters(in: .whitespaces)
+            stop = true
         }
-        let sentence = String(flat[...end])
+        let sentence = first ?? flat
         return sentence.count > 180 ? "Open to read it." : sentence
     }
 }
