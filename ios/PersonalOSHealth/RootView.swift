@@ -112,7 +112,7 @@ enum AppTab: CaseIterable, Hashable {
         case .health: return "heart"
         case .finance: return "banknote"
         case .time: return "clock"
-        case .settings: return "person.crop.circle"
+        case .settings: return "person"
         }
     }
 
@@ -285,6 +285,18 @@ struct RootView: View {
     /// would leave a screen reader reading out "tab, two of four".
     private func glyph(_ t: AppTab) -> some View {
         Label { Text("") } icon: { Image(systemName: t.symbol) }
+            // The bar substitutes the filled variant of every symbol on its
+            // own. That turned the clock and the figure into two near-identical
+            // dark discs sitting side by side, while the banknote — which has
+            // no real filled form — stayed a line box next to them. Three
+            // different densities in four glyphs.
+            //
+            // Outlines throughout instead: one stroke weight, four distinct
+            // silhouettes, and a register that matches the engravings rather
+            // than shouting over them. Selection is already carried by the
+            // amber and by the capsule the bar draws behind the chosen tab, so
+            // nothing is lost by refusing the fill.
+            .environment(\.symbolVariants, .none)
             .accessibilityLabel(t.title)
     }
 
