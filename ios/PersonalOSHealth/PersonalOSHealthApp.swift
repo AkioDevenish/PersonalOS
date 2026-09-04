@@ -23,7 +23,7 @@ struct PersonalOSHealthApp: App {
                 if !clerk.isLoaded {
                     LoadingView()
                 } else if clerk.user != nil {
-                    RootView()
+                    OnboardingGate { RootView() }
                 } else {
                     SignInView()
                 }
