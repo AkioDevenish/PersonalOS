@@ -98,13 +98,14 @@ struct HistoryView: View {
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
 enum Tab: CaseIterable {
-    case health, settings
+    case health, finance, time, settings
 
-    /// Icons carry the meaning; there are no labels, so these have to read at
-    /// a glance. Light weight keeps them in the same register as the type.
+    /// Light weight keeps the glyphs in the same register as the type.
     var symbol: String {
         switch self {
         case .health: return "heart"
+        case .finance: return "banknote"
+        case .time: return "clock"
         case .settings: return "person"   // replaced by the avatar when present
         }
     }
@@ -121,6 +122,8 @@ enum Tab: CaseIterable {
     var title: String {
         switch self {
         case .health: return "Health"
+        case .finance: return "Finance"
+        case .time: return "Time"
         case .settings: return "Settings"
         }
     }
@@ -227,6 +230,8 @@ struct RootView: View {
                 Group {
                     switch tab {
                     case .health: HealthView()
+                    case .finance: FinanceView()
+                    case .time: TimeView()
                     case .settings: ConnectionsView()
                     }
                 }
@@ -254,7 +259,7 @@ struct RootView: View {
                     Button {
                         select(t)
                     } label: {
-                        VStack(spacing: 0) {
+                        VStack(spacing: 6) {
                             Group {
                                 if t == .settings {
                                     // A photograph can't be filled, so the
@@ -280,12 +285,22 @@ struct RootView: View {
                                         .frame(height: 22)
                                 }
                             }
-                            // The overshoot lives here: the icon springs past
-                            // its size and settles back, which is the whole
-                            // bounce. Anything larger and the bar wobbles.
-                            .scaleEffect(tab == t ? 1.14 : 1)
+                            // The overshoot lives on the glyph alone. Scaling
+                            // the word underneath it with the same spring makes
+                            // the letters swim, and four of them doing it at
+                            // once is the whole bar wobbling.
+                            .scaleEffect(tab == t ? 1.12 : 1)
 
-
+                            // Two icons could go unlabelled; four cannot. A
+                            // banknote and a clock are not self-evident, and a
+                            // person should not have to tap a tab to find out
+                            // what is behind it. Tracked caps, the same voice
+                            // the section headings use.
+                            Kicker(
+                                text: t.title,
+                                color: tab == t ? Theme.amber : Theme.dust,
+                                size: 8
+                            )
                         }
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
@@ -295,8 +310,8 @@ struct RootView: View {
                 }
             }
             .animation(Theme.Motion.pop, value: tab)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
             .background(Theme.linen)
         }
         .background(Theme.linen)

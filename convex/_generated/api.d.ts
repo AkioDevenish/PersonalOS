@@ -13,6 +13,7 @@ import type * as ai_preferences from "../ai/preferences.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as business from "../business.js";
 import type * as datascience from "../datascience.js";
+import type * as finance from "../finance.js";
 import type * as health_connections from "../health/connections.js";
 import type * as health_consult from "../health/consult.js";
 import type * as health_cuisine from "../health/cuisine.js";
@@ -22,6 +23,7 @@ import type * as health_resolve from "../health/resolve.js";
 import type * as health_samples from "../health/samples.js";
 import type * as health_tokens from "../health/tokens.js";
 import type * as marketing from "../marketing.js";
+import type * as time from "../time.js";
 import type * as wellbeing from "../wellbeing.js";
 
 import type {
@@ -36,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "billing/entitlements": typeof billing_entitlements;
   business: typeof business;
   datascience: typeof datascience;
+  finance: typeof finance;
   "health/connections": typeof health_connections;
   "health/consult": typeof health_consult;
   "health/cuisine": typeof health_cuisine;
@@ -45,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "health/samples": typeof health_samples;
   "health/tokens": typeof health_tokens;
   marketing: typeof marketing;
+  time: typeof time;
   wellbeing: typeof wellbeing;
 }>;
 

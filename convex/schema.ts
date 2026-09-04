@@ -362,4 +362,61 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"])
     .index("by_name", ["name"]),
+
+  // Finance
+
+  /**
+   * One movement of money.
+   *
+   * Amounts are integer minor units (cents, not dollars) and signed: negative
+   * is money out, positive is money in. Storing 12.30 as a float and adding a
+   * few hundred of them drifts off the true total by a cent or two, which is
+   * the one error a ledger may never make. The currency travels with the row
+   * because a total across two currencies is meaningless and the reader has to
+   * be able to tell.
+   *
+   * `source` is "manual" for anything typed in. An imported feed writes its own
+   * name plus the provider's row id in `external_id`, which is what lets the
+   * same transaction arrive twice without being counted twice.
+   */
+  finance_entries: defineTable({
+    userId: v.string(), // Clerk user ID
+    date: v.number(), // when the money moved, not when it was recorded
+    minor: v.number(), // signed integer minor units
+    currency: v.string(), // ISO 4217
+    category: v.string(),
+    note: v.optional(v.string()),
+    source: v.string(), // "manual", or the feed that imported it
+    external_id: v.optional(v.string()), // the provider's id, for deduplication
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_source_external", ["userId", "source", "external_id"]),
+
+  // Time
+
+  /**
+   * A stretch of time that went somewhere.
+   *
+   * Minutes rather than an end timestamp: the question a person answers is
+   * "how long did that take", and deriving a duration from two clock times is
+   * where daylight saving and midnight crossings go wrong. `source` and
+   * `external_id` work exactly as they do for money, so an imported calendar
+   * event lands in the same ledger as a block typed in by hand.
+   */
+  time_blocks: defineTable({
+    userId: v.string(), // Clerk user ID
+    start: v.number(),
+    minutes: v.number(),
+    activity: v.string(),
+    category: v.string(),
+    note: v.optional(v.string()),
+    source: v.string(),
+    external_id: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_start", ["userId", "start"])
+    .index("by_user_source_external", ["userId", "source", "external_id"]),
 });
