@@ -91,35 +91,33 @@ struct HistoryView: View {
 
 /// What the tab bar shows.
 ///
+/// `AppTab` rather than `Tab` because SwiftUI's own `Tab` builds the bar now,
+/// and two types of that name in one file is a coin toss over which one the
+/// compiler reaches for.
+///
 /// Business, Creative and Data were here and are pulled for now. Their screens
 /// and the route behind them are untouched in PillarViews.swift,
 /// PillarClient.swift and /api/pillars — bringing them back is adding the
 /// cases below and the matching lines in the switch, nothing more. They were
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
-enum Tab: CaseIterable {
+enum AppTab: CaseIterable, Hashable {
     case health, finance, time, settings
 
-    /// Icons carry the meaning; there are no labels, so these have to read at
-    /// a glance. Light weight keeps them in the same register as the type.
+    /// The system fills the selected one and tints it, so only the outline is
+    /// named here. The hand-rolled bar used to keep a `.fill` twin for that
+    /// job; it is the platform's now.
     var symbol: String {
         switch self {
         case .health: return "heart"
         case .finance: return "banknote"
         case .time: return "clock"
-        case .settings: return "person"   // replaced by the avatar when present
+        case .settings: return "person.crop.circle"
         }
     }
 
-    /// The selected form of the same glyph.
-    ///
-    /// Selection fills the shape rather than putting a mark under it. A dot
-    /// beneath an outline is two objects saying one thing, and the smaller of
-    /// them was carrying the meaning — the heart went amber and you still had
-    /// to look below it to be sure. A filled heart is unmistakable at a glance
-    /// and needs nothing beside it.
-    var filled: String { symbol + ".fill" }
-
+    /// Single words, as the guidelines ask, and the label a screen reader
+    /// announces either way.
     var title: String {
         switch self {
         case .health: return "Health"
@@ -128,10 +126,6 @@ enum Tab: CaseIterable {
         case .settings: return "Settings"
         }
     }
-
-    /// Position in the bar, which is what the content drifts along when you
-    /// move between them.
-    var index: Int { Tab.allCases.firstIndex(of: self) ?? 0 }
 }
 
 /// Everywhere you can go from a tab's root.
@@ -147,14 +141,15 @@ enum Route: Hashable {
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
     @EnvironmentObject private var notifier: Notifier
-    @State private var tab: Tab = .health
-    /// Which way the last tap moved, so the screens drift the way your thumb
-    /// went rather than always the same way.
-    @State private var forward = true
-    /// One stack serves both tabs, so it empties when you change tab. Left
-    /// alone, tapping Settings while three screens deep into Health left you
-    /// looking at the specialist you were reading, under the wrong tab.
-    @State private var path: [Route] = []
+    @State private var tab: AppTab = .health
+    /// A stack per tab rather than one shared between them.
+    ///
+    /// The single stack was there to stop a drill-down in Health showing up
+    /// under Settings. Giving each tab its own solves that properly and buys
+    /// the behaviour the guidelines actually ask for: moving between sections
+    /// keeps your place in each, so a glance at Finance doesn't cost you the
+    /// specialist you were three screens into.
+    @State private var paths: [AppTab: [Route]] = [:]
     @State private var drawer = false
     /// Live finger position while dragging the edge, so the panel tracks the
     /// thumb instead of waiting for the gesture to finish and then jumping.
@@ -174,12 +169,19 @@ struct RootView: View {
                 withAnimation(Theme.Motion.flow) {
                     drawer = false
                     tab = .health
-                    path = [route]
+                    paths[.health] = [route]
                 }
             }
 
             page
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The floating bar sits in the home indicator's band, so the
+                // TabView has to reach the true bottom of the screen to place
+                // it. Held inside the safe area it lays the bar out against
+                // the wrong edge and the drawer's clip shears the labels off.
+                // Children still get correct insets: the TabView passes them
+                // down itself.
+                .ignoresSafeArea()
                 // Everything that catches a touch has to be applied BEFORE the
                 // offset, and this is why the drawer's entries did nothing when
                 // tapped. `offset` moves what you see, not what the layout
@@ -198,7 +200,20 @@ struct RootView: View {
                     if !drawer { DrawerHandle(open: $drawer) }
                 }
                 .gesture(edgeDrag)
-                .clipShape(RoundedRectangle(cornerRadius: shift > 0 ? 30 : 0, style: .continuous))
+                .clipShape(
+                    PageReveal(
+                        radius: shift > 0 ? 30 : 0,
+                        // While the drawer is shut the clip runs past the
+                        // bottom of the page, because the system draws the
+                        // floating tab bar partly outside the TabView's own
+                        // bounds and a clip that stops at the edge shears the
+                        // labels off. As the page slides across, the overhang
+                        // closes to nothing: by then the page has shrunk away
+                        // from the bottom of the screen and the real corner is
+                        // what should be showing.
+                        overhang: 80 * (1 - shift / LedgerDrawer.width)
+                    )
+                )
                 .scaleEffect(1 - (shift / LedgerDrawer.width) * 0.06, anchor: .center)
                 .offset(x: shift)
                 .shadow(color: Theme.ink.opacity(shift > 0 ? 0.16 : 0), radius: 22, x: -6)
@@ -225,17 +240,54 @@ struct RootView: View {
             }
     }
 
+    /// The bar itself, the system's rather than ours.
+    ///
+    /// The hand-rolled version was an HStack of buttons with a hairline over
+    /// it, pinned to the bottom. It could not be anything else. This one
+    /// floats over the content on Liquid Glass, shrinks out of the way as you
+    /// read down a long page, and becomes a sidebar on iPad — none of which is
+    /// available to a stack of buttons, however carefully drawn.
+    ///
+    /// The cost is the avatar. A photograph cannot be handed to a tab that
+    /// wants a symbol, so Settings is a drawn figure now and the face lives on
+    /// the Settings screen itself.
     private var page: some View {
-        VStack(spacing: 0) {
-            NavigationStack(path: $path) {
-                Group {
-                    switch tab {
-                    case .health: HealthView()
-                    case .finance: FinanceView()
-                    case .time: TimeView()
-                    case .settings: ConnectionsView()
-                    }
-                }
+        TabView(selection: selection) {
+            Tab(AppTab.health.title, systemImage: AppTab.health.symbol, value: AppTab.health) {
+                stack(for: .health)
+            }
+            Tab(AppTab.finance.title, systemImage: AppTab.finance.symbol, value: AppTab.finance) {
+                stack(for: .finance)
+            }
+            Tab(AppTab.time.title, systemImage: AppTab.time.symbol, value: AppTab.time) {
+                stack(for: .time)
+            }
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.symbol, value: AppTab.settings) {
+                stack(for: .settings)
+            }
+        }
+        // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
+        .tabViewStyle(.sidebarAdaptable)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        // Otherwise the selected tab comes up system blue, which is the
+        // one saturated colour this palette does not contain.
+        .tint(Theme.amber)
+        // A tapped notification should land on the thing it announced, not on
+        // whatever screen the app was last showing.
+        .onChange(of: notifier.opened) { _, route in
+            guard let route else { return }
+            withAnimation(Theme.Motion.flow) {
+                tab = .health
+                paths[.health] = [route]
+            }
+            notifier.opened = nil
+        }
+    }
+
+    /// One tab's navigation stack.
+    private func stack(for t: AppTab) -> some View {
+        NavigationStack(path: binding(for: t)) {
+            root(for: t)
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .briefing:     BriefingView()
@@ -246,88 +298,79 @@ struct RootView: View {
                     case .goals:        GoalsView()
                     }
                 }
-                // The identity changes with the tab, which is what lets one
-                // screen leave while the other arrives instead of the content
-                // being swapped underneath a static frame.
-                .id(tab)
-                .transition(.drift(forward ? 28 : -28))
                 .toolbarBackground(Theme.linen, for: .navigationBar)
-            }
-
-            Rule()
-            HStack {
-                ForEach(Tab.allCases, id: \.self) { t in
-                    Button {
-                        select(t)
-                    } label: {
-                        Group {
-                            if t == .settings {
-                                // A photograph can't be filled, so the selected
-                                // state is a ring drawn round it — the same
-                                // idea as a solid heart: the thing itself
-                                // changes, nothing is added underneath.
-                                Avatar(user: clerk.user, size: 26)
-                                    .opacity(tab == t ? 1 : 0.5)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Theme.amber, lineWidth: tab == t ? 1.5 : 0)
-                                            .padding(-3)
-                                    )
-                            } else {
-                                Image(systemName: tab == t ? t.filled : t.symbol)
-                                    .font(.system(size: 25, weight: .light))
-                                    .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
-                                    // The outline doesn't swap for the solid —
-                                    // it becomes it, which is the whole
-                                    // animation.
-                                    .contentTransition(.symbolEffect(.replace.downUp))
-                                    .frame(height: 27)
-                            }
-                        }
-                        // Smaller overshoot than the labelled bar had: a bigger
-                        // glyph travels further for the same multiplier, and at
-                        // this size 1.12 reads as a lurch.
-                        .scaleEffect(tab == t ? 1.08 : 1)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.pressRow)
-                    .accessibilityLabel(t.title)
-                }
-            }
-            .animation(Theme.Motion.pop, value: tab)
-            .padding(.top, 13)
-            .padding(.bottom, 9)
-            .background(Theme.linen)
-        }
-        .background(Theme.linen)
-        // A tapped notification should land on the thing it announced, not on
-        // whatever screen the app was last showing.
-        .onChange(of: notifier.opened) { _, route in
-            guard let route else { return }
-            withAnimation(Theme.Motion.flow) {
-                tab = .health
-                path = [route]
-            }
-            notifier.opened = nil
         }
     }
 
-    private func select(_ t: Tab) {
-        // Tapping the tab you are already on means "take me back" — the
-        // gesture every iOS app has, and the only way out of a drill-down
-        // that doesn't involve reaching for the top-left corner.
-        guard t != tab else {
-            guard !path.isEmpty else { return }
-            Haptics.tap()
-            withAnimation(Theme.Motion.flow) { path.removeAll() }
-            return
+    @ViewBuilder
+    private func root(for t: AppTab) -> some View {
+        switch t {
+        case .health:   HealthView()
+        case .finance:  FinanceView()
+        case .time:     TimeView()
+        case .settings: ConnectionsView()
         }
-        Haptics.select()
-        forward = t.index > tab.index
-        withAnimation(Theme.Motion.flow) {
-            path.removeAll()
-            tab = t
+    }
+
+    /// A dictionary of stacks, read as a binding one tab at a time.
+    private func binding(for t: AppTab) -> Binding<[Route]> {
+        Binding(
+            get: { paths[t] ?? [] },
+            set: { paths[t] = $0 }
+        )
+    }
+
+    /// Selection, with the re-tap gesture kept.
+    ///
+    /// The bar writes the tapped tab back even when it is the one already
+    /// showing, and that second case is "take me home" — the gesture every iOS
+    /// app has, and the only way out of a drill-down that doesn't involve
+    /// reaching for the top-left corner. Emptying an already-empty stack would
+    /// buzz for nothing, so it doesn't.
+    private var selection: Binding<AppTab> {
+        Binding(
+            get: { tab },
+            set: { next in
+                guard next != tab else {
+                    guard !(paths[tab] ?? []).isEmpty else { return }
+                    Haptics.tap()
+                    withAnimation(Theme.Motion.flow) { paths[tab] = [] }
+                    return
+                }
+                Haptics.select()
+                tab = next
+            }
+        )
+    }
+}
+
+/// The page's outline while the drawer moves it.
+///
+/// A plain rounded rectangle would do, were it not for the tab bar hanging
+/// below the page's frame. Both numbers animate, so the corner rounds and the
+/// overhang closes together as the drawer opens.
+private struct PageReveal: Shape {
+    var radius: CGFloat
+    var overhang: CGFloat
+
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(radius, overhang) }
+        set {
+            radius = newValue.first
+            overhang = newValue.second
         }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        Path(
+            roundedRect: CGRect(
+                x: rect.minX,
+                y: rect.minY,
+                width: rect.width,
+                height: rect.height + max(0, overhang)
+            ),
+            cornerRadius: radius,
+            style: .continuous
+        )
     }
 }
