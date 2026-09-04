@@ -40,7 +40,7 @@ struct OnboardingView: View {
             """
         ),
         Leaf(
-            plate: "pulse",
+            plate: "stride",
             kicker: "The record",
             title: "Your body, recorded",
             body: """
