@@ -100,7 +100,8 @@ struct HistoryView: View {
 enum Tab: CaseIterable {
     case health, finance, time, settings
 
-    /// Light weight keeps the glyphs in the same register as the type.
+    /// Icons carry the meaning; there are no labels, so these have to read at
+    /// a glance. Light weight keeps them in the same register as the type.
     var symbol: String {
         switch self {
         case .health: return "heart"
@@ -259,49 +260,34 @@ struct RootView: View {
                     Button {
                         select(t)
                     } label: {
-                        VStack(spacing: 6) {
-                            Group {
-                                if t == .settings {
-                                    // A photograph can't be filled, so the
-                                    // selected state is a ring drawn round it
-                                    // — the same idea as a solid heart: the
-                                    // thing itself changes, nothing is added
-                                    // underneath.
-                                    Avatar(user: clerk.user, size: 22)
-                                        .opacity(tab == t ? 1 : 0.5)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(Theme.amber, lineWidth: tab == t ? 1.5 : 0)
-                                                .padding(-3)
-                                        )
-                                } else {
-                                    Image(systemName: tab == t ? t.filled : t.symbol)
-                                        .font(.system(size: 18, weight: .light))
-                                        .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
-                                        // The outline doesn't swap for the
-                                        // solid — it becomes it, which is the
-                                        // whole animation.
-                                        .contentTransition(.symbolEffect(.replace.downUp))
-                                        .frame(height: 22)
-                                }
+                        Group {
+                            if t == .settings {
+                                // A photograph can't be filled, so the selected
+                                // state is a ring drawn round it — the same
+                                // idea as a solid heart: the thing itself
+                                // changes, nothing is added underneath.
+                                Avatar(user: clerk.user, size: 26)
+                                    .opacity(tab == t ? 1 : 0.5)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Theme.amber, lineWidth: tab == t ? 1.5 : 0)
+                                            .padding(-3)
+                                    )
+                            } else {
+                                Image(systemName: tab == t ? t.filled : t.symbol)
+                                    .font(.system(size: 25, weight: .light))
+                                    .foregroundStyle(tab == t ? Theme.amber : Theme.dust)
+                                    // The outline doesn't swap for the solid —
+                                    // it becomes it, which is the whole
+                                    // animation.
+                                    .contentTransition(.symbolEffect(.replace.downUp))
+                                    .frame(height: 27)
                             }
-                            // The overshoot lives on the glyph alone. Scaling
-                            // the word underneath it with the same spring makes
-                            // the letters swim, and four of them doing it at
-                            // once is the whole bar wobbling.
-                            .scaleEffect(tab == t ? 1.12 : 1)
-
-                            // Two icons could go unlabelled; four cannot. A
-                            // banknote and a clock are not self-evident, and a
-                            // person should not have to tap a tab to find out
-                            // what is behind it. Tracked caps, the same voice
-                            // the section headings use.
-                            Kicker(
-                                text: t.title,
-                                color: tab == t ? Theme.amber : Theme.dust,
-                                size: 8
-                            )
                         }
+                        // Smaller overshoot than the labelled bar had: a bigger
+                        // glyph travels further for the same multiplier, and at
+                        // this size 1.12 reads as a lurch.
+                        .scaleEffect(tab == t ? 1.08 : 1)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                     }
@@ -310,8 +296,8 @@ struct RootView: View {
                 }
             }
             .animation(Theme.Motion.pop, value: tab)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
+            .padding(.top, 13)
+            .padding(.bottom, 9)
             .background(Theme.linen)
         }
         .background(Theme.linen)
