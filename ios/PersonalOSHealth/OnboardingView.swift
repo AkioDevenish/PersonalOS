@@ -252,5 +252,20 @@ struct OnboardingGate<Content: View>: View {
                 .transition(.opacity)
             }
         }
+        .onAppear(perform: honourResetRequest)
+    }
+
+    /// Lets a debug build be launched with RESET_ONBOARDING set to see the
+    /// introduction again.
+    ///
+    /// The alternative is deleting the app, which clears the flag but takes
+    /// the signed-in session and the granted Health permissions with it. This
+    /// is compiled out of release builds entirely.
+    private func honourResetRequest() {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["RESET_ONBOARDING"] != nil {
+            done = false
+        }
+        #endif
     }
 }
