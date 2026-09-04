@@ -253,18 +253,10 @@ struct RootView: View {
     /// the Settings screen itself.
     private var page: some View {
         TabView(selection: selection) {
-            Tab(AppTab.health.title, systemImage: AppTab.health.symbol, value: AppTab.health) {
-                stack(for: .health)
-            }
-            Tab(AppTab.finance.title, systemImage: AppTab.finance.symbol, value: AppTab.finance) {
-                stack(for: .finance)
-            }
-            Tab(AppTab.time.title, systemImage: AppTab.time.symbol, value: AppTab.time) {
-                stack(for: .time)
-            }
-            Tab(AppTab.settings.title, systemImage: AppTab.settings.symbol, value: AppTab.settings) {
-                stack(for: .settings)
-            }
+            Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
+            Tab(value: AppTab.finance) { stack(for: .finance) } label: { glyph(.finance) }
+            Tab(value: AppTab.time) { stack(for: .time) } label: { glyph(.time) }
+            Tab(value: AppTab.settings) { stack(for: .settings) } label: { glyph(.settings) }
         }
         // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
         .tabViewStyle(.sidebarAdaptable)
@@ -282,6 +274,18 @@ struct RootView: View {
             }
             notifier.opened = nil
         }
+    }
+
+
+    /// A tab's mark, with no word under it.
+    ///
+    /// The title is emptied rather than dropped: it still travels as the
+    /// accessibility label, so VoiceOver announces "Finance" where a sighted
+    /// reader gets the banknote alone. An empty `Label` with nothing else said
+    /// would leave a screen reader reading out "tab, two of four".
+    private func glyph(_ t: AppTab) -> some View {
+        Label { Text("") } icon: { Image(systemName: t.symbol) }
+            .accessibilityLabel(t.title)
     }
 
     /// One tab's navigation stack.
