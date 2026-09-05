@@ -111,7 +111,12 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .health: return "heart"
         case .finance: return "banknote"
-        case .time: return "clock"
+        // An hourglass rather than a clock. A clock says what time it is; an
+        // hourglass says how much of it went, which is the only question this
+        // tab answers. It is also the one glyph of the four that is not a
+        // circle, so nothing in the bar rhymes with anything else, and it sits
+        // in the same century as the pocket watch and the quill.
+        case .time: return "hourglass"
         case .settings: return "person"
         }
     }
