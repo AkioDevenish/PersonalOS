@@ -102,21 +102,17 @@ struct HistoryView: View {
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
 enum AppTab: CaseIterable, Hashable {
-    case health, finance, time, settings
+    case home, health, finance, time, settings
 
     /// The system fills the selected one and tints it, so only the outline is
     /// named here. The hand-rolled bar used to keep a `.fill` twin for that
     /// job; it is the platform's now.
     var symbol: String {
         switch self {
+        case .home: return "house"
         case .health: return "heart"
-        case .finance: return "banknote"
-        // An hourglass rather than a clock. A clock says what time it is; an
-        // hourglass says how much of it went, which is the only question this
-        // tab answers. It is also the one glyph of the four that is not a
-        // circle, so nothing in the bar rhymes with anything else, and it sits
-        // in the same century as the pocket watch and the quill.
-        case .time: return "hourglass"
+        case .finance: return "dollarsign.gauge.chart.leftthird.topthird.rightthird"
+        case .time: return "clock"
         case .settings: return "person"
         }
     }
@@ -125,10 +121,11 @@ enum AppTab: CaseIterable, Hashable {
     /// announces either way.
     var title: String {
         switch self {
+        case .home: return "Home"
         case .health: return "Health"
         case .finance: return "Finance"
         case .time: return "Time"
-        case .settings: return "Settings"
+        case .settings: return "Profile"
         }
     }
 }
@@ -146,7 +143,7 @@ enum Route: Hashable {
 struct RootView: View {
     @Environment(Clerk.self) private var clerk
     @EnvironmentObject private var notifier: Notifier
-    @State private var tab: AppTab = .health
+    @State private var tab: AppTab = .home
     /// A stack per tab rather than one shared between them.
     ///
     /// The single stack was there to stop a drill-down in Health showing up
@@ -258,6 +255,7 @@ struct RootView: View {
     /// the Settings screen itself.
     private var page: some View {
         TabView(selection: selection) {
+            Tab(value: AppTab.home) { stack(for: .home) } label: { glyph(.home) }
             Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
             Tab(value: AppTab.finance) { stack(for: .finance) } label: { glyph(.finance) }
             Tab(value: AppTab.time) { stack(for: .time) } label: { glyph(.time) }
@@ -326,6 +324,9 @@ struct RootView: View {
     @ViewBuilder
     private func root(for t: AppTab) -> some View {
         switch t {
+        // The rows on Home send you to a tab, which only the bar's selection
+        // can do, so it is handed the way to ask.
+        case .home:     HomeView { tab = $0 }
         case .health:   HealthView()
         case .finance:  FinanceView()
         case .time:     TimeView()
