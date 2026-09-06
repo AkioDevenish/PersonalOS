@@ -45,6 +45,10 @@ export default defineSchema({
     .index("by_platform", ["platform"]),
 
   // Well Being
+
+  // DEPRECATED: Apple-HealthKit-shaped, one column per metric, so every new
+  // provider would need a migration. Superseded by health_samples below.
+  // Kept until the existing read paths are moved over.
   health_records: defineTable({
     userId: v.string(), // Clerk user ID
     timestamp: v.number(),
@@ -59,6 +63,261 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"])
     .index("by_user_timestamp", ["userId", "timestamp"])
     .index("by_source", ["source"]),
+
+  /**
+   * Provider-agnostic health samples (entity-attribute-value).
+   *
+   * Adding a provider or a metric is data, never a schema change. Raw rows
+   * from every connected provider are kept side by side — overlap is resolved
+   * at read time by convex/health/resolve.ts, never by discarding on write, so
+   * changing the trust order re-resolves history instead of losing it.
+   */
+  health_samples: defineTable({
+    userId: v.string(), // Clerk user ID
+    provider: v.string(), // see PROVIDERS in convex/health/metrics.ts
+    metric: v.string(), // see METRICS
+    value: v.number(),
+    unit: v.string(), // canonical unit for the metric
+    recorded_at: v.number(), // epoch ms, start of the sample
+    period_end: v.optional(v.number()), // for interval samples (e.g. sleep)
+    /**
+     * Calendar day (YYYY-MM-DD) in the user's timezone at ingest. Denormalised
+     * because bucketing by day in a query would otherwise mean reading a whole
+     * range and grouping in JS on every request.
+     */
+    day: v.string(),
+    /** Provider's own id for the sample, when it has one — used for idempotency. */
+    external_id: v.optional(v.string()),
+    device: v.optional(v.string()), // e.g. "Apple Watch Series 9"
+    ingested_at: v.number(),
+  })
+    // resolution: every sample for one user/day/metric across all providers
+    .index("by_user_day_metric", ["userId", "day", "metric"])
+    // time series for a single metric
+    .index("by_user_metric_recorded", ["userId", "metric", "recorded_at"])
+    // idempotent upsert + per-provider purge on disconnect
+    .index("by_user_provider_metric_recorded", [
+      "userId",
+      "provider",
+      "metric",
+      "recorded_at",
+    ])
+    .index("by_user_provider", ["userId", "provider"]),
+
+  /**
+   * A user's link to one provider. OAuth tokens are deliberately NOT stored
+   * here: they live with the aggregator, or in a secrets store. Convex
+   * documents are readable by any function, so a leaked query is a leaked
+   * token — keep this table to non-secret connection state.
+   */
+  health_connections: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    status: v.string(), // 'connected' | 'disconnected' | 'error' | 'pending'
+    external_user_id: v.optional(v.string()), // provider/aggregator id
+    scopes: v.optional(v.array(v.string())),
+    last_sync_at: v.optional(v.number()),
+    /**
+     * Opaque resume point for incremental sync. A timestamp is not enough:
+     * HealthKit hands back a serialised HKQueryAnchor and several cloud
+     * providers hand back a cursor rather than a date. Storing the provider's
+     * own token means we fetch true deltas — and, for HealthKit, learn about
+     * deletions, which a date-range query never reports.
+     */
+    sync_cursor: v.optional(v.string()),
+    last_error: v.optional(v.string()),
+    connected_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_provider", ["userId", "provider"])
+    .index("by_external_user", ["external_user_id"]),
+
+  /**
+   * Provider OAuth tokens, encrypted before they ever reach Convex.
+   *
+   * The decryption key lives in the Next.js environment only, so these
+   * documents are unreadable from inside Convex — a query that accidentally
+   * returned every row would leak ciphertext and nothing else. Separate from
+   * health_connections so ordinary connection reads never touch them.
+   */
+  health_oauth_tokens: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    access_token: v.string(), // encrypted envelope
+    refresh_token: v.optional(v.string()), // encrypted envelope
+    expires_at: v.optional(v.number()),
+    scopes: v.optional(v.array(v.string())),
+    updated_at: v.number(),
+  }).index("by_user_provider", ["userId", "provider"]),
+
+  /**
+   * Per-user override of the default trust order — "use Oura for sleep even
+   * though I also wear a Garmin". Absent means the default in metrics.ts.
+   */
+  health_metric_sources: defineTable({
+    userId: v.string(),
+    metric: v.string(),
+    priority: v.array(v.string()), // provider keys, most trusted first
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_metric", ["userId", "metric"]),
+
+  /**
+   * Bring-your-own-key credentials for AI platforms.
+   *
+   * Same posture as health_oauth_tokens and for the same reason: an API key is
+   * a billable secret, so Convex only ever holds the ciphertext. `last4` is
+   * stored separately in the clear so the app can show which key is saved
+   * without anything having to decrypt it just to render a list.
+   */
+  ai_keys: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    api_key: v.string(), // encrypted envelope
+    last4: v.string(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_provider", ["userId", "provider"]),
+
+  /**
+   * What a user has paid for.
+   *
+   * Written only by the verification route, after Apple's signature on the
+   * transaction has been checked. Nothing the app sends can grant an
+   * entitlement directly — a client that could write here could give itself a
+   * subscription for free, which is the whole reason receipts are signed.
+   *
+   * `credits` is a running balance rather than a log because the balance is
+   * what every read wants; ai_credit_ledger keeps the history.
+   */
+  entitlements: defineTable({
+    userId: v.string(),
+    /** none | active | expired | grace | revoked */
+    subscription_status: v.string(),
+    product_id: v.optional(v.string()),
+    expires_at: v.optional(v.number()),
+    /** Apple's stable per-user id, for reconciling renewals. */
+    original_transaction_id: v.optional(v.string()),
+    credits: v.number(),
+    updated_at: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /**
+   * Every credit movement, so a balance can always be explained.
+   *
+   * A bare number that only ever goes down is impossible to support when
+   * someone asks where their credits went. `transaction_id` is unique per
+   * purchase and is what makes granting idempotent — Apple can and does
+   * deliver the same transaction more than once.
+   */
+  ai_credit_ledger: defineTable({
+    userId: v.string(),
+    delta: v.number(), // positive for a purchase, negative for a spend
+    reason: v.string(),
+    transaction_id: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_transaction", ["transaction_id"]),
+
+  /**
+   * Which platform and model this user's insights should run on. One row per
+   * user; absent means fall back to whatever the server has configured.
+   */
+  /**
+   * A conversation with a nutritionist.
+   *
+   * One row per consultation, with the messages beside it. `status` is what the
+   * person waiting is actually asking about — has a human seen this yet — so it
+   * is derived from real events (a reply exists) rather than set optimistically
+   * when the request is sent.
+   *
+   * `shared` records exactly which readings the person agreed to hand over.
+   * Health data going to another human being is the most consequential thing
+   * this app does, so what was shared is stored as text on the consultation
+   * rather than read live: the nutritionist sees the numbers as they were when
+   * consent was given, and nothing more.
+   */
+  /**
+   * A nutritionist people can choose to ask.
+   *
+   * Written by the professional themselves — the allowlist in the Convex
+   * environment says who is one, and this row says who they are. Country is on
+   * the profile because it is the thing a person actually wants to know before
+   * asking about food: someone who eats what you eat gives different advice
+   * from someone who has read about it.
+   */
+  nutritionists: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    country: v.string(),          // ISO region code
+    credentials: v.string(),      // "RD, MSc Nutrition" — as they state it
+    bio: v.string(),
+    /** What one consultation costs, in credits. */
+    price_credits: v.number(),
+    active: v.boolean(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_active", ["active"]),
+
+  consults: defineTable({
+    userId: v.string(),
+    /** Which professional was asked, when one was chosen. */
+    nutritionistId: v.optional(v.string()),
+    topic: v.string(),
+    status: v.string(),          // waiting | answered | closed
+    /** The readings shared at the moment of asking, as shown to the user. */
+    shared: v.optional(v.string()),
+    country: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"]),
+
+  consult_messages: defineTable({
+    consultId: v.id("consults"),
+    /** "you" or "nutritionist" — who the message reads as, not who wrote it. */
+    from: v.string(),
+    authorId: v.string(),
+    body: v.string(),
+    created_at: v.number(),
+  }).index("by_consult", ["consultId"]),
+
+  /**
+   * What people in a country actually eat, and who said so.
+   *
+   * One row per person per dish rather than a dish with a counter, because a
+   * counter cannot be audited, cannot be undone, and cannot stop the same
+   * person voting twice. The count is derived by reading the rows.
+   *
+   * Deliberately global: this is the one table in the app that is not scoped
+   * to a single user, because its whole purpose is that ten people saying
+   * "doubles" means more than one person saying it. Nothing here is health
+   * data — it is the name of a dish and the country it belongs to.
+   */
+  cuisine_dishes: defineTable({
+    country: v.string(),        // ISO region code, e.g. "TT"
+    dish: v.string(),           // as typed, for display
+    key: v.string(),            // normalised, for counting: lowercased, trimmed
+    userId: v.string(),         // one vote each; also lets a person take it back
+    /** True for the model-written starter list, which nobody voted for. */
+    seeded: v.optional(v.boolean()),
+    created_at: v.number(),
+  })
+    .index("by_country", ["country"])
+    .index("by_country_key", ["country", "key"])
+    .index("by_country_user", ["country", "userId"]),
+
+  ai_preferences: defineTable({
+    userId: v.string(),
+    provider: v.string(),
+    model: v.string(),
+    updated_at: v.number(),
+  }).index("by_user", ["userId"]),
 
   activity_tracking: defineTable({
     userId: v.string(), // Clerk user ID
@@ -103,4 +362,61 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"])
     .index("by_name", ["name"]),
+
+  // Finance
+
+  /**
+   * One movement of money.
+   *
+   * Amounts are integer minor units (cents, not dollars) and signed: negative
+   * is money out, positive is money in. Storing 12.30 as a float and adding a
+   * few hundred of them drifts off the true total by a cent or two, which is
+   * the one error a ledger may never make. The currency travels with the row
+   * because a total across two currencies is meaningless and the reader has to
+   * be able to tell.
+   *
+   * `source` is "manual" for anything typed in. An imported feed writes its own
+   * name plus the provider's row id in `external_id`, which is what lets the
+   * same transaction arrive twice without being counted twice.
+   */
+  finance_entries: defineTable({
+    userId: v.string(), // Clerk user ID
+    date: v.number(), // when the money moved, not when it was recorded
+    minor: v.number(), // signed integer minor units
+    currency: v.string(), // ISO 4217
+    category: v.string(),
+    note: v.optional(v.string()),
+    source: v.string(), // "manual", or the feed that imported it
+    external_id: v.optional(v.string()), // the provider's id, for deduplication
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_source_external", ["userId", "source", "external_id"]),
+
+  // Time
+
+  /**
+   * A stretch of time that went somewhere.
+   *
+   * Minutes rather than an end timestamp: the question a person answers is
+   * "how long did that take", and deriving a duration from two clock times is
+   * where daylight saving and midnight crossings go wrong. `source` and
+   * `external_id` work exactly as they do for money, so an imported calendar
+   * event lands in the same ledger as a block typed in by hand.
+   */
+  time_blocks: defineTable({
+    userId: v.string(), // Clerk user ID
+    start: v.number(),
+    minutes: v.number(),
+    activity: v.string(),
+    category: v.string(),
+    note: v.optional(v.string()),
+    source: v.string(),
+    external_id: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_start", ["userId", "start"])
+    .index("by_user_source_external", ["userId", "source", "external_id"]),
 });

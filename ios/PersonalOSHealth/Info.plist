@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Personal OS</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>CormorantGaramond-Regular.ttf</string>
+		<string>CormorantGaramond-Medium.ttf</string>
+		<string>CormorantGaramond-MediumItalic.ttf</string>
+		<string>Jost-Regular.ttf</string>
+		<string>Jost-Medium.ttf</string>
+	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Personal OS does not write to Health.</string>
+</dict>
+</plist>
