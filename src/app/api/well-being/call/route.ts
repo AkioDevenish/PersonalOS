@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getConvexClient } from "@/lib/convex-client"
 import { api } from "../../../../../convex/_generated/api"
 import { requireCaller } from "@/lib/ai/user-model"
-import { createRoom, mintToken, roomURL, videoConfigured } from "@/lib/video"
+import { createRoom, mintToken, roomURL, videoProvider, jitsiURL } from "@/lib/video"
 
 export const dynamic = "force-dynamic"
 
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
   const id = typeof body?.id === "string" ? body.id : ""
   if (!id) return NextResponse.json({ error: '"id" is required' }, { status: 400 })
 
-  if (!videoConfigured() || !process.env.DAILY_DOMAIN) {
+  const provider = videoProvider()
+  if (!provider) {
     return NextResponse.json({ error: "No video service is connected yet." }, { status: 503 })
   }
 
@@ -44,15 +45,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This call has not been paid for" }, { status: 402 })
     }
 
+    // The label over a video tile. The Caller carries no display name and a
+    // call is not the place to go fetching one.
+    const label = "You"
+
+    // A Jitsi room needs no creating: it exists the moment somebody with a
+    // valid token opens its name.
+    if (provider === "jitsi") {
+      return NextResponse.json({ url: jitsiURL(session.id, label) })
+    }
+
     let room = session.room ?? ""
     if (!room || !room.startsWith("pos-")) {
       room = await createRoom(session.id)
       await convex.mutation(api.health.consult.attachRoom, { id: id as never, room })
     }
 
-    // The Caller carries no display name, and a call is not the place to go
-    // fetching one. Daily only uses this as the label over a tile.
-    const token = await mintToken(room, "You")
+    const token = await mintToken(room, label)
     return NextResponse.json({ url: roomURL(room, token) })
   } catch (error) {
     console.error("[call] join failed:", error)
