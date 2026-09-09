@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 /// One specialist, and the two ways of reaching them.
 ///
@@ -241,8 +242,24 @@ struct ChatView: View {
     @State private var sending = false
     @State private var failure: String?
     @State private var poller: Task<Void, Never>?
+    @State private var sharing = false
+
+    @EnvironmentObject private var health: HealthKitManager
 
     private let client = SessionClient()
+
+    /// Messages grouped by the day they were sent, oldest first.
+    ///
+    /// A conversation with a practitioner is not read in one sitting: a reply
+    /// can be a day later, and without a date the two halves read as one
+    /// exchange that contradicts itself.
+    private var days: [(day: Date, messages: [SessionClient.Message])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: thread.messages) {
+            calendar.startOfDay(for: $0.at)
+        }
+        return grouped.keys.sorted().map { ($0, grouped[$0]!.sorted { $0.at < $1.at }) }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -258,8 +275,18 @@ struct ChatView: View {
                                 .lineSpacing(4)
                                 .padding(.top, 30)
                         }
-                        ForEach(thread.messages) { message in
-                            bubble(message).id(message.id)
+                        ForEach(days, id: \.day) { day, messages in
+                            Text(dayLabel(day))
+                                .font(Theme.sans(10, medium: true))
+                                .tracking(1.6)
+                                .foregroundStyle(Theme.dust)
+                                .textCase(.uppercase)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 8)
+
+                            ForEach(messages) { message in
+                                bubble(message).id(message.id)
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -287,6 +314,13 @@ struct ChatView: View {
             }
         }
         .onDisappear { poller?.cancel() }
+        .sheet(isPresented: $sharing) {
+            ShareReadingsSheet(specialist: specialist) { text in
+                try await client.send(id: sessionId, body: text)
+                await refresh()
+            }
+            .environmentObject(health)
+        }
     }
 
     private var header: some View {
@@ -317,19 +351,35 @@ struct ChatView: View {
     private func bubble(_ message: SessionClient.Message) -> some View {
         HStack {
             if !message.theirs { Spacer(minLength: 40) }
-            Text(message.body)
-                .font(Theme.sans(14))
-                .foregroundStyle(message.theirs ? Theme.ink : Theme.warm)
-                .lineSpacing(4)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 11)
-                .background(
-                    message.theirs ? Theme.warm : Theme.ink,
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                )
+
+            VStack(alignment: message.theirs ? .leading : .trailing, spacing: 4) {
+                Text(message.body)
+                    .font(Theme.sans(14))
+                    .foregroundStyle(message.theirs ? Theme.ink : Theme.warm)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 11)
+                    .background(
+                        message.theirs ? Theme.warm : Theme.ink,
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    )
+
+                Text(message.at.formatted(date: .omitted, time: .shortened))
+                    .font(Theme.sans(9.5))
+                    .foregroundStyle(Theme.dust)
+                    .padding(.horizontal, 4)
+            }
+
             if message.theirs { Spacer(minLength: 40) }
         }
         .frame(maxWidth: .infinity, alignment: message.theirs ? .leading : .trailing)
+    }
+
+    private func dayLabel(_ day: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(day) { return "Today" }
+        if calendar.isDateInYesterday(day) { return "Yesterday" }
+        return day.formatted(.dateTime.weekday(.wide).day().month(.abbreviated))
     }
 
     private var composer: some View {
@@ -343,6 +393,19 @@ struct ChatView: View {
             }
             Rule()
             HStack(spacing: 12) {
+                // The reason this app exists: a practitioner reading what was
+                // actually recorded rather than what somebody remembers.
+                Button {
+                    Haptics.tap()
+                    sharing = true
+                } label: {
+                    Image(systemName: "heart.text.square")
+                        .font(.system(size: 17, weight: .light))
+                        .foregroundStyle(Theme.amber)
+                        .environment(\.symbolVariants, .none)
+                }
+                .buttonStyle(.press)
+
                 TextField("Write a message", text: $draft, axis: .vertical)
                     .font(Theme.sans(14))
                     .foregroundStyle(Theme.ink)
@@ -391,74 +454,139 @@ struct ChatView: View {
     }
 }
 
-/// The call screen, with no call behind it yet.
+/// The call itself.
 ///
-/// The session, the room and the fee are all real — what is missing is a
-/// service to carry the video, which needs an account and keys that do not
-/// exist yet. Saying so plainly beats a button that spins forever, and it
-/// means the day a provider is added, only this view changes.
+/// Daily's own room, in a web view. The alternative is their native SDK, which
+/// is a large dependency and a build-time commitment to one provider; a hosted
+/// room is a URL, and swapping provider later means changing where that URL
+/// comes from rather than what this screen is made of.
+///
+/// The room is private and the token to enter it lasts twenty minutes, so the
+/// link is worth nothing to anybody who sees it afterwards.
 struct VideoCallView: View {
     let specialist: SpecialistsClient.Specialist
     let session: SessionClient.Opened
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var room: URL?
+    @State private var failure: String?
+    @State private var opening = true
+
+    private let client = SessionClient()
+
     var body: some View {
+        ZStack {
+            Theme.ink.ignoresSafeArea()
+
+            if let room {
+                CallWebView(url: room)
+                    .ignoresSafeArea(edges: .bottom)
+            } else {
+                waiting
+            }
+
+            VStack {
+                HStack {
+                    Button {
+                        Haptics.tap()
+                        dismiss()
+                    } label: {
+                        Text("Leave")
+                            .font(Theme.sans(13, medium: true))
+                            .foregroundStyle(Theme.warm)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 9)
+                            .background(.black.opacity(0.45), in: Capsule())
+                    }
+                    .buttonStyle(.press)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                Spacer()
+            }
+        }
+        .task { await open() }
+    }
+
+    private var waiting: some View {
         VStack(spacing: 0) {
-            Spacer()
-
-            Image(systemName: "video")
-                .font(.system(size: 30, weight: .ultraLight))
-                .foregroundStyle(Theme.dust)
-                .environment(\.symbolVariants, .none)
-
-            Text("The call cannot connect yet")
-                .font(Theme.serif(28))
-                .foregroundStyle(Theme.ink)
-                .multilineTextAlignment(.center)
-                .padding(.top, 20)
-
-            Text("Your session with \(specialist.name) is booked and the room is reserved. Personal OS has no video service connected to carry the picture, so the call itself will not open until one is added.")
-                .font(Theme.sans(13))
-                .foregroundStyle(Theme.mid)
-                .lineSpacing(5)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 14)
-                .padding(.horizontal, 34)
-
-            if session.price_minor > 0 {
-                Text("Nothing has been charged for this call, and the conversation stays open in writing.")
-                    .font(Theme.sans(11))
+            if let failure {
+                Image(systemName: "video.slash")
+                    .font(.system(size: 28, weight: .ultraLight))
                     .foregroundStyle(Theme.dust)
-                    .lineSpacing(4)
+                    .environment(\.symbolVariants, .none)
+
+                Text("The call cannot open")
+                    .font(Theme.serif(26))
+                    .foregroundStyle(Theme.warm)
+                    .padding(.top, 18)
+
+                Text(failure)
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.dust)
+                    .lineSpacing(5)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 18)
-                    .padding(.horizontal, 34)
-            }
+                    .padding(.top, 12)
+                    .padding(.horizontal, 40)
 
-            Spacer()
-
-            Button {
-                dismiss()
-            } label: {
-                Text("Write instead")
-                    .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Theme.ink, in: Capsule())
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Write instead")
+                        .font(Theme.sans(14, medium: true))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 26)
+                        .padding(.vertical, 13)
+                        .background(Theme.warm, in: Capsule())
+                }
+                .buttonStyle(.press)
+                .padding(.top, 26)
+            } else if opening {
+                ProgressView().tint(Theme.warm)
+                Text("Opening the room with \(specialist.name)")
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.dust)
+                    .padding(.top, 16)
             }
-            .buttonStyle(.press)
-            .padding(.horizontal, 30)
-            .padding(.bottom, 40)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.linen)
+    }
+
+    private func open() async {
+        opening = true
+        do {
+            room = try await client.joinCall(id: session.id)
+        } catch {
+            failure = error.localizedDescription
+        }
+        opening = false
     }
 }
 
+/// A web view that is allowed to use the camera.
+///
+/// Inline playback and no gesture requirement, or the call sits behind a play
+/// button nobody thinks to press.
+private struct CallWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+
+        let view = WKWebView(frame: .zero, configuration: config)
+        view.isOpaque = false
+        view.backgroundColor = .black
+        view.scrollView.isScrollEnabled = false
+        view.load(URLRequest(url: url))
+        return view
+    }
+
+    func updateUIView(_ view: WKWebView, context: Context) {}
+}
 
 /// Paying for a conversation.
 ///
@@ -597,5 +725,134 @@ struct PaymentView: View {
             }
             waiting = false
         }
+    }
+}
+
+/// Handing your readings to a practitioner.
+///
+/// The whole text is shown before anything is sent, and it is sent verbatim.
+/// What the practitioner reads is exactly what was on this screen when the
+/// person agreed to it — no summary made afterwards, no field they did not
+/// see. That is the difference between sharing health data and leaking it.
+struct ShareReadingsSheet: View {
+    let specialist: SpecialistsClient.Specialist
+    let send: (String) async throws -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var health: HealthKitManager
+
+    @State private var snapshot: HealthSnapshot?
+    @State private var reading = ""
+    @State private var loading = true
+    @State private var sending = false
+    @State private var failure: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Share your readings")
+                    .font(Theme.serif(30))
+                    .foregroundStyle(Theme.ink)
+
+                Text("This is exactly what \(specialist.name) will see, word for word. Nothing else from your ledger goes with it.")
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.mid)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 10)
+
+                if loading {
+                    Composing(lines: 4)
+                        .frame(height: 96)
+                        .padding(.top, 28)
+                } else if reading.isEmpty {
+                    Text("Nothing has been recorded today, so there is nothing to share.")
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.dust)
+                        .padding(.top, 30)
+                } else {
+                    Text(reading)
+                        .font(Theme.serifBody(16))
+                        .foregroundStyle(Theme.ink)
+                        .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.warm, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.top, 24)
+                }
+
+                if let failure {
+                    Text(failure)
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.amber)
+                        .padding(.top, 16)
+                }
+
+                Button {
+                    Task { await confirm() }
+                } label: {
+                    ZStack {
+                        Text("Send these readings").opacity(sending ? 0 : 1)
+                        if sending { ProgressView().tint(Theme.warm) }
+                    }
+                    .font(Theme.sans(15, medium: true))
+                    .foregroundStyle(Theme.warm)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(reading.isEmpty ? Theme.dust : Theme.ink, in: Capsule())
+                }
+                .buttonStyle(.press)
+                .disabled(reading.isEmpty || sending)
+                .padding(.top, 28)
+            }
+            .padding(.horizontal, 26)
+            .padding(.top, 26)
+            .padding(.bottom, 40)
+        }
+        .background(Theme.linen)
+        .task { await load() }
+    }
+
+    private func load() async {
+        snapshot = try? await health.fetchTodaySnapshot()
+        reading = Self.compose(snapshot)
+        loading = false
+    }
+
+    /// The day as a short block of lines, one measure each.
+    ///
+    /// Plain text rather than anything structured: it travels as a message and
+    /// is read by a person, so it has to make sense on its own in a
+    /// conversation rather than needing the app to render it.
+    static func compose(_ snapshot: HealthSnapshot?) -> String {
+        guard let snapshot else { return "" }
+
+        let date = Date().formatted(.dateTime.weekday(.wide).day().month(.wide))
+        var lines = ["My readings for \(date):"]
+
+        for group in Metrics.populatedGroups(snapshot) {
+            for spec in Metrics.inGroup(group) {
+                guard let value = spec.display(snapshot) else { continue }
+                let unit = spec.unit.isEmpty ? "" : " \(spec.unit)"
+                lines.append("\(spec.label): \(value)\(unit)")
+            }
+        }
+
+        // The heading alone is not a reading.
+        return lines.count > 1 ? lines.joined(separator: "\n") : ""
+    }
+
+    private func confirm() async {
+        sending = true
+        failure = nil
+        do {
+            try await send(reading)
+            Haptics.tap()
+            dismiss()
+        } catch {
+            failure = error.localizedDescription
+        }
+        sending = false
     }
 }

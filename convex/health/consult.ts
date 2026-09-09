@@ -358,6 +358,8 @@ export const billing = query({
       currency: row.currency ?? "TTD",
       payment_status: row.payment_status ?? "free",
       payment_ref: row.payment_ref ?? null,
+      kind: row.kind ?? "text",
+      room: row.room ?? null,
       topic: row.topic,
     }
   },
@@ -392,6 +394,21 @@ export const attachPayment = mutation({
  * is a URL the payer could type themselves, and both processors say plainly
  * not to fulfil on it alone.
  */
+/** Records the room a call was actually given, once one has been made. */
+export const attachRoom = mutation({
+  args: { id: v.id("consults"), room: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const row = await ctx.db.get(args.id)
+    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+
+    await ctx.db.patch(args.id, { room: args.room, updated_at: Date.now() })
+    return { ok: true }
+  },
+})
+
 export const markPaid = mutation({
   args: { id: v.id("consults") },
   handler: async (ctx, args) => {

@@ -4,10 +4,14 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Personal OS</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Personal OS uses the camera for video consultations with a practitioner you have chosen.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Personal OS does not write to Health.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Personal OS uses the microphone for video consultations with a practitioner you have chosen.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>EBGaramond.ttf</string>

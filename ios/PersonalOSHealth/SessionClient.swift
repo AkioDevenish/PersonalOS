@@ -86,6 +86,27 @@ struct SessionClient {
         }
     }
 
+    /// Opens the call and returns the room to join.
+    ///
+    /// The room is made on first ask and reused after, so a dropped connection
+    /// rejoins the same call rather than starting a second one beside it.
+    func joinCall(id: String) async throws -> URL {
+        struct Room: Decodable { let url: String }
+        do {
+            let data = try await transport.send(
+                "/api/well-being/call", method: "POST", body: ["id": id]
+            )
+            guard let url = URL(string: try JSONDecoder().decode(Room.self, from: data).url) else {
+                throw TransportError.badResponse
+            }
+            return url
+        } catch TransportError.http(503, _) {
+            throw CallUnavailable.noService
+        } catch TransportError.http(402, _) {
+            throw CallUnavailable.unpaid
+        }
+    }
+
     /// Asks the server, which asks the processor. The redirect back from a
     /// checkout page is not evidence and is never treated as any.
     func isPaid(id: String) async -> Bool {
@@ -114,6 +135,21 @@ enum PaymentUnavailable: LocalizedError {
             return "No payment processor is connected yet, so this cannot be collected."
         case .alreadySettled:
             return "This conversation is already paid for."
+        }
+    }
+}
+
+
+enum CallUnavailable: LocalizedError {
+    case noService
+    case unpaid
+
+    var errorDescription: String? {
+        switch self {
+        case .noService:
+            return "No video service is connected yet, so the call cannot open."
+        case .unpaid:
+            return "This call has not been paid for."
         }
     }
 }
