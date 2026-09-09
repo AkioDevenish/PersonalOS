@@ -23,7 +23,11 @@ struct LedgerDrawer: View {
     private let entries: [(route: Route, title: String, note: String)] = [
         (.history, "Records", "Any measurement over time, or two against each other"),
         (.nutrition, "Nutrition", "What to eat next, from your own readings"),
-        (.specialists, "Specialists", "Read by an expert"),
+        // Two kinds of expert, and the notes have to carry the difference:
+        // one is a model running on the phone, the other is a person who will
+        // read your ledger and write back.
+        (.specialists, "Specialists", "Read by an expert on this phone"),
+        (.professionals, "Practitioners", "Real people you can ask"),
         (.goals, "Goals", "What you're aiming at"),
     ]
 

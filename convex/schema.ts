@@ -255,13 +255,40 @@ export default defineSchema({
     country: v.string(),          // ISO region code
     credentials: v.string(),      // "RD, MSc Nutrition" — as they state it
     bio: v.string(),
+    /**
+     * What this person will actually answer about: "Diabetes", "Sports
+     * nutrition", "Sleep". The thing someone scans the directory for, and the
+     * reason a card exists rather than a list of names.
+     */
+    specialties: v.optional(v.array(v.string())),
+    /**
+     * Whether this person will take a video call as well as a written one.
+     * Their choice: plenty of practitioners will answer in writing and have no
+     * wish to appear on camera.
+     */
+    offers_video: v.optional(v.boolean()),
+    /**
+     * Where the application stands: "pending", "approved", "declined".
+     *
+     * Separate from `active`, and the difference matters. `active` is the
+     * practitioner saying whether they are taking questions this week.
+     * `status` is whether anyone has checked they are who they say they are.
+     * Anyone can type "RD, MSc" into a form, so a profile is invisible to
+     * everyone but its owner until it is approved.
+     *
+     * Optional because rows written before sign-up existed have no value here;
+     * those are the people on the environment allowlist, who are approved by
+     * being on it.
+     */
+    status: v.optional(v.string()),
     /** What one consultation costs, in credits. */
     price_credits: v.number(),
     active: v.boolean(),
     updated_at: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_active", ["active"]),
+    .index("by_active", ["active"])
+    .index("by_status", ["status"]),
 
   consults: defineTable({
     userId: v.string(),
@@ -271,6 +298,24 @@ export default defineSchema({
     status: v.string(),          // waiting | answered | closed
     /** The readings shared at the moment of asking, as shown to the user. */
     shared: v.optional(v.string()),
+    /**
+     * "text" or "video". A written conversation and a call are the same
+     * relationship — the same two people, the same history — so they are one
+     * row with a kind rather than two tables that have to be stitched together
+     * to show someone what they have already asked.
+     */
+    kind: v.optional(v.string()),
+    /**
+     * The call's room, when there is one.
+     *
+     * Named here and handed to whichever service ends up carrying the video.
+     * Generating it at the moment the session opens means the room exists
+     * before either party needs it, and swapping providers later changes who
+     * reads this string, not the shape of anything around it.
+     */
+    room: v.optional(v.string()),
+    /** What was actually taken for this session, so the ledger can be audited. */
+    paid_credits: v.optional(v.number()),
     country: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),

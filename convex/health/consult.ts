@@ -69,6 +69,229 @@ export const professionals = query({
  * Their own, and only their own: the allowlist decides who may answer, and
  * this decides nothing except how they introduce themselves.
  */
+/**
+ * Everyone a person may actually choose to ask.
+ *
+ * Approved and taking questions, nothing else. A pending application is
+ * invisible here: it is a stranger's claim about their own qualifications
+ * until somebody has checked it, and a directory that shows those is worse
+ * than no directory at all where health advice is concerned.
+ */
+export const directory = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const rows = await ctx.db.query("nutritionists").collect()
+
+    return rows
+      // Being on the environment allowlist is itself an approval: those rows
+      // predate applications and were vetted by whoever added the id.
+      .filter((r) => r.active && (r.status === "approved" || staff().includes(r.userId)))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => ({
+        id: r.userId,
+        name: r.name,
+        country: r.country,
+        credentials: r.credentials,
+        bio: r.bio,
+        specialties: r.specialties ?? [],
+        offers_video: r.offers_video ?? false,
+        price_credits: r.price_credits,
+      }))
+  },
+})
+
+/**
+ * The caller's own application, however it stands.
+ *
+ * Returns null for the overwhelming majority of people, who are not
+ * practitioners and never will be. The screen uses that to decide whether it
+ * is showing a form or a status.
+ */
+export const myApplication = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const row = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first()
+
+    if (!row) return null
+    return {
+      name: row.name,
+      country: row.country,
+      credentials: row.credentials,
+      bio: row.bio,
+      specialties: row.specialties ?? [],
+      offers_video: row.offers_video ?? false,
+      price_credits: row.price_credits,
+      active: row.active,
+      status: staff().includes(identity.subject) ? "approved" : (row.status ?? "pending"),
+    }
+  },
+})
+
+/**
+ * Applying to appear in the directory, or editing an application already made.
+ *
+ * Open to anyone signed in — that is the point of it — but an application is
+ * only ever a request. Editing an approved profile does not send it back for
+ * checking: the person has been verified, and making them requeue because they
+ * reworded their bio would mean nobody ever updates one.
+ */
+export const apply = mutation({
+  args: {
+    name: v.string(),
+    country: v.string(),
+    credentials: v.string(),
+    bio: v.string(),
+    specialties: v.array(v.string()),
+    offers_video: v.boolean(),
+    price_credits: v.number(),
+    active: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const name = args.name.trim()
+    const credentials = args.credentials.trim()
+    if (!name) throw new Error("A name is required")
+    if (!credentials) throw new Error("Your qualifications are required")
+
+    const specialties = args.specialties
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 6)
+    if (specialties.length === 0) throw new Error("Name at least one specialism")
+
+    const existing = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first()
+
+    const doc = {
+      userId: identity.subject,
+      name,
+      country: args.country.trim().toUpperCase(),
+      credentials,
+      bio: args.bio.trim(),
+      specialties,
+      offers_video: args.offers_video,
+      price_credits: Math.max(0, Math.floor(args.price_credits)),
+      active: args.active,
+      // An approved profile stays approved through an edit; anything else is
+      // pending, including a previously declined application being redone.
+      status: existing?.status === "approved" ? "approved" : "pending",
+      updated_at: Date.now(),
+    }
+
+    if (existing) {
+      await ctx.db.patch(existing._id, doc)
+      return { status: doc.status }
+    }
+    await ctx.db.insert("nutritionists", doc)
+    return { status: doc.status }
+  },
+})
+
+/**
+ * Approving or declining an application. Allowlist only.
+ *
+ * Whoever holds NUTRITIONIST_IDS is the one who checks qualifications. There
+ * is no self-approval: an applicant cannot be the person who reviews them,
+ * which is the whole reason the two fields are separate.
+ */
+export const review = mutation({
+  args: { userId: v.string(), approved: v.boolean() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+    if (!isStaff(identity.subject)) throw new Error("Not allowed")
+    if (args.userId === identity.subject) throw new Error("Cannot review your own application")
+
+    const row = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first()
+    if (!row) throw new Error("No such application")
+
+    await ctx.db.patch(row._id, {
+      status: args.approved ? "approved" : "declined",
+      updated_at: Date.now(),
+    })
+    return { status: args.approved ? "approved" : "declined" }
+  },
+})
+
+
+/**
+ * Opening a conversation with one specialist, in writing or on a call.
+ *
+ * The payment happens here and nowhere else. A free specialist costs nothing
+ * and the charge is skipped entirely rather than being a charge of zero — that
+ * distinction is what keeps a free consultation out of the credit ledger,
+ * where a row saying "-0 credits" would be noise forever.
+ *
+ * The room is named for a video session whether or not a video service is
+ * connected yet. Naming it here means the identifier exists before anybody
+ * needs it, and connecting a provider later is a matter of who reads the
+ * string rather than a change to any of this.
+ */
+export const openSession = mutation({
+  args: {
+    specialistId: v.string(),
+    kind: v.string(),          // "text" | "video"
+    topic: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const kind = args.kind === "video" ? "video" : "text"
+
+    const profile = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", args.specialistId))
+      .first()
+
+    const approved =
+      profile && profile.active &&
+      (profile.status === "approved" || staff().includes(profile.userId))
+    if (!approved) throw new Error("That specialist is not taking questions")
+
+    if (kind === "video" && !(profile.offers_video ?? false)) {
+      throw new Error(`${profile.name} does not take video calls`)
+    }
+
+    const price = Math.max(0, Math.floor(profile.price_credits))
+    // Free means free: no charge call, and so no ledger entry either.
+    if (price > 0) {
+      await charge(ctx, identity.subject, price, `session:${kind}:${args.specialistId}`)
+    }
+
+    const now = Date.now()
+    const id = await ctx.db.insert("consults", {
+      userId: identity.subject,
+      nutritionistId: args.specialistId,
+      topic: args.topic?.trim() || (kind === "video" ? "Video consultation" : "Consultation"),
+      status: "waiting",
+      kind,
+      room: kind === "video" ? `pos-${identity.subject.slice(-8)}-${now}` : undefined,
+      paid_credits: price,
+      created_at: now,
+      updated_at: now,
+    })
+
+    return { id, kind, price }
+  },
+})
+
 export const upsertProfile = mutation({
   args: {
     name: v.string(),
