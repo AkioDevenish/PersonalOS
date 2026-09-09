@@ -21,23 +21,6 @@ struct HealthView: View {
         return f.string(from: Date())
     }
 
-    /// The two figures a day is actually judged on.
-    ///
-    /// A grid of equal numbers is a table, and a table has no opinion about
-    /// which of them you opened the app to see. How you slept and what your
-    /// heart made of it lead, set large enough to read from a pocket.
-    ///
-    /// They are also the whole of Recovery & environment worth a heading, which
-    /// is why that section is gone from this page: with these two lifted out it
-    /// was a title over the leftovers. Steps went back to Physical activity for
-    /// the same reason, so that group reads as the whole of your movement
-    /// rather than the parts of it that weren't promoted.
-    private var lead: [MetricSpec] {
-        ["sleep", "resting_hr"]
-            .compactMap { Metrics.by(id: $0) }
-            .filter { spec in snapshot.flatMap { spec.value($0) } != nil }
-    }
-
     /// Which groups this page prints. Recovery & environment is not one of
     /// them: its two figures are large at the top, and what remained under the
     /// heading was mindful minutes and headphone volume, which is not a section
@@ -48,8 +31,14 @@ struct HealthView: View {
 
     /// The groups, minus anything already shown large above it.
     private func rest(_ group: MetricSpec.Group) -> [MetricSpec] {
-        Metrics.inGroup(group).filter { spec in
-            snapshot.flatMap { spec.value($0) } != nil && !lead.contains(spec)
+        Metrics.inGroup(group).filter { spec -> Bool in
+            // Excludes whatever is already shown large above: the headline
+            // figure and the supporting four. This used to filter against a
+            // separate list of "lead" metrics that stopped being displayed
+            // when the page was rebuilt, so the groups were hiding figures on
+            // the strength of a list nothing rendered any more.
+            let shownAbove = [headlineSpec].compactMap { $0 } + pairs
+            return snapshot.flatMap { spec.value($0) } != nil && !shownAbove.contains(spec)
         }
     }
 

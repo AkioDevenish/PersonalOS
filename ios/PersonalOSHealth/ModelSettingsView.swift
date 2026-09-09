@@ -159,7 +159,6 @@ private struct ProviderDetailView: View {
     @State private var entry = ""
     @State private var status = ""
     @State private var isBusy = false
-    @State private var chosenModel = ""
 
     /// On-device is usable when the phone says so; everything else when a key
     /// is stored, or when it needs none at all.

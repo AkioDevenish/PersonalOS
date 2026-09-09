@@ -65,30 +65,6 @@ struct SignInView: View {
     }
 }
 
-/// A tasteful stub — the tab exists in the design; its content comes with
-/// the resolver-backed history read.
-struct HistoryView: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            Ornament().frame(width: 180)
-            Text("The ledger's past")
-                .font(Theme.serif(26))
-                .foregroundStyle(Theme.ink)
-                .padding(.top, 18)
-            Text("Every day you've recorded, resolved and kept.\nArriving in a coming build.")
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-                .padding(.top, 8)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .background(Theme.linen)
-    }
-}
-
 /// What the tab bar shows.
 ///
 /// `AppTab` rather than `Tab` because SwiftUI's own `Tab` builds the bar now,
@@ -141,7 +117,6 @@ enum Route: Hashable {
 }
 
 struct RootView: View {
-    @Environment(Clerk.self) private var clerk
     @EnvironmentObject private var notifier: Notifier
     @State private var tab: AppTab = .home
     /// A stack per tab rather than one shared between them.
