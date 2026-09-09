@@ -11,14 +11,15 @@ import SwiftUI
 /// So the two things a reader is hunting for are lifted out of it: the
 /// measurement's name, and every figure.
 ///
-/// Weight alone cannot do it here. Both bundled faces are cut from the Light
-/// master, 400 against 500, which on a serif this fine is a difference you have
-/// to be told about before you can see it. Real bold would mean shipping a
-/// heavier Cormorant, which is a decision about the app's typography rather
-/// than about this sentence.
+/// Emphasis is carried by three things at once rather than one: the Medium
+/// cut, a point of extra size, and colour.
 ///
-/// So emphasis is carried by three things at once instead of one: the Medium
-/// cut, a point of extra size, and colour. Names go to ink, which is the
+/// That began as a workaround. Cormorant's two bundled faces were both cut
+/// from the Light master, so 400 against 500 was a difference you had to be
+/// told about before you could see it, and weight was doing nothing. EB
+/// Garamond carries five real weights, so the Medium now pulls its share —
+/// but the other two are kept, because subtle was the point. There is a
+/// SemiBold and a Bold in the file if this ever needs to shout. Names go to ink, which is the
 /// darkest thing on the page. Figures go to amber, the colour this design
 /// already reserves for the part that matters — in a health briefing the
 /// numbers are exactly that, so it is the accent doing its own job rather than

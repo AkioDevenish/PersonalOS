@@ -4,22 +4,21 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Personal OS</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Personal OS does not write to Health.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>EBGaramond.ttf</string>
+		<string>EBGaramond-Italic.ttf</string>
+		<string>Jost-Regular.ttf</string>
+		<string>Jost-Medium.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
 	</dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>CormorantGaramond-Regular.ttf</string>
-		<string>CormorantGaramond-Medium.ttf</string>
-		<string>CormorantGaramond-MediumItalic.ttf</string>
-		<string>Jost-Regular.ttf</string>
-		<string>Jost-Medium.ttf</string>
-	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Personal OS does not write to Health.</string>
 </dict>
 </plist>

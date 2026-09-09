@@ -17,16 +17,24 @@ enum Theme {
     static let hairline = Color(red: 0.157, green: 0.125, blue: 0.059).opacity(0.16)
 
     // MARK: Fonts
-    // PostScript names verified from the bundled TTFs — the fontsource
-    // statics are instanced from the Light master, hence the odd family name.
+    //
+    // EB Garamond, as two variable files carrying five real weights each
+    // (400 to 800 on the weight axis) plus their italics. PostScript names
+    // below were read back out of the bundled files with CoreText rather than
+    // guessed from the filenames.
+    //
+    // This replaced Cormorant Garamond, whose static cuts were both instanced
+    // from the Light master: asking for Medium silently returned Light, so
+    // emphasis had to be faked with a size step and a colour. These are
+    // genuinely different weights, so bold can be bold again.
     static func serif(_ size: CGFloat) -> Font {
-        .custom("CormorantGaramondLight-Medium", size: size)
+        .custom("EBGaramond-Medium", size: size)
     }
     static func serifBody(_ size: CGFloat) -> Font {
-        .custom("CormorantGaramondLight-Regular", size: size)
+        .custom("EBGaramond-Regular", size: size)
     }
     static func serifItalic(_ size: CGFloat) -> Font {
-        .custom("CormorantGaramondLight-MediumItalic", size: size)
+        .custom("EBGaramond-MediumItalic", size: size)
     }
     static func sans(_ size: CGFloat, medium: Bool = false) -> Font {
         .custom(medium ? "Jost-Medium" : "Jost-Regular", size: size)
