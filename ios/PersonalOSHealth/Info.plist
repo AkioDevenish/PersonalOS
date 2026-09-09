@@ -10,6 +10,10 @@
 	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Personal OS does not write to Health.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Personal OS records where you walk so it can paint those places onto your map. The trail is kept on this phone and is never uploaded.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Personal OS paints the places you have walked onto your own map.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Personal OS uses the microphone for video consultations with a practitioner you have chosen.</string>
 	<key>UIAppFonts</key>
@@ -18,6 +22,10 @@
 		<string>EBGaramond-Italic.ttf</string>
 		<string>Jost-Regular.ttf</string>
 		<string>Jost-Medium.ttf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

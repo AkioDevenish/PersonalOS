@@ -78,7 +78,7 @@ struct SignInView: View {
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
 enum AppTab: CaseIterable, Hashable {
-    case home, health, finance, time, settings
+    case home, health, finance, time, map, settings
 
     /// The system fills the selected one and tints it, so only the outline is
     /// named here. The hand-rolled bar used to keep a `.fill` twin for that
@@ -89,6 +89,7 @@ enum AppTab: CaseIterable, Hashable {
         case .health: return "heart"
         case .finance: return "dollarsign.gauge.chart.leftthird.topthird.rightthird"
         case .time: return "clock"
+        case .map: return "map"
         case .settings: return "person"
         }
     }
@@ -101,6 +102,7 @@ enum AppTab: CaseIterable, Hashable {
         case .health: return "Health"
         case .finance: return "Finance"
         case .time: return "Time"
+        case .map: return "Map"
         case .settings: return "Profile"
         }
     }
@@ -242,6 +244,7 @@ struct RootView: View {
             Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
             Tab(value: AppTab.finance) { stack(for: .finance) } label: { glyph(.finance) }
             Tab(value: AppTab.time) { stack(for: .time) } label: { glyph(.time) }
+            Tab(value: AppTab.map) { stack(for: .map) } label: { glyph(.map) }
             Tab(value: AppTab.settings) { stack(for: .settings) } label: { glyph(.settings) }
         }
         // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
@@ -315,6 +318,7 @@ struct RootView: View {
         case .health:   HealthView()
         case .finance:  FinanceView()
         case .time:     TimeView()
+        case .map:      MapView()
         case .settings: ConnectionsView()
         }
     }
