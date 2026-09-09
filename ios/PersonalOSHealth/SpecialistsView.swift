@@ -63,7 +63,7 @@ struct SpecialistsView: View {
                 } else {
                     VStack(spacing: 14) {
                         ForEach(Array(shown.enumerated()), id: \.element.id) { i, one in
-                            NavigationLink(value: one) {
+                            NavigationLink(value: Route.practitioner(one)) {
                                 card(one)
                             }
                             .buttonStyle(.pressRow)
@@ -96,9 +96,6 @@ struct SpecialistsView: View {
         .onAppear {
             guard desk.specialists.isEmpty else { return }
             Task { await load() }
-        }
-        .navigationDestination(for: SpecialistsClient.Specialist.self) { one in
-            SpecialistProfileView(specialist: one)
         }
     }
 

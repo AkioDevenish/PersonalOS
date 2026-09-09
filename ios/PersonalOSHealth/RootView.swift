@@ -114,6 +114,14 @@ enum AppTab: CaseIterable, Hashable {
 /// the tab you're already on take you home.
 enum Route: Hashable {
     case briefing, history, nutrition, specialists, professionals, paywall, goals
+    /// One practitioner's page.
+    ///
+    /// Carries the whole record rather than an id, because the directory has
+    /// already fetched it and the page would otherwise fetch it a second time
+    /// to draw the same thing. A value-carrying case rather than a view-based
+    /// link keeps every push in this app inside the one path the tab owns,
+    /// which is what lets tapping the tab again empty it.
+    case practitioner(SpecialistsClient.Specialist)
 }
 
 struct RootView: View {
@@ -289,6 +297,7 @@ struct RootView: View {
                     case .nutrition:    NutritionView()
                     case .specialists:  ExpertsView()
                     case .professionals: SpecialistsView()
+                    case .practitioner(let one): SpecialistProfileView(specialist: one)
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
                     }
