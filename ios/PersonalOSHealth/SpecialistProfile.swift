@@ -112,14 +112,19 @@ struct SpecialistProfileView: View {
             isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
             titleVisibility: .visible
         ) {
-            Button("Pay \(specialist.price)") {
+            Button("Continue \u{00B7} \(specialist.price)") {
                 if let kind = confirming { Task { await open(kind) } }
                 confirming = nil
             }
             Button("Cancel", role: .cancel) { confirming = nil }
         }
         .fullScreenCover(item: $session) { opened in
-            if opened.kind == "video" {
+            // A session that owes money does not open into the conversation.
+            // Being able to talk first and settle later is not a payment flow,
+            // it is an invoice nobody agreed to.
+            if opened.owing {
+                PaymentView(specialist: specialist, session: opened)
+            } else if opened.kind == "video" {
                 VideoCallView(specialist: specialist, session: opened)
             } else {
                 ChatView(specialist: specialist, sessionId: opened.id)
@@ -162,7 +167,7 @@ struct SpecialistProfileView: View {
     private var costLine: String {
         specialist.free
             ? "\(specialist.name) does not charge. Start a conversation whenever you like."
-            : "\(specialist.price) for a conversation, taken once when it opens. A subscription covers it."
+            : "\(specialist.price) for a conversation, paid to \(specialist.name) when it opens."
     }
 
     private var confirmTitle: String {
@@ -422,8 +427,8 @@ struct VideoCallView: View {
                 .padding(.top, 14)
                 .padding(.horizontal, 34)
 
-            if session.price > 0 {
-                Text("You have not been charged twice: the \(session.price) credits for this session are already taken, and the conversation stays open in writing.")
+            if session.price_minor > 0 {
+                Text("Nothing has been charged for this call, and the conversation stays open in writing.")
                     .font(Theme.sans(11))
                     .foregroundStyle(Theme.dust)
                     .lineSpacing(4)
@@ -439,6 +444,64 @@ struct VideoCallView: View {
                 dismiss()
             } label: {
                 Text("Write instead")
+                    .font(Theme.sans(15, medium: true))
+                    .foregroundStyle(Theme.warm)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Theme.ink, in: Capsule())
+            }
+            .buttonStyle(.press)
+            .padding(.horizontal, 30)
+            .padding(.bottom, 40)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.linen)
+    }
+}
+
+
+/// Where money would change hands.
+///
+/// The price, the practitioner and the session are all real and recorded. What
+/// is missing is a payment processor, which needs an account and keys that do
+/// not exist yet. Saying so is better than a card form that collects details
+/// and cannot do anything with them — and it is the one screen that changes
+/// when a processor is chosen.
+struct PaymentView: View {
+    let specialist: SpecialistsClient.Specialist
+    let session: SessionClient.Opened
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Kicker(text: "To pay")
+            Text(session.price)
+                .font(Theme.serif(52))
+                .foregroundStyle(Theme.ink)
+                .padding(.top, 8)
+            Text("to \(specialist.name)")
+                .font(Theme.sans(13))
+                .foregroundStyle(Theme.mid)
+                .padding(.top, 6)
+
+            Text("Personal OS has no payment processor connected, so this cannot be collected yet. Your conversation has been reserved and nothing has been charged to you.")
+                .font(Theme.sans(13))
+                .foregroundStyle(Theme.mid)
+                .lineSpacing(5)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 30)
+                .padding(.horizontal, 34)
+
+            Spacer()
+
+            Button {
+                dismiss()
+            } label: {
+                Text("Close")
                     .font(Theme.sans(15, medium: true))
                     .foregroundStyle(Theme.warm)
                     .frame(maxWidth: .infinity)

@@ -377,6 +377,7 @@ struct SpecialistApplicationSheet: View {
     @State private var draftSpecialty = ""
     @State private var country = ""
     @State private var price = "0"
+    @State private var currencyCode = Money.deviceDefault
     @State private var active = true
     @State private var offersVideo = false
     @State private var picked: PhotosPickerItem?
@@ -522,14 +523,19 @@ struct SpecialistApplicationSheet: View {
 
                 field("Country", "TT", $country)
 
-                Kicker(text: "Price in credits")
+                Kicker(text: "What you charge")
                     .padding(.top, 30)
-                TextField("0", text: $price)
-                    .font(Theme.serif(26))
-                    .foregroundStyle(Theme.ink)
-                    .keyboardType(.numberPad)
-                    .padding(.top, 6)
-                Text("Zero means free.")
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(currencyCode)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.dust)
+                    TextField("0", text: $price)
+                        .font(Theme.serif(30))
+                        .foregroundStyle(Theme.ink)
+                        .keyboardType(.decimalPad)
+                }
+                .padding(.top, 6)
+                Text("Per conversation. Leave it at zero to work for free.")
                     .font(Theme.sans(11))
                     .foregroundStyle(Theme.dust)
                     .padding(.top, 4)
@@ -641,7 +647,8 @@ struct SpecialistApplicationSheet: View {
         specialties = existing.specialties
         offersVideo = existing.offers_video
         country = existing.country
-        price = String(existing.price_credits)
+        currencyCode = existing.currency
+        price = Money.major(existing.price_minor, existing.currency)
         active = existing.active
     }
 
@@ -657,7 +664,8 @@ struct SpecialistApplicationSheet: View {
                 specialties: specialties,
                 offersVideo: offersVideo,
                 photo: photoId,
-                priceCredits: Int(price.filter(\.isNumber)) ?? 0,
+                priceMinor: Money.minor(from: price, currency: currencyCode) ?? 0,
+                currency: currencyCode,
                 active: active
             )
             Haptics.tap()

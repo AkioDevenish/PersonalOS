@@ -122,6 +122,17 @@ enum Money {
         return f.string(from: NSNumber(value: shown)) ?? String(format: "%.2f", shown)
     }
 
+    /// Minor units as a bare major-unit number, for a text field.
+    ///
+    /// No currency symbol and no grouping: this is a value being edited, and a
+    /// field that reads "$1,500.00" cannot be typed into without first
+    /// deleting the punctuation.
+    static func major(_ minor: Int, _ currency: String) -> String {
+        let digits = fractionDigits(currency)
+        let value = Double(minor) / pow(10.0, Double(digits))
+        return String(format: "%.\(digits)f", value)
+    }
+
     /// What someone typed, as whole minor units.
     ///
     /// Rounds rather than truncates: typing 12.999 and having it recorded as

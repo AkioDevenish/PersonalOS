@@ -290,8 +290,19 @@ export default defineSchema({
      * being on it.
      */
     status: v.optional(v.string()),
-    /** What one consultation costs, in credits. */
+    /** What one consultation costs, in credits. Superseded by price_minor. */
     price_credits: v.number(),
+    /**
+     * What a consultation costs, in integer minor units of `currency`.
+     *
+     * Credits were the wrong instrument for paying a person for their time:
+     * they are a token this app invents, and a practitioner is owed money. The
+     * same reasoning as the finance ledger applies to the arithmetic — whole
+     * minor units, never a decimal, and the currency travels with the amount
+     * because a price without one is not a price.
+     */
+    price_minor: v.optional(v.number()),
+    currency: v.optional(v.string()),      // ISO 4217
     active: v.boolean(),
     updated_at: v.number(),
   })
@@ -325,6 +336,20 @@ export default defineSchema({
     room: v.optional(v.string()),
     /** What was actually taken for this session, so the ledger can be audited. */
     paid_credits: v.optional(v.number()),
+    /** The agreed price, captured at the moment of opening so a later change
+     *  to the practitioner's rate cannot rewrite what somebody already owed. */
+    price_minor: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    /**
+     * "free", "pending" or "paid".
+     *
+     * Kept separate from the conversation's own status. A session can be open
+     * and unpaid, and the two facts answer different questions: one is whether
+     * anybody has replied, the other is whether the practitioner is owed.
+     */
+    payment_status: v.optional(v.string()),
+    /** The processor's own reference, once there is a processor. */
+    payment_ref: v.optional(v.string()),
     country: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),

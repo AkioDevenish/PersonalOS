@@ -15,19 +15,19 @@ struct SpecialistsClient {
         let specialties: [String]
         let offers_video: Bool
         let photo_url: String?
-        let price_credits: Int
+        /// Whole minor units of `currency`. Zero means free.
+        let price_minor: Int
+        let currency: String
 
         /// Whether talking to this person costs anything at all.
-        var free: Bool { price_credits == 0 }
+        var free: Bool { price_minor == 0 }
 
         /// The country in words, which is what someone wants to know before
         /// asking about food or exercise.
         var place: String { Cuisine.name(for: country) }
 
         var price: String {
-            price_credits == 0
-                ? "Free"
-                : "\(price_credits) \(price_credits == 1 ? "credit" : "credits")"
+            free ? "Free" : Money.text(price_minor, currency)
         }
     }
 
@@ -40,7 +40,8 @@ struct SpecialistsClient {
         let specialties: [String]
         let offers_video: Bool
         let photo_url: String?
-        let price_credits: Int
+        let price_minor: Int
+        let currency: String
         let active: Bool
         let status: String          // pending | approved | declined
 
@@ -71,7 +72,8 @@ struct SpecialistsClient {
         specialties: [String],
         offersVideo: Bool,
         photo: String?,
-        priceCredits: Int,
+        priceMinor: Int,
+        currency: String,
         active: Bool
     ) async throws -> String {
         struct Result: Decodable { let status: String }
@@ -82,7 +84,8 @@ struct SpecialistsClient {
                 "bio": bio,
                 "specialties": specialties,
                 "offers_video": offersVideo,
-                "price_credits": priceCredits,
+                "price_minor": priceMinor,
+                "currency": currency,
                 "active": active,
         ]
         // Omitted rather than sent as null when unchanged, so editing a bio

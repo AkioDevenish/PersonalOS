@@ -103,7 +103,8 @@ export const directory = query({
         specialties: r.specialties ?? [],
         offers_video: r.offers_video ?? false,
         photo_url: r.photo ? await ctx.storage.getUrl(r.photo) : null,
-        price_credits: r.price_credits,
+        price_minor: r.price_minor ?? 0,
+        currency: r.currency ?? "TTD",
       }))
     )
   },
@@ -130,13 +131,14 @@ export const myApplication = query({
     if (!row) return null
     return {
       photo_url: row.photo ? await ctx.storage.getUrl(row.photo) : null,
+      price_minor: row.price_minor ?? 0,
+      currency: row.currency ?? "TTD",
       name: row.name,
       country: row.country,
       credentials: row.credentials,
       bio: row.bio,
       specialties: row.specialties ?? [],
       offers_video: row.offers_video ?? false,
-      price_credits: row.price_credits,
       active: row.active,
       status: staff().includes(identity.subject) ? "approved" : (row.status ?? "pending"),
     }
@@ -160,7 +162,8 @@ export const apply = mutation({
     specialties: v.array(v.string()),
     offers_video: v.boolean(),
     photo: v.optional(v.id("_storage")),
-    price_credits: v.number(),
+    price_minor: v.number(),
+    currency: v.string(),
     active: v.boolean(),
   },
   handler: async (ctx, args) => {
@@ -194,7 +197,10 @@ export const apply = mutation({
       // Left alone when no new file was chosen, so editing a bio does not
       // silently remove a photograph.
       photo: args.photo ?? existing?.photo,
-      price_credits: Math.max(0, Math.floor(args.price_credits)),
+      price_minor: Math.max(0, Math.floor(args.price_minor)),
+      currency: args.currency.trim().toUpperCase() || "TTD",
+      // Kept at zero so the old column stops being consulted anywhere.
+      price_credits: 0,
       active: args.active,
       // An approved profile stays approved through an edit; anything else is
       // pending, including a previously declined application being redone.
@@ -280,12 +286,13 @@ export const openSession = mutation({
       throw new Error(`${profile.name} does not take video calls`)
     }
 
-    const price = Math.max(0, Math.floor(profile.price_credits))
-    // Free means free: no charge call, and so no ledger entry either.
-    if (price > 0) {
-      await charge(ctx, identity.subject, price, `session:${kind}:${args.specialistId}`)
-    }
+    const priceMinor = Math.max(0, Math.floor(profile.price_minor ?? 0))
+    const currency = (profile.currency ?? "TTD").toUpperCase()
 
+    // Free means free: nothing to collect, so the session opens outright.
+    // A priced one opens unpaid and waits on a processor. Recording the price
+    // here rather than reading it back off the profile later means a
+    // practitioner raising their rate cannot change what somebody already owes.
     const now = Date.now()
     const id = await ctx.db.insert("consults", {
       userId: identity.subject,
@@ -294,12 +301,20 @@ export const openSession = mutation({
       status: "waiting",
       kind,
       room: kind === "video" ? `pos-${identity.subject.slice(-8)}-${now}` : undefined,
-      paid_credits: price,
+      price_minor: priceMinor,
+      currency,
+      payment_status: priceMinor === 0 ? "free" : "pending",
       created_at: now,
       updated_at: now,
     })
 
-    return { id, kind, price }
+    return {
+      id,
+      kind,
+      price_minor: priceMinor,
+      currency,
+      payment_status: priceMinor === 0 ? "free" : "pending",
+    }
   },
 })
 

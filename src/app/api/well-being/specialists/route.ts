@@ -78,7 +78,8 @@ export async function POST(request: Request) {
         ? body.specialties.filter((s: unknown): s is string => typeof s === "string")
         : [],
       photo: typeof body.photo === "string" ? (body.photo as never) : undefined,
-      price_credits: Number(body.price_credits ?? 0),
+      price_minor: Number(body.price_minor ?? 0),
+      currency: String(body.currency ?? "TTD"),
       active: body.active !== false,
     })
     return NextResponse.json(result)

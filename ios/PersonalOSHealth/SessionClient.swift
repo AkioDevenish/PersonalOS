@@ -16,8 +16,16 @@ struct SessionClient {
     struct Opened: Decodable {
         let id: String
         let kind: String
-        /// What was actually taken. Zero for a free specialist.
-        let price: Int
+        /// The agreed price in whole minor units, fixed at the moment of
+        /// opening so a later change to the rate cannot rewrite what is owed.
+        let price_minor: Int
+        let currency: String
+        /// "free", "pending" or "paid".
+        let payment_status: String
+
+        var free: Bool { payment_status == "free" }
+        var owing: Bool { payment_status == "pending" }
+        var price: String { Money.text(price_minor, currency) }
     }
 
     struct Message: Decodable, Identifiable, Hashable {
