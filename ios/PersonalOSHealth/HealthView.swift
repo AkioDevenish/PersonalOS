@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 /// The screen you open in the morning: date, briefing, the ledger.
 struct HealthView: View {
@@ -9,6 +10,8 @@ struct HealthView: View {
     /// the page is actually about.
     @State private var history: [HealthSnapshot] = []
     @State private var historyLoading = true
+    /// Today's steps hour by hour, and the same for recent same-weekdays.
+    @State private var curve: DayCurve?
     @State private var loadFailed = false
     @State private var appeared = false
 
@@ -95,6 +98,12 @@ struct HealthView: View {
                     pairGrid
                         .padding(.top, 38)
                         .flowIn(4)
+                }
+
+                if let curve, curve.today.count > 1 {
+                    progress(curve)
+                        .padding(.top, 44)
+                        .flowIn(5)
                 }
 
                 // MARK: Everything else recorded
@@ -225,6 +234,116 @@ struct HealthView: View {
         }
     }
 
+
+    // MARK: How the day has gone
+
+    /// Today's climb against the way this weekday usually goes.
+    ///
+    /// Two lines and no axis furniture beyond what is needed to read them. The
+    /// usual day is drawn first and quietly, because it is the thing being
+    /// measured against rather than the thing being read.
+    private func progress(_ curve: DayCurve) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionRule(text: "How the day has gone")
+
+            Text(standing(curve))
+                .font(Theme.sans(12))
+                .foregroundStyle(Theme.mid)
+                .padding(.top, 10)
+
+            Chart {
+                ForEach(Array(curve.typical.enumerated()), id: \.offset) { hour, value in
+                    LineMark(
+                        x: .value("Hour", hour),
+                        y: .value("Steps", value),
+                        series: .value("Series", "usual")
+                    )
+                    .foregroundStyle(Theme.dust.opacity(0.65))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                    .interpolationMethod(.monotone)
+                }
+
+                ForEach(Array(curve.today.enumerated()), id: \.offset) { hour, value in
+                    AreaMark(
+                        x: .value("Hour", hour),
+                        y: .value("Steps", value),
+                        series: .value("Series", "today")
+                    )
+                    .foregroundStyle(
+                        .linearGradient(
+                            colors: [Theme.amber.opacity(0.22), Theme.amber.opacity(0.01)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.monotone)
+
+                    LineMark(
+                        x: .value("Hour", hour),
+                        y: .value("Steps", value),
+                        series: .value("Series", "today")
+                    )
+                    .foregroundStyle(Theme.amber)
+                    .lineStyle(StrokeStyle(lineWidth: 2.4, lineCap: .round))
+                    .interpolationMethod(.monotone)
+                }
+
+                // Where the day has got to. The one point worth marking.
+                if let last = curve.today.last {
+                    PointMark(
+                        x: .value("Hour", curve.today.count - 1),
+                        y: .value("Steps", last)
+                    )
+                    .foregroundStyle(Theme.amber)
+                    .symbolSize(60)
+                }
+            }
+            .chartXScale(domain: 0...23)
+            .chartXAxis {
+                AxisMarks(values: [0, 6, 12, 18]) { value in
+                    AxisValueLabel {
+                        Text(clockLabel(value.as(Int.self) ?? 0))
+                            .font(Theme.sans(9))
+                            .foregroundStyle(Theme.dust)
+                    }
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
+                    AxisGridLine().foregroundStyle(Theme.hairline)
+                    AxisValueLabel {
+                        Text(MetricSpec.grouped(value.as(Double.self) ?? 0))
+                            .font(Theme.sans(9))
+                            .foregroundStyle(Theme.dust)
+                    }
+                }
+            }
+            .frame(height: 150)
+            .padding(.top, 18)
+        }
+    }
+
+    /// The sentence over the chart, in steps rather than percentages.
+    private func standing(_ curve: DayCurve) -> String {
+        let usual = MetricSpec.grouped(curve.typicalByNow)
+        let gap = abs(curve.difference)
+        // Under a couple of hundred steps apart is the same day twice.
+        guard gap >= 200 else {
+            return "Level with a usual \(curve.weekday) by now, which is about \(usual)"
+        }
+        let word = curve.difference > 0 ? "ahead of" : "behind"
+        return "\(MetricSpec.grouped(gap)) \(word) a usual \(curve.weekday), which reaches \(usual) by now"
+    }
+
+    private func clockLabel(_ hour: Int) -> String {
+        switch hour {
+        case 0: return "12am"
+        case 12: return "noon"
+        case let h where h < 12: return "\(h)am"
+        default: return "\(hour - 12)pm"
+        }
+    }
+
     // MARK: The supporting figures
 
     /// The four that sit under the headline, whichever of them the day has.
@@ -297,7 +416,13 @@ struct HealthView: View {
     private func loadHistory() async {
         historyLoading = true
         history = (try? await health.fetchHistoricalSnapshots(days: 56)) ?? []
-        withAnimation(Theme.Motion.flow) { historyLoading = false }
+        // One statistics query for eight weeks of hourly buckets, which is
+        // what the curve is drawn from.
+        let hourly = (try? await health.hourlySteps(days: 56)) ?? [:]
+        withAnimation(Theme.Motion.flow) {
+            curve = DayCurve.build(from: hourly)
+            historyLoading = false
+        }
     }
 
     static func grouped(_ v: Double) -> String {

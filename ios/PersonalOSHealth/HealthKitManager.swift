@@ -123,6 +123,56 @@ final class HealthKitManager: ObservableObject {
         return snapshots.sorted { $0.recordedAt < $1.recordedAt }
     }
 
+    /// Steps bucketed by the hour, over the last `days` days.
+    ///
+    /// One statistics-collection query rather than a query per day. HealthKit
+    /// will happily walk a 56-day window in hourly buckets in a single pass,
+    /// and asking it 56 times instead is how a chart ends up taking seconds to
+    /// draw.
+    ///
+    /// Returned keyed by the start of each hour, so the caller can bucket by
+    /// weekday and hour-of-day without re-deriving dates.
+    func hourlySteps(days: Int = 56) async throws -> [Date: Double] {
+        guard HKHealthStore.isHealthDataAvailable() else { throw HealthKitError.unavailable }
+        guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [:] }
+
+        let calendar = Calendar.current
+        let end = Date()
+        guard let start = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: end))
+        else { return [:] }
+
+        var hourly = DateComponents()
+        hourly.hour = 1
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: HKQuery.predicateForSamples(
+                    withStart: start, end: end, options: .strictStartDate
+                ),
+                options: .cumulativeSum,
+                anchorDate: calendar.startOfDay(for: start),
+                intervalComponents: hourly
+            )
+
+            query.initialResultsHandler = { _, results, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                var buckets: [Date: Double] = [:]
+                results?.enumerateStatistics(from: start, to: end) { stat, _ in
+                    if let sum = stat.sumQuantity()?.doubleValue(for: .count()), sum > 0 {
+                        buckets[stat.startDate] = sum
+                    }
+                }
+                continuation.resume(returning: buckets)
+            }
+
+            store.execute(query)
+        }
+    }
+
     private func fetchSnapshotForDay(_ date: Date) async throws -> HealthSnapshot {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
