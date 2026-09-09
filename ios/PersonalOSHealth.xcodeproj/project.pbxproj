@@ -143,6 +143,7 @@
 			files = (
 			);
 			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
 			);
 			name = "Stamp dev server host";
 			outputPaths = (
