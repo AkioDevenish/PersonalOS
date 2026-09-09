@@ -183,6 +183,10 @@ struct TimeView: View {
         let w = span.window()
         do {
             ledger = try await client.ledger(from: w.from, to: w.to)
+        } catch where error.isCancellation {
+            // A rebuilt view calls off its own request; that is not a failure
+            // anybody can act on and it is never shown.
+            return
         } catch {
             failure = error.localizedDescription
         }

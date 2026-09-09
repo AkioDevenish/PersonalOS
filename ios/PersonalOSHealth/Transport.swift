@@ -79,3 +79,19 @@ enum TransportError: LocalizedError {
         }
     }
 }
+
+extension Error {
+    /// Whether this is the request being called off rather than failing.
+    ///
+    /// SwiftUI cancels a `.task` every time it rebuilds the view that owns it,
+    /// which happens on the way in from the drawer and on any parent redraw.
+    /// The URL loading system reports that as an error, and its description is
+    /// the single word "cancelled" — which reads, to somebody looking at a
+    /// screen, as though the server refused them. Nothing was refused and
+    /// there is nothing to act on, so it is never shown.
+    var isCancellation: Bool {
+        if self is CancellationError { return true }
+        if let url = self as? URLError { return url.code == .cancelled }
+        return false
+    }
+}

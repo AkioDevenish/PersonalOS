@@ -70,7 +70,14 @@ struct SpecialistsView: View {
         }
         .background(Theme.linen)
         .refreshable { await load() }
-        .task { await load() }
+        // Deliberately not `.task`. That binds the request's lifetime to this
+        // view, and SwiftUI tears the view down and rebuilds it as the drawer
+        // closes behind the push, killing the read before it lands. A task
+        // started here outlives the rebuild.
+        .onAppear {
+            guard desk.specialists.isEmpty else { return }
+            Task { await load() }
+        }
         .navigationDestination(for: SpecialistsClient.Specialist.self) { one in
             SpecialistProfileView(specialist: one)
         }
@@ -233,6 +240,10 @@ struct SpecialistsView: View {
         failure = nil
         do {
             desk = try await client.desk()
+        } catch where error.isCancellation {
+            // Called off, not refused. Leave the shimmer up: whatever rebuilt
+            // the view will bring us back through onAppear.
+            return
         } catch {
             failure = error.localizedDescription
         }
