@@ -33,6 +33,67 @@ struct Transport {
         try await send(request(path, method: method, body: body))
     }
 
+    // MARK: Convex, directly
+
+    /// Calls a Convex function without anything in between.
+    ///
+    /// Convex takes the same bearer token the routes did, so the phone can ask
+    /// the database itself rather than asking a server to ask it. That removes
+    /// the whole middle: no host to stamp into the build, no Mac that has to
+    /// be awake, no plaintext exception, and one place to deploy instead of
+    /// two.
+    ///
+    /// `path` is Convex's own naming — "finance:ledger", or
+    /// "health/consult:directory" for a function in a folder.
+    func query(_ path: String, _ args: [String: Any] = [:]) async throws -> Data {
+        try await call("query", path, args)
+    }
+
+    func mutation(_ path: String, _ args: [String: Any] = [:]) async throws -> Data {
+        try await call("mutation", path, args)
+    }
+
+    private func call(_ kind: String, _ path: String, _ args: [String: Any]) async throws -> Data {
+        guard let url = URL(string: "\(AppConfig.convexURL)/api/\(kind)") else {
+            throw TransportError.badURL
+        }
+        guard let token = await auth.currentToken() else { throw TransportError.notSignedIn }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = timeout
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: ["path": path, "args": args, "format": "json"]
+        )
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw TransportError.badResponse }
+        guard (200...299).contains(http.statusCode) else {
+            throw TransportError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+        }
+
+        // Convex answers 200 even when the function threw, with the failure in
+        // the envelope. Treating that as success is how an error becomes a
+        // blank screen instead of a sentence.
+        struct Envelope: Decodable {
+            let status: String
+            let errorMessage: String?
+        }
+        if let envelope = try? JSONDecoder().decode(Envelope.self, from: data),
+           envelope.status != "success" {
+            throw TransportError.server(envelope.errorMessage ?? "The database refused that")
+        }
+
+        // The caller wants the value, not the wrapper around it.
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw TransportError.badResponse
+        }
+        let value = object["value"] ?? NSNull()
+        return try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
+    }
+
     private func request(_ path: String, method: String, body: [String: Any]?) async throws -> URLRequest {
         guard let url = URL(string: AppConfig.baseURL + path) else { throw TransportError.badURL }
         guard let token = await auth.currentToken() else { throw TransportError.notSignedIn }

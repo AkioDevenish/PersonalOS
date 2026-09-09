@@ -56,7 +56,7 @@ struct FinanceClient {
     func ledger(from: Date, to: Date) async throws -> Ledger {
         let a = Int(from.timeIntervalSince1970 * 1000)
         let b = Int(to.timeIntervalSince1970 * 1000)
-        let data = try await transport.send("/api/finance?from=\(a)&to=\(b)", method: "GET", body: nil)
+        let data = try await transport.query("finance:ledger", ["from": a, "to": b])
         return try JSONDecoder().decode(Ledger.self, from: data)
     }
 
@@ -74,11 +74,11 @@ struct FinanceClient {
             "category": category,
         ]
         if let note, !note.isEmpty { body["note"] = note }
-        _ = try await transport.send("/api/finance", method: "POST", body: body)
+        _ = try await transport.mutation("finance:add", body)
     }
 
     func remove(id: String) async throws {
-        _ = try await transport.send("/api/finance?id=\(id)", method: "DELETE", body: nil)
+        _ = try await transport.mutation("finance:remove", ["id": id])
     }
 }
 

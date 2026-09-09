@@ -51,12 +51,12 @@ struct SessionClient {
     func open(specialistId: String, kind: Kind, topic: String?) async throws -> Opened {
         var body: [String: Any] = ["specialistId": specialistId, "kind": kind.rawValue]
         if let topic, !topic.isEmpty { body["topic"] = topic }
-        let data = try await transport.send("/api/well-being/session", method: "POST", body: body)
+        let data = try await transport.mutation("health/consult:openSession", body)
         return try JSONDecoder().decode(Opened.self, from: data)
     }
 
     func thread(id: String) async throws -> Thread {
-        let data = try await transport.send("/api/well-being/session?id=\(id)", method: "GET", body: nil)
+        let data = try await transport.query("health/consult:thread", ["id": id])
         return try JSONDecoder().decode(Thread.self, from: data)
     }
 
@@ -118,9 +118,7 @@ struct SessionClient {
     }
 
     func send(id: String, body text: String) async throws {
-        _ = try await transport.send(
-            "/api/well-being/session", method: "POST", body: ["id": id, "body": text]
-        )
+        _ = try await transport.mutation("health/consult:send", ["id": id, "body": text])
     }
 }
 

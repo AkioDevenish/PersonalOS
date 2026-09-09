@@ -57,9 +57,15 @@ struct SpecialistsClient {
         static let empty = Desk(specialists: [], application: nil)
     }
 
+    /// Two calls rather than one route returning both, which is what the
+    /// forwarding layer was doing on the phone's behalf.
     func desk() async throws -> Desk {
-        let data = try await transport.send("/api/well-being/specialists", method: "GET", body: nil)
-        return try JSONDecoder().decode(Desk.self, from: data)
+        async let listing = transport.query("health/consult:directory")
+        async let mine = transport.query("health/consult:myApplication")
+
+        let specialists = try JSONDecoder().decode([Specialist].self, from: try await listing)
+        let application = try? JSONDecoder().decode(Application.self, from: try await mine)
+        return Desk(specialists: specialists, application: application)
     }
 
     /// Applies to appear, or edits an application already made.
@@ -91,9 +97,7 @@ struct SpecialistsClient {
         // Omitted rather than sent as null when unchanged, so editing a bio
         // cannot silently drop a photograph already uploaded.
         if let photo { body["photo"] = photo }
-        let data = try await transport.send(
-            "/api/well-being/specialists", method: "POST", body: body
-        )
+        let data = try await transport.mutation("health/consult:apply", body)
         return (try? JSONDecoder().decode(Result.self, from: data))?.status ?? "pending"
     }
 
@@ -103,11 +107,12 @@ struct SpecialistsClient {
     /// goes straight from the phone to Convex, so several megabytes of JPEG
     /// never pass through a JSON body.
     func uploadPhoto(_ jpeg: Data) async throws -> String {
-        struct Slot: Decodable { let url: String }
         struct Stored: Decodable { let storageId: String }
 
-        let slot = try await transport.send("/api/well-being/specialists", method: "PUT", body: nil)
-        guard let target = URL(string: (try JSONDecoder().decode(Slot.self, from: slot)).url) else {
+        // The mutation answers with the URL itself, as a bare JSON string.
+        let slot = try await transport.mutation("health/consult:photoUploadUrl")
+        guard let link = try? JSONDecoder().decode(String.self, from: slot),
+              let target = URL(string: link) else {
             throw TransportError.badURL
         }
 

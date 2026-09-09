@@ -37,7 +37,7 @@ struct TimeClient {
     func ledger(from: Date, to: Date) async throws -> Ledger {
         let a = Int(from.timeIntervalSince1970 * 1000)
         let b = Int(to.timeIntervalSince1970 * 1000)
-        let data = try await transport.send("/api/time?from=\(a)&to=\(b)", method: "GET", body: nil)
+        let data = try await transport.query("time:ledger", ["from": a, "to": b])
         return try JSONDecoder().decode(Ledger.self, from: data)
     }
 
@@ -55,11 +55,11 @@ struct TimeClient {
             "category": category,
         ]
         if let note, !note.isEmpty { body["note"] = note }
-        _ = try await transport.send("/api/time", method: "POST", body: body)
+        _ = try await transport.mutation("time:add", body)
     }
 
     func remove(id: String) async throws {
-        _ = try await transport.send("/api/time?id=\(id)", method: "DELETE", body: nil)
+        _ = try await transport.mutation("time:remove", ["id": id])
     }
 }
 

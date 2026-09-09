@@ -13,7 +13,19 @@ import Foundation
 enum AppConfig {
 
     /// Production hub. Change this once, here, when the domain changes.
+    ///
+    /// Only three things still go through it: the two AI routes and the sync,
+    /// which do real work rather than forwarding. Everything else now talks to
+    /// Convex directly.
     static let productionBaseURL = "https://web-iota-eight-97.vercel.app"
+
+    /// The database, spoken to directly.
+    ///
+    /// The same address in development and production, which is the point of
+    /// it. There is no host to stamp at build time, no Mac that has to be
+    /// awake, and no insecure-HTTP exception, because there is no machine of
+    /// yours in the path at all.
+    static let convexURL = "https://wary-penguin-35.convex.cloud"
 
     #if DEBUG
     private static let debugBaseURLKey = "personal_os_debug_base_url"
