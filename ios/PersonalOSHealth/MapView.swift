@@ -1,5 +1,5 @@
 import SwiftUI
-import MapKit
+import CoreLocation
 
 /// Everywhere you have walked, painted onto the map.
 ///
@@ -10,16 +10,15 @@ import MapKit
 struct MapView: View {
     @StateObject private var trail = Trail.shared
 
-    @State private var camera: MapCameraPosition = .automatic
     @State private var confirmingForget = false
 
     /// A gap this long means the walking stopped and something else began.
     private static let gap: TimeInterval = 10 * 60
 
     /// The trail cut into separate outings.
-    private var outings: [[CLLocationCoordinate2D]] {
-        var out: [[CLLocationCoordinate2D]] = []
-        var current: [CLLocationCoordinate2D] = []
+    private var outings: [[Trail.Point]] {
+        var out: [[Trail.Point]] = []
+        var current: [Trail.Point] = []
         var last: Date?
 
         for point in trail.points {
@@ -27,45 +26,40 @@ struct MapView: View {
                 if current.count > 1 { out.append(current) }
                 current = []
             }
-            current.append(point.coordinate)
+            current.append(point)
             last = point.when
         }
         if current.count > 1 { out.append(current) }
         return out
     }
 
+    /// Which way the last stretch of walking was going, so the world turns to
+    /// face it. Averaged over the last few points, because one step's bearing
+    /// swings wildly and the whole scene would swing with it.
+    private var heading: Double {
+        let tail = trail.points.suffix(6)
+        guard tail.count >= 2, let first = tail.first, let last = tail.last else { return 0 }
+        let latitude = last.lat * .pi / 180
+        let east = (last.lon - first.lon) * cos(latitude)
+        let north = last.lat - first.lat
+        guard abs(east) > 1e-9 || abs(north) > 1e-9 else { return 0 }
+        return atan2(east, north)
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            Map(position: $camera) {
-                ForEach(Array(outings.enumerated()), id: \.offset) { _, path in
-                    // Three passes, which is what gives a stroke the glow
-                    // rather than the flatness of a drawn line: a wide dim
-                    // halo, a mid band, then a bright core on top.
-                    MapPolyline(coordinates: path)
-                        .stroke(Self.glow.opacity(0.16), style: Self.stroke(26))
-                    MapPolyline(coordinates: path)
-                        .stroke(Self.glow.opacity(0.38), style: Self.stroke(12))
-                    MapPolyline(coordinates: path)
-                        .stroke(Self.core, style: Self.stroke(3))
-                }
-                UserAnnotation()
-            }
-            // Flat and stripped: no points of interest, no terrain relief, no
-            // colour competing with the trail. Tesla's screen is not a map of
-            // a place, it is a diagram of where you are, and the difference is
-            // almost entirely what has been left out.
-            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll, showsTraffic: false))
-            .mapControlVisibility(.hidden)
-            // Dark regardless of the phone's own setting. The ground has to be
-            // darker than the trail or nothing glows.
-            .preferredColorScheme(.dark)
+            TrailCanvas(
+                outings: outings,
+                focus: trail.points.last,
+                heading: heading
+            )
             .ignoresSafeArea()
+
+            if trail.points.isEmpty { nothingYet }
 
             panel
         }
         .background(Self.ground)
-        .onAppear(perform: frame)
-        .onChange(of: trail.recording) { _, _ in frame() }
         .confirmationDialog(
             "Forget everywhere you have walked?",
             isPresented: $confirmingForget,
@@ -74,12 +68,25 @@ struct MapView: View {
             Button("Forget it all", role: .destructive) {
                 Haptics.tap()
                 trail.forget()
-                frame()
             }
             Button("Keep it", role: .cancel) {}
         } message: {
             Text("The trail is deleted from this phone. There is no copy anywhere else, so this cannot be undone.")
         }
+    }
+
+    /// An empty grid is not obviously a map waiting to be filled in.
+    private var nothingYet: some View {
+        VStack(spacing: 10) {
+            Text("Nothing walked yet")
+                .font(Theme.serif(28))
+                .foregroundStyle(.white)
+            Text("Start recording and the ground fills in behind you.")
+                .font(Theme.sans(12.5))
+                .foregroundStyle(.white.opacity(0.45))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.bottom, 190)
     }
 
     // MARK: The look
@@ -93,37 +100,6 @@ struct MapView: View {
 
     private static func stroke(_ width: CGFloat) -> StrokeStyle {
         StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
-    }
-
-    /// Looking along the ground rather than straight down at it.
-    ///
-    /// The tilt is what makes this read as a world rather than a chart, and it
-    /// is most of why Tesla's screen looks the way it does. Following while
-    /// recording, and pulled back to hold the whole trail when not.
-    private func frame() {
-        withAnimation(.easeInOut(duration: 0.8)) {
-            if trail.recording {
-                camera = .userLocation(
-                    followsHeading: true,
-                    fallback: .camera(MapCamera(
-                        centerCoordinate: trail.points.last?.coordinate
-                            ?? CLLocationCoordinate2D(latitude: 10.65, longitude: -61.51),
-                        distance: 900,
-                        heading: 0,
-                        pitch: 60
-                    ))
-                )
-            } else if let last = trail.points.last {
-                camera = .camera(MapCamera(
-                    centerCoordinate: last.coordinate,
-                    distance: 2600,
-                    heading: 0,
-                    pitch: 45
-                ))
-            } else {
-                camera = .userLocation(followsHeading: false, fallback: .automatic)
-            }
-        }
     }
 
     /// The controls, floating over the map rather than beside it.
