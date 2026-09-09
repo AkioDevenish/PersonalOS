@@ -460,20 +460,47 @@ struct VideoCallView: View {
 }
 
 
-/// Where money would change hands.
+/// Paying for a conversation.
 ///
-/// The price, the practitioner and the session are all real and recorded. What
-/// is missing is a payment processor, which needs an account and keys that do
-/// not exist yet. Saying so is better than a card form that collects details
-/// and cannot do anything with them — and it is the one screen that changes
-/// when a processor is chosen.
+/// The checkout itself belongs to the processor: a hosted page, opened in the
+/// browser, where card details are typed somewhere that is built to receive
+/// them and this app never sees them.
+///
+/// Coming back from that page proves nothing — it is a URL the payer could
+/// type themselves, and both processors say plainly not to act on it. So the
+/// screen asks the server, which asks the processor, and only an answer from
+/// there opens the conversation.
 struct PaymentView: View {
     let specialist: SpecialistsClient.Specialist
     let session: SessionClient.Opened
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    @State private var paid = false
+    @State private var starting = false
+    @State private var waiting = false
+    @State private var failure: String?
+    @State private var poller: Task<Void, Never>?
+
+    private let client = SessionClient()
 
     var body: some View {
+        Group {
+            if paid {
+                if session.kind == "video" {
+                    VideoCallView(specialist: specialist, session: session)
+                } else {
+                    ChatView(specialist: specialist, sessionId: session.id)
+                }
+            } else {
+                asking
+            }
+        }
+        .onDisappear { poller?.cancel() }
+    }
+
+    private var asking: some View {
         VStack(spacing: 0) {
             Spacer()
 
@@ -487,32 +514,88 @@ struct PaymentView: View {
                 .foregroundStyle(Theme.mid)
                 .padding(.top, 6)
 
-            Text("Personal OS has no payment processor connected, so this cannot be collected yet. Your conversation has been reserved and nothing has been charged to you.")
+            Text(waiting
+                 ? "Finish in the page that opened. This screen will move on by itself once the payment clears."
+                 : "You will be taken to a secure page to pay. Your conversation opens as soon as it clears.")
                 .font(Theme.sans(13))
                 .foregroundStyle(Theme.mid)
                 .lineSpacing(5)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 30)
+                .padding(.top, 26)
                 .padding(.horizontal, 34)
+
+            if let failure {
+                Text(failure)
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.amber)
+                    .lineSpacing(4)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 22)
+                    .padding(.horizontal, 34)
+            }
 
             Spacer()
 
             Button {
-                dismiss()
+                Task { await pay() }
             } label: {
-                Text("Close")
-                    .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Theme.ink, in: Capsule())
+                ZStack {
+                    Text(waiting ? "Waiting for the payment" : "Pay \(session.price)")
+                        .opacity(starting ? 0 : 1)
+                    if starting { ProgressView().tint(Theme.warm) }
+                }
+                .font(Theme.sans(15, medium: true))
+                .foregroundStyle(Theme.warm)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(waiting ? Theme.dust : Theme.ink, in: Capsule())
             }
             .buttonStyle(.press)
+            .disabled(starting || waiting)
             .padding(.horizontal, 30)
-            .padding(.bottom, 40)
+
+            Button("Not now") { dismiss() }
+                .font(Theme.sans(13))
+                .foregroundStyle(Theme.dust)
+                .buttonStyle(.press)
+                .padding(.top, 18)
+                .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.linen)
+    }
+
+    private func pay() async {
+        starting = true
+        failure = nil
+        do {
+            let url = try await client.startPayment(id: session.id)
+            openURL(url)
+            waiting = true
+            watch()
+        } catch {
+            failure = error.localizedDescription
+        }
+        starting = false
+    }
+
+    /// Asks every few seconds while this screen is up, and gives up after a
+    /// few minutes rather than polling a payment nobody is going to finish.
+    private func watch() {
+        poller?.cancel()
+        poller = Task {
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { return }
+                if await client.isPaid(id: session.id) {
+                    Haptics.tap()
+                    withAnimation(Theme.Motion.settle) { paid = true }
+                    return
+                }
+            }
+            waiting = false
+        }
     }
 }

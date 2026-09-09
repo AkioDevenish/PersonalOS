@@ -60,9 +60,60 @@ struct SessionClient {
         return try JSONDecoder().decode(Thread.self, from: data)
     }
 
+    /// Raises a checkout and hands back the page to send the payer to.
+    ///
+    /// Throws `PaymentUnavailable` when no processor is connected, which is a
+    /// different thing from a payment being refused and reads differently on
+    /// screen.
+    func startPayment(id: String) async throws -> URL {
+        struct Raised: Decodable {
+            let url: String?
+            let paid: Bool?
+            let error: String?
+        }
+        do {
+            let data = try await transport.send(
+                "/api/well-being/pay", method: "POST", body: ["id": id]
+            )
+            let raised = try JSONDecoder().decode(Raised.self, from: data)
+            if raised.paid == true { throw PaymentUnavailable.alreadySettled }
+            guard let link = raised.url, let url = URL(string: link) else {
+                throw TransportError.badResponse
+            }
+            return url
+        } catch TransportError.http(503, _) {
+            throw PaymentUnavailable.noProcessor
+        }
+    }
+
+    /// Asks the server, which asks the processor. The redirect back from a
+    /// checkout page is not evidence and is never treated as any.
+    func isPaid(id: String) async -> Bool {
+        struct Settled: Decodable { let paid: Bool }
+        guard let data = try? await transport.send(
+            "/api/well-being/pay?id=\(id)", method: "GET", body: nil
+        ) else { return false }
+        return (try? JSONDecoder().decode(Settled.self, from: data))?.paid ?? false
+    }
+
     func send(id: String, body text: String) async throws {
         _ = try await transport.send(
             "/api/well-being/session", method: "POST", body: ["id": id, "body": text]
         )
+    }
+}
+
+
+enum PaymentUnavailable: LocalizedError {
+    case noProcessor
+    case alreadySettled
+
+    var errorDescription: String? {
+        switch self {
+        case .noProcessor:
+            return "No payment processor is connected yet, so this cannot be collected."
+        case .alreadySettled:
+            return "This conversation is already paid for."
+        }
     }
 }

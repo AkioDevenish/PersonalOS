@@ -333,6 +333,80 @@ export const photoUploadUrl = mutation({
   },
 })
 
+
+/**
+ * What a session owes, for the payment route.
+ *
+ * Deliberately narrow: the amount, the currency and where the payment stands.
+ * The route needs nothing else to raise a checkout, and a query that returned
+ * the conversation as well would be handing a payment endpoint the messages.
+ */
+export const billing = query({
+  args: { id: v.id("consults") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const row = await ctx.db.get(args.id)
+    // The same answer for missing and not-yours, so the error cannot be used
+    // to discover which session ids are real.
+    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+
+    return {
+      id: row._id,
+      price_minor: row.price_minor ?? 0,
+      currency: row.currency ?? "TTD",
+      payment_status: row.payment_status ?? "free",
+      payment_ref: row.payment_ref ?? null,
+      topic: row.topic,
+    }
+  },
+})
+
+/**
+ * Records which processor is carrying this payment, and its reference.
+ *
+ * Written before the person is sent to the checkout page, so a payment that
+ * completes can always be traced back to a session even if they close the app
+ * on the way.
+ */
+export const attachPayment = mutation({
+  args: { id: v.id("consults"), ref: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const row = await ctx.db.get(args.id)
+    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+
+    await ctx.db.patch(args.id, { payment_ref: args.ref, updated_at: Date.now() })
+    return { ok: true }
+  },
+})
+
+/**
+ * Marks a session paid.
+ *
+ * Only ever called after the processor has been asked directly what happened.
+ * Being returned to the app from a checkout page proves nothing: the redirect
+ * is a URL the payer could type themselves, and both processors say plainly
+ * not to fulfil on it alone.
+ */
+export const markPaid = mutation({
+  args: { id: v.id("consults") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const row = await ctx.db.get(args.id)
+    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+    if (row.payment_status === "paid") return { already: true }
+
+    await ctx.db.patch(args.id, { payment_status: "paid", updated_at: Date.now() })
+    return { already: false }
+  },
+})
+
 export const upsertProfile = mutation({
   args: {
     name: v.string(),
