@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// The people you can ask, as cards.
 ///
@@ -12,7 +13,9 @@ struct SpecialistsView: View {
     @State private var desk = SpecialistsClient.Desk.empty
     @State private var loading = true
     @State private var failure: String?
-    @State private var applying = false
+    @State private var query = ""
+    /// A tapped specialism, which narrows harder than typing its name would.
+    @State private var filter: String?
 
     private let client = SpecialistsClient()
 
@@ -40,6 +43,17 @@ struct SpecialistsView: View {
                         .padding(.top, 20)
                 }
 
+                if !desk.specialists.isEmpty {
+                    searchField
+                        .padding(.top, 24)
+                        .flowIn(2)
+                    if offered.count > 1 {
+                        filterRow
+                            .padding(.top, 12)
+                            .flowIn(2)
+                    }
+                }
+
                 if loading && desk.specialists.isEmpty {
                     Composing(lines: 4)
                         .frame(height: 96)
@@ -48,7 +62,7 @@ struct SpecialistsView: View {
                     empty
                 } else {
                     VStack(spacing: 14) {
-                        ForEach(Array(desk.specialists.enumerated()), id: \.element.id) { i, one in
+                        ForEach(Array(shown.enumerated()), id: \.element.id) { i, one in
                             NavigationLink(value: one) {
                                 card(one)
                             }
@@ -56,11 +70,16 @@ struct SpecialistsView: View {
                             .flowIn(min(i, 6) + 2)
                         }
                     }
-                    .padding(.top, 30)
-                }
+                    .padding(.top, 22)
 
-                practitionerFooter
-                    .padding(.top, 38)
+                    if shown.isEmpty {
+                        Text("Nobody here matches that.")
+                            .font(Theme.sans(13))
+                            .foregroundStyle(Theme.dust)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
+                    }
+                }
 
                 Ornament()
                     .padding(.top, 40)
@@ -81,32 +100,147 @@ struct SpecialistsView: View {
         .navigationDestination(for: SpecialistsClient.Specialist.self) { one in
             SpecialistProfileView(specialist: one)
         }
-        .sheet(isPresented: $applying) {
-            SpecialistApplicationSheet(
-                existing: desk.application,
-                defaultCountry: country
-            ) { await load() }
+    }
+
+
+    /// Every specialism anyone in the directory actually lists, so the filter
+    /// row offers only things that will return somebody.
+    private var offered: [String] {
+        Array(Set(desk.specialists.flatMap(\.specialties))).sorted()
+    }
+
+    /// Matches on the things a person would actually type: a name, a
+    /// specialism, a qualification, or where somebody is.
+    private var shown: [SpecialistsClient.Specialist] {
+        var list = desk.specialists
+
+        if let filter {
+            list = list.filter { $0.specialties.contains(filter) }
         }
+
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return list }
+
+        return list.filter { one in
+            let haystack = ([one.name, one.credentials, one.place] + one.specialties)
+                .joined(separator: " ")
+                .lowercased()
+            // Every word has to appear somewhere, so "sleep trinidad" narrows
+            // rather than widening the way an any-word match would.
+            return q.split(separator: " ").allSatisfy { haystack.contains($0) }
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .light))
+                .foregroundStyle(Theme.dust)
+                .environment(\.symbolVariants, .none)
+
+            TextField("Search by name, specialism or place", text: $query)
+                .font(Theme.sans(14))
+                .foregroundStyle(Theme.ink)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            if !query.isEmpty {
+                Button {
+                    Haptics.tap()
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.dust)
+                }
+                .buttonStyle(.press)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .background(Theme.warm, in: Capsule())
+    }
+
+    private var filterRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 7) {
+                ForEach(offered, id: \.self) { s in
+                    let on = filter == s
+                    Button {
+                        Haptics.select()
+                        withAnimation(Theme.Motion.bouncy) { filter = on ? nil : s }
+                    } label: {
+                        Text(s)
+                            .font(Theme.sans(11, medium: on))
+                            .foregroundStyle(on ? Theme.warm : Theme.mid)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background {
+                                if on {
+                                    Capsule().fill(Theme.ink)
+                                } else {
+                                    Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                }
+                            }
+                    }
+                    .buttonStyle(.press)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    /// A face, or the initials that stand in for one.
+    @ViewBuilder
+    private func portrait(_ one: SpecialistsClient.Specialist, size: CGFloat) -> some View {
+        ZStack {
+            Circle().fill(Theme.amber.opacity(0.16))
+
+            Text(initials(one.name))
+                .font(Theme.serif(size * 0.38))
+                .foregroundStyle(Theme.amber)
+
+            if let link = one.photo_url, let url = URL(string: link) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    // Nothing: the initials underneath are the placeholder,
+                    // which beats a spinner that flashes on every scroll.
+                    Color.clear
+                }
+                .clipShape(Circle())
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+
+    private func initials(_ name: String) -> String {
+        name.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined()
     }
 
     // MARK: One card
 
     private func card(_ one: SpecialistsClient.Specialist) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(one.name)
-                    .font(Theme.serif(23))
-                    .foregroundStyle(Theme.ink)
-                Spacer(minLength: 8)
-                Text(one.place)
-                    .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
-            }
+            HStack(alignment: .top, spacing: 14) {
+                portrait(one, size: 52)
 
-            Text(one.credentials)
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.mid)
-                .padding(.top, 3)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(one.name)
+                        .font(Theme.serif(23))
+                        .foregroundStyle(Theme.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(one.credentials)
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.mid)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(one.place)
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+                }
+                Spacer(minLength: 0)
+            }
 
             // The reason someone is scanning this page at all.
             if !one.specialties.isEmpty {
@@ -175,62 +309,6 @@ struct SpecialistsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 50)
-    }
-
-    // MARK: The way in, for practitioners
-
-    @ViewBuilder
-    private var practitionerFooter: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionRule(text: "Are you a specialist?")
-
-            if let application = desk.application {
-                Text(statusLine(application))
-                    .font(Theme.sans(13))
-                    .foregroundStyle(application.approved ? Theme.sage : Theme.mid)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button(application.approved ? "Edit your listing" : "Edit your application") {
-                    Haptics.tap()
-                    applying = true
-                }
-                .font(Theme.sans(12, medium: true))
-                .foregroundStyle(Theme.amber)
-                .buttonStyle(.press)
-            } else {
-                Text("Practitioners can apply to appear here. Applications are checked before anyone is listed.")
-                    .font(Theme.sans(13))
-                    .foregroundStyle(Theme.mid)
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button {
-                    Haptics.tap()
-                    applying = true
-                } label: {
-                    Text("Apply to be listed")
-                        .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Theme.ink, in: Capsule())
-                }
-                .buttonStyle(.press)
-                .padding(.top, 4)
-            }
-        }
-    }
-
-    private func statusLine(_ a: SpecialistsClient.Application) -> String {
-        if a.approved {
-            return a.active
-                ? "You are listed and taking questions."
-                : "You are approved, but your listing is switched off."
-        }
-        if a.declined {
-            return "Your application was not approved. You can change it and apply again."
-        }
-        return "Your application is with us. You will appear once it has been checked."
     }
 
     // MARK: Behaviour
@@ -304,6 +382,10 @@ struct SpecialistApplicationSheet: View {
     @State private var price = "0"
     @State private var active = true
     @State private var offersVideo = false
+    @State private var picked: PhotosPickerItem?
+    @State private var photoData: Data?
+    @State private var photoId: String?
+    @State private var uploading = false
     @State private var saving = false
     @State private var failure: String?
 
@@ -333,6 +415,42 @@ struct SpecialistApplicationSheet: View {
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
+
+                PhotosPicker(selection: $picked, matching: .images) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().fill(Theme.amber.opacity(0.16))
+                            if let photoData, let image = UIImage(data: photoData) {
+                                Image(uiImage: image).resizable().scaledToFill()
+                            } else if let link = existing?.photo_url, let url = URL(string: link) {
+                                AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                            } else {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 17, weight: .light))
+                                    .foregroundStyle(Theme.amber)
+                                    .environment(\.symbolVariants, .none)
+                            }
+                        }
+                        .frame(width: 66, height: 66)
+                        .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(uploading ? "Sending your photograph" : "Your photograph")
+                                .font(Theme.sans(13, medium: true))
+                                .foregroundStyle(Theme.ink)
+                            Text("A face makes a card worth reading. Optional.")
+                                .font(Theme.sans(11))
+                                .foregroundStyle(Theme.dust)
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.pressRow)
+                .padding(.top, 26)
+                .onChange(of: picked) { _, item in
+                    guard let item else { return }
+                    Task { await attach(item) }
+                }
 
                 field("Name", "How you want to be listed", $name)
                 field("Qualifications", "RD, MSc Nutrition", $credentials)
@@ -491,6 +609,30 @@ struct SpecialistApplicationSheet: View {
         draftSpecialty = ""
     }
 
+    /// Compresses and sends the chosen image, keeping the id for the save.
+    private func attach(_ item: PhotosPickerItem) async {
+        uploading = true
+        failure = nil
+        defer { uploading = false }
+        do {
+            guard let raw = try await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: raw) else { return }
+            // Down to something a card can use. A twelve megapixel photograph
+            // is forty times the size of the circle it will be shown in.
+            let side: CGFloat = 512
+            let scale = min(side / max(image.size.width, 1), side / max(image.size.height, 1), 1)
+            let target = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            let shrunk = UIGraphicsImageRenderer(size: target).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: target))
+            }
+            guard let jpeg = shrunk.jpegData(compressionQuality: 0.8) else { return }
+            photoData = jpeg
+            photoId = try await SpecialistsClient().uploadPhoto(jpeg)
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+
     private func prefill() {
         guard let existing, name.isEmpty else {
             if country.isEmpty { country = defaultCountry }
@@ -517,6 +659,7 @@ struct SpecialistApplicationSheet: View {
                 bio: bio.trimmingCharacters(in: .whitespaces),
                 specialties: specialties,
                 offersVideo: offersVideo,
+                photo: photoId,
                 priceCredits: Int(price.filter(\.isNumber)) ?? 0,
                 active: active
             )

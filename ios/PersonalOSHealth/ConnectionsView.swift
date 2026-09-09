@@ -4,6 +4,12 @@ import ClerkKitUI
 
 /// Settings: the ledger of providers, plus sync controls and the dev section.
 struct ConnectionsView: View {
+    // Applying to be a practitioner lives here rather than in the directory.
+    // The directory is a place to find somebody; this is a thing you do about
+    // yourself, which is what the rest of this screen is for.
+    @State private var application: SpecialistsClient.Application?
+    @State private var applying = false
+
     @EnvironmentObject var health: HealthKitManager
     @Environment(Store.self) private var store
     @AppStorage("last_sync_at") private var lastSyncAt: Double = 0
@@ -21,6 +27,28 @@ struct ConnectionsView: View {
     @State private var debugToken = DebugTokenAuthProvider.token
     #endif
 
+
+    private func loadApplication() async {
+        // Nothing to show for the overwhelming majority of people, who are not
+        // practitioners; a failure here is not worth a message on a settings
+        // screen, so it stays silent and the row reads as an invitation.
+        application = try? await SpecialistsClient().desk().application
+    }
+
+    private var applicationNote: String {
+        guard let application else {
+            return "Practitioners can offer consultations here. Applications are checked before anyone is listed."
+        }
+        if application.approved {
+            return application.active
+                ? "You are listed and taking questions."
+                : "Approved, but your listing is switched off."
+        }
+        if application.declined {
+            return "Not approved. You can change your application and send it again."
+        }
+        return "Your application is with us, and you will appear once it has been checked."
+    }
 
     var body: some View {
         ScrollView {
@@ -130,6 +158,33 @@ struct ConnectionsView: View {
                 .buttonStyle(.pressRow)
                 .padding(.top, 6)
 
+                SectionRule(text: "Practise here")
+                    .padding(.top, 32)
+                    .flowIn(4)
+
+                Button {
+                    Haptics.tap()
+                    applying = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(application == nil ? "Apply to be listed" : "Your listing")
+                                .font(Theme.serif(19))
+                                .foregroundStyle(Theme.ink)
+                            Text(applicationNote)
+                                .font(Theme.sans(10.5))
+                                .foregroundStyle(application?.approved == true ? Theme.sage : Theme.dust)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                        Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                    }
+                    .padding(.vertical, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressRow)
+                .padding(.top, 6)
+
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
                     .flowIn(4)
@@ -215,6 +270,13 @@ struct ConnectionsView: View {
         }
         .background(Theme.linen)
         .task { await loadConnections() }
+        .task { await loadApplication() }
+        .sheet(isPresented: $applying) {
+            SpecialistApplicationSheet(
+                existing: application,
+                defaultCountry: Cuisine.deviceDefault
+            ) { await loadApplication() }
+        }
         .sheet(isPresented: $showProfile) { UserProfileView() }
         // Its own stack: the model list drills into a provider, and the tab
         // bar has no navigation of its own to borrow.

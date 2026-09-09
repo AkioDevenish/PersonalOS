@@ -38,6 +38,28 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Hands back a one-time URL the phone uploads a photograph to.
+ *
+ * A separate verb rather than a field on the application, because the file
+ * never travels through here: the device sends it straight to storage and only
+ * the resulting id comes back through the application.
+ */
+export async function PUT(request: Request) {
+  const caller = await requireCaller(request)
+  if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  try {
+    const convex = getConvexClient(bearer(request) || caller.token)
+    const url = await convex.mutation(api.health.consult.photoUploadUrl, {})
+    return NextResponse.json({ url })
+  } catch (error) {
+    console.error("[specialists] upload url failed:", error)
+    const message = error instanceof Error ? error.message : "Failed"
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   const caller = await requireCaller(request)
   if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -55,6 +77,7 @@ export async function POST(request: Request) {
       specialties: Array.isArray(body.specialties)
         ? body.specialties.filter((s: unknown): s is string => typeof s === "string")
         : [],
+      photo: typeof body.photo === "string" ? (body.photo as never) : undefined,
       price_credits: Number(body.price_credits ?? 0),
       active: body.active !== false,
     })

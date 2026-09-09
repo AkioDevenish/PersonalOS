@@ -268,6 +268,15 @@ export default defineSchema({
      */
     offers_video: v.optional(v.boolean()),
     /**
+     * Their photograph, in Convex file storage.
+     *
+     * A storage id rather than a URL: a pasted link rots, points at somebody
+     * else's server, and cannot be revoked. The id is resolved to a signed URL
+     * at read time, so the file is served by the same system that holds the
+     * rest of this.
+     */
+    photo: v.optional(v.id("_storage")),
+    /**
      * Where the application stands: "pending", "approved", "declined".
      *
      * Separate from `active`, and the difference matters. `active` is the

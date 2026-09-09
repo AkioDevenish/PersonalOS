@@ -18,6 +18,10 @@ struct SpecialistProfileView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                portrait
+                    .padding(.bottom, 20)
+                    .flowIn(0)
+
                 Text(specialist.name)
                     .font(Theme.serif(38))
                     .foregroundStyle(Theme.ink)
@@ -121,6 +125,38 @@ struct SpecialistProfileView: View {
                 ChatView(specialist: specialist, sessionId: opened.id)
             }
         }
+    }
+
+    /// Their face, or the initials standing in for one.
+    ///
+    /// The initials are drawn underneath rather than swapped in while loading:
+    /// a placeholder that flashes on every appearance is worse than one that
+    /// simply sits there until the photograph covers it.
+    private var portrait: some View {
+        ZStack {
+            Circle().fill(Theme.amber.opacity(0.16))
+
+            Text(
+                specialist.name
+                    .split(separator: " ")
+                    .prefix(2)
+                    .compactMap { $0.first.map(String.init) }
+                    .joined()
+            )
+            .font(Theme.serif(30))
+            .foregroundStyle(Theme.amber)
+
+            if let link = specialist.photo_url, let url = URL(string: link) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.clear
+                }
+                .clipShape(Circle())
+            }
+        }
+        .frame(width: 84, height: 84)
+        .clipShape(Circle())
     }
 
     private var costLine: String {

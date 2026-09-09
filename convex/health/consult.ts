@@ -85,12 +85,16 @@ export const directory = query({
 
     const rows = await ctx.db.query("nutritionists").collect()
 
-    return rows
+    const listed = rows
       // Being on the environment allowlist is itself an approval: those rows
       // predate applications and were vetted by whoever added the id.
       .filter((r) => r.active && (r.status === "approved" || staff().includes(r.userId)))
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((r) => ({
+
+    // Signed URLs are minted at read time rather than stored, so a photo can
+    // be replaced or withdrawn without anything else having to be rewritten.
+    return await Promise.all(
+      listed.map(async (r) => ({
         id: r.userId,
         name: r.name,
         country: r.country,
@@ -98,8 +102,10 @@ export const directory = query({
         bio: r.bio,
         specialties: r.specialties ?? [],
         offers_video: r.offers_video ?? false,
+        photo_url: r.photo ? await ctx.storage.getUrl(r.photo) : null,
         price_credits: r.price_credits,
       }))
+    )
   },
 })
 
@@ -123,6 +129,7 @@ export const myApplication = query({
 
     if (!row) return null
     return {
+      photo_url: row.photo ? await ctx.storage.getUrl(row.photo) : null,
       name: row.name,
       country: row.country,
       credentials: row.credentials,
@@ -152,6 +159,7 @@ export const apply = mutation({
     bio: v.string(),
     specialties: v.array(v.string()),
     offers_video: v.boolean(),
+    photo: v.optional(v.id("_storage")),
     price_credits: v.number(),
     active: v.boolean(),
   },
@@ -183,6 +191,9 @@ export const apply = mutation({
       bio: args.bio.trim(),
       specialties,
       offers_video: args.offers_video,
+      // Left alone when no new file was chosen, so editing a bio does not
+      // silently remove a photograph.
+      photo: args.photo ?? existing?.photo,
       price_credits: Math.max(0, Math.floor(args.price_credits)),
       active: args.active,
       // An approved profile stays approved through an edit; anything else is
@@ -289,6 +300,21 @@ export const openSession = mutation({
     })
 
     return { id, kind, price }
+  },
+})
+
+/**
+ * A one-time URL for the phone to send a photograph to.
+ *
+ * The file goes straight from the device to Convex storage rather than through
+ * the route layer, which keeps a few megabytes of JPEG out of a JSON body.
+ */
+export const photoUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+    return await ctx.storage.generateUploadUrl()
   },
 })
 
