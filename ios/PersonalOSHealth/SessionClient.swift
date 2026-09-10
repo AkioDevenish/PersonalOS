@@ -93,17 +93,17 @@ struct SessionClient {
     func joinCall(id: String) async throws -> URL {
         struct Room: Decodable { let url: String }
         do {
-            let data = try await transport.send(
-                "/api/well-being/call", method: "POST", body: ["id": id]
-            )
+            let data = try await transport.action("health/call:join", ["id": id])
             guard let url = URL(string: try JSONDecoder().decode(Room.self, from: data).url) else {
                 throw TransportError.badResponse
             }
             return url
-        } catch TransportError.http(503, _) {
-            throw CallUnavailable.noService
-        } catch TransportError.http(402, _) {
-            throw CallUnavailable.unpaid
+        } catch TransportError.server(let message) {
+            // Convex raises the function's own sentence; these two are worth
+            // saying in the app's words rather than the server's.
+            if message.contains("No video service") { throw CallUnavailable.noService }
+            if message.contains("not been paid") { throw CallUnavailable.unpaid }
+            throw TransportError.server(message)
         }
     }
 

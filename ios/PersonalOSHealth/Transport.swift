@@ -53,6 +53,13 @@ struct Transport {
         try await call("mutation", path, args)
     }
 
+    /// An action, for the functions that reach outside Convex — minting a
+    /// video room, taking a payment. They live there rather than here because
+    /// they hold keys, and a key in an app is a key anybody can read out of it.
+    func action(_ path: String, _ args: [String: Any] = [:]) async throws -> Data {
+        try await call("action", path, args)
+    }
+
     private func call(_ kind: String, _ path: String, _ args: [String: Any]) async throws -> Data {
         guard let url = URL(string: "\(AppConfig.convexURL)/api/\(kind)") else {
             throw TransportError.badURL
