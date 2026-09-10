@@ -469,7 +469,7 @@ struct VideoCallView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var room: URL?
+    @State private var room: SessionClient.Room?
     @State private var failure: String?
     @State private var opening = true
 
@@ -479,8 +479,8 @@ struct VideoCallView: View {
         ZStack {
             Theme.ink.ignoresSafeArea()
 
-            if let room {
-                CallWebView(url: room)
+            if let room, let link = room.link {
+                CallWebView(url: link)
                     .ignoresSafeArea(edges: .bottom)
             } else {
                 waiting
@@ -501,6 +501,15 @@ struct VideoCallView: View {
                     }
                     .buttonStyle(.press)
                     Spacer()
+                    if let room, !room.secured {
+                        Text("UNSECURED ROOM")
+                            .font(Theme.sans(9, medium: true))
+                            .tracking(1.4)
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Theme.amber, in: Capsule())
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)

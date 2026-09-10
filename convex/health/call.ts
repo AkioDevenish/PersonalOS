@@ -6,36 +6,39 @@ import { api } from "../_generated/api"
 import crypto from "crypto"
 
 /**
- * Opening the video call for a session.
+ * Opening the video call for a session, on Jitsi.
  *
- * An action rather than a route, so the phone can reach it without a web
- * server in the middle. The secrets stay here: Convex holds them as
- * environment variables and this runs on Convex's own machines, so nothing
- * that could mint a room ever travels to a device.
+ * An action rather than a route, so the phone reaches it with no web server
+ * in between, and the signing secret stays on Convex's machines. A secret in
+ * an app binary is a secret anybody can read out of it.
  *
- * Jitsi first when it is configured — a server you run has no per-minute
- * meter and no third party inside a medical conversation. Daily otherwise.
+ * Nothing is created in advance: a Jitsi room exists the moment somebody
+ * opens its name. That is convenient and it is also the danger, which is what
+ * the token is for.
  */
-
-function jitsiConfigured() {
-  return Boolean(
-    process.env.JITSI_DOMAIN && process.env.JITSI_APP_ID && process.env.JITSI_APP_SECRET
-  )
-}
 
 function base64url(input: Buffer | string) {
   return Buffer.from(input).toString("base64")
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
-function jitsiURL(room: string, name: string) {
+/**
+ * A token naming one room, good for twenty minutes.
+ *
+ * Only minted when the deployment is running `jitsi-meet-tokens`. Without it
+ * a signed link would simply be refused, so an unsigned URL is the correct
+ * thing to hand back — but see the warning the caller gets, because an
+ * unsigned room is one anybody who learns the name can walk into.
+ */
+function token(room: string, name: string): string {
   const now = Math.floor(Date.now() / 1000)
   const header = { alg: "HS256", typ: "JWT" }
   const payload = {
     aud: process.env.JITSI_APP_AUD ?? "jitsi",
     iss: process.env.JITSI_APP_ID,
     sub: process.env.JITSI_DOMAIN,
-    // One room, not the wildcard, so a token cannot open somebody else's.
+    // Named rather than "*", so a token for one consultation cannot open
+    // somebody else's.
     room,
     nbf: now - 10,
     exp: now + 60 * 20,
@@ -46,31 +49,12 @@ function jitsiURL(room: string, name: string) {
     .createHmac("sha256", process.env.JITSI_APP_SECRET!)
     .update(input)
     .digest()
-
-  const options = [
-    "config.prejoinPageEnabled=false",
-    "config.disableInviteFunctions=true",
-    "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-  ].join("&")
-  return `https://${process.env.JITSI_DOMAIN}/${room}?jwt=${input}.${base64url(signature)}#${options}`
-}
-
-async function daily(path: string, body: unknown) {
-  const response = await fetch(`https://api.daily.co/v1${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.DAILY_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  })
-  const json = await response.json().catch(() => null)
-  return { ok: response.ok, status: response.status, json }
+  return `${input}.${base64url(signature)}`
 }
 
 export const join = action({
   args: { id: v.id("consults") },
-  handler: async (ctx, args): Promise<{ url: string }> => {
+  handler: async (ctx, args): Promise<{ url: string; secured: boolean }> => {
     const session = await ctx.runQuery(api.health.consult.billing, { id: args.id })
 
     if (session.kind !== "video") throw new Error("That session is not a call")
@@ -78,46 +62,25 @@ export const join = action({
     // a practitioner's time is not given away by a URL.
     if (session.payment_status === "pending") throw new Error("This call has not been paid for")
 
+    const domain = process.env.JITSI_DOMAIN
+    if (!domain) throw new Error("No video service is connected yet.")
+
+    // The session id, so a room cannot be guessed from a name or a date.
     const room = `pos-${session.id}`.toLowerCase().slice(0, 40)
+    const signed = Boolean(process.env.JITSI_APP_ID && process.env.JITSI_APP_SECRET)
 
-    if (jitsiConfigured()) {
-      // Nothing to create: a Jitsi room exists the moment a valid token opens
-      // its name.
-      return { url: jitsiURL(room, "You") }
-    }
+    const options = [
+      "config.prejoinPageEnabled=false",
+      "config.disableInviteFunctions=true",
+      "interfaceConfig.SHOW_JITSI_WATERMARK=false",
+    ].join("&")
 
-    if (!process.env.DAILY_API_KEY || !process.env.DAILY_DOMAIN) {
-      throw new Error("No video service is connected yet.")
-    }
+    const url = signed
+      ? `https://${domain}/${room}?jwt=${token(room, "You")}#${options}`
+      : `https://${domain}/${room}#${options}`
 
-    const made = await daily("/rooms", {
-      name: room,
-      privacy: "private",
-      properties: {
-        exp: Math.floor(Date.now() / 1000) + 60 * 60,
-        enable_prejoin_ui: true,
-        enable_chat: true,
-      },
-    })
-    // Already existing is a rejoin, not a failure.
-    const exists = made.status === 400 && String(made.json?.info ?? "").includes("already exists")
-    if (!made.ok && !exists) {
-      throw new Error(made.json?.info ?? `Could not open a room (${made.status})`)
-    }
-
-    const minted = await daily("/meeting-tokens", {
-      properties: {
-        room_name: room,
-        user_name: "You",
-        // Twenty minutes: long enough to join a call that starts late, short
-        // enough that a token copied out of a log is useless.
-        exp: Math.floor(Date.now() / 1000) + 60 * 20,
-      },
-    })
-    if (!minted.ok || !minted.json?.token) {
-      throw new Error(minted.json?.info ?? "Could not authorise the call")
-    }
-
-    return { url: `https://${process.env.DAILY_DOMAIN}.daily.co/${room}?t=${minted.json.token}` }
+    // The screen says so when a room is not signed, rather than the app
+    // quietly pretending a public room is private.
+    return { url, secured: signed }
   },
 })

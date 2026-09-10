@@ -86,18 +86,24 @@ struct SessionClient {
         }
     }
 
+    struct Room: Decodable {
+        let url: String
+        /// Whether the room is protected by a signed token. False means the
+        /// server has no token plugin, and anybody who learns the room's name
+        /// could join — worth saying out loud rather than hiding.
+        let secured: Bool
+
+        var link: URL? { URL(string: url) }
+    }
+
     /// Opens the call and returns the room to join.
     ///
     /// The room is made on first ask and reused after, so a dropped connection
     /// rejoins the same call rather than starting a second one beside it.
-    func joinCall(id: String) async throws -> URL {
-        struct Room: Decodable { let url: String }
+    func joinCall(id: String) async throws -> Room {
         do {
             let data = try await transport.action("health/call:join", ["id": id])
-            guard let url = URL(string: try JSONDecoder().decode(Room.self, from: data).url) else {
-                throw TransportError.badResponse
-            }
-            return url
+            return try JSONDecoder().decode(Room.self, from: data)
         } catch TransportError.server(let message) {
             // Convex raises the function's own sentence; these two are worth
             // saying in the app's words rather than the server's.
