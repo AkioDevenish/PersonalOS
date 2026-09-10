@@ -1,5 +1,5 @@
 import SwiftUI
-import WebKit
+import WebRTC
 
 /// One specialist, and the two ways of reaching them.
 ///
@@ -454,147 +454,201 @@ struct ChatView: View {
     }
 }
 
-/// The call itself.
+/// The call, drawn by this app.
 ///
-/// Daily's own room, in a web view. The alternative is their native SDK, which
-/// is a large dependency and a build-time commitment to one provider; a hosted
-/// room is a URL, and swapping provider later means changing where that URL
-/// comes from rather than what this screen is made of.
-///
-/// The room is private and the token to enter it lasts twenty minutes, so the
-/// link is worth nothing to anybody who sees it afterwards.
+/// No web view and no hosted interface: the two video tracks come out of our
+/// own peer connection and are rendered here, so the screen belongs to the
+/// app rather than to whoever was carrying the media.
 struct VideoCallView: View {
     let specialist: SpecialistsClient.Specialist
     let session: SessionClient.Opened
 
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var engine: CallEngine
 
-    @State private var room: SessionClient.Room?
-    @State private var failure: String?
-    @State private var opening = true
-
-    private let client = SessionClient()
+    init(specialist: SpecialistsClient.Specialist, session: SessionClient.Opened) {
+        self.specialist = specialist
+        self.session = session
+        _engine = StateObject(wrappedValue: CallEngine(sessionId: session.id))
+    }
 
     var body: some View {
         ZStack {
-            Theme.ink.ignoresSafeArea()
+            Color.black.ignoresSafeArea()
 
-            if let room, let link = room.link {
-                CallWebView(url: link)
-                    .ignoresSafeArea(edges: .bottom)
+            if let remote = engine.remoteTrack {
+                VideoTrackView(track: remote, fill: true)
+                    .ignoresSafeArea()
             } else {
                 waiting
             }
 
             VStack {
-                HStack {
-                    Button {
-                        Haptics.tap()
-                        dismiss()
-                    } label: {
-                        Text("Leave")
-                            .font(Theme.sans(13, medium: true))
-                            .foregroundStyle(Theme.warm)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 9)
-                            .background(.black.opacity(0.45), in: Capsule())
-                    }
-                    .buttonStyle(.press)
-                    Spacer()
-                    if let room, !room.secured {
-                        Text("UNSECURED ROOM")
-                            .font(Theme.sans(9, medium: true))
-                            .tracking(1.4)
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Theme.amber, in: Capsule())
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+                header
                 Spacer()
+                controls
             }
-        }
-        .task { await open() }
-    }
 
-    private var waiting: some View {
-        VStack(spacing: 0) {
-            if let failure {
-                Image(systemName: "video.slash")
-                    .font(.system(size: 28, weight: .ultraLight))
-                    .foregroundStyle(Theme.dust)
-                    .environment(\.symbolVariants, .none)
-
-                Text("The call cannot open")
-                    .font(Theme.serif(26))
-                    .foregroundStyle(Theme.warm)
-                    .padding(.top, 18)
-
-                Text(failure)
-                    .font(Theme.sans(13))
-                    .foregroundStyle(Theme.dust)
-                    .lineSpacing(5)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12)
-                    .padding(.horizontal, 40)
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Write instead")
-                        .font(Theme.sans(14, medium: true))
-                        .foregroundStyle(Theme.ink)
-                        .padding(.horizontal, 26)
-                        .padding(.vertical, 13)
-                        .background(Theme.warm, in: Capsule())
+            // Yourself, small, in the corner — and only once there is
+            // somebody else to look at. Before that you are the whole screen,
+            // which is what the waiting state is for.
+            if engine.remoteTrack != nil, let local = engine.localTrack, engine.cameraOn {
+                VStack {
+                    HStack {
+                        Spacer()
+                        VideoTrackView(track: local, fill: true)
+                            .frame(width: 104, height: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .padding(.trailing, 16)
+                            .padding(.top, 74)
+                    }
+                    Spacer()
                 }
-                .buttonStyle(.press)
-                .padding(.top, 26)
-            } else if opening {
-                ProgressView().tint(Theme.warm)
-                Text("Opening the room with \(specialist.name)")
-                    .font(Theme.sans(13))
-                    .foregroundStyle(Theme.dust)
-                    .padding(.top, 16)
+            }
+        }
+        .task { await engine.start() }
+        .onChange(of: engine.state) { _, state in
+            if state == .ended { dismiss() }
+        }
+    }
+
+    // MARK: Pieces
+
+    private var header: some View {
+        VStack(spacing: 4) {
+            Text(specialist.name)
+                .font(Theme.serif(20))
+                .foregroundStyle(.white)
+            Text(status)
+                .font(Theme.sans(11))
+                .foregroundStyle(.white.opacity(0.6))
+        }
+        .padding(.top, 16)
+    }
+
+    private var status: String {
+        switch engine.state {
+        case .idle, .connecting: return "Connecting"
+        case .ringing: return "Waiting for them to join"
+        case .live: return "Connected"
+        case .ended: return "Ended"
+        case .failed(let why): return why
+        }
+    }
+
+    /// Yourself, full screen, while there is nobody else yet.
+    private var waiting: some View {
+        ZStack {
+            if let local = engine.localTrack, engine.cameraOn {
+                VideoTrackView(track: local, fill: true).ignoresSafeArea()
+                LinearGradient(
+                    colors: [.black.opacity(0.55), .clear, .black.opacity(0.7)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
+
+            VStack(spacing: 12) {
+                if case .failed(let why) = engine.state {
+                    Image(systemName: "video.slash")
+                        .font(.system(size: 26, weight: .ultraLight))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .environment(\.symbolVariants, .none)
+                    Text(why)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 44)
+                } else {
+                    ProgressView().tint(.white)
+                }
+
+                // Said before a call fails rather than after, since this is
+                // the cause of most calls that cannot connect.
+                if !engine.relayAvailable, engine.state != .live {
+                    Text("No relay server is configured, so this will only connect if a direct route exists.")
+                        .font(Theme.sans(10.5))
+                        .foregroundStyle(Theme.amber.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 44)
+                        .padding(.top, 6)
+                }
             }
         }
     }
 
-    private func open() async {
-        opening = true
-        do {
-            room = try await client.joinCall(id: session.id)
-        } catch {
-            failure = error.localizedDescription
+    private var controls: some View {
+        HStack(spacing: 22) {
+            circle(engine.micOn ? "mic" : "mic.slash", on: engine.micOn) { engine.toggleMic() }
+            circle("phone.down", on: false, destructive: true) {
+                engine.hangUp()
+                dismiss()
+            }
+            circle(engine.cameraOn ? "video" : "video.slash", on: engine.cameraOn) { engine.toggleCamera() }
         }
-        opening = false
+        .padding(.bottom, 42)
+    }
+
+    private func circle(
+        _ symbol: String,
+        on: Bool,
+        destructive: Bool = false,
+        _ action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .light))
+                .foregroundStyle(destructive ? .white : (on ? .black : .white))
+                .frame(width: 58, height: 58)
+                .background(
+                    destructive ? Color.red : (on ? Color.white : Color.white.opacity(0.22)),
+                    in: Circle()
+                )
+                .environment(\.symbolVariants, .none)
+        }
+        .buttonStyle(.press)
     }
 }
 
-/// A web view that is allowed to use the camera.
-///
-/// Inline playback and no gesture requirement, or the call sits behind a play
-/// button nobody thinks to press.
-private struct CallWebView: UIViewRepresentable {
-    let url: URL
+/// One WebRTC track, rendered by Metal.
+private struct VideoTrackView: UIViewRepresentable {
+    let track: RTCVideoTrack
+    var fill: Bool = true
 
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
-
-        let view = WKWebView(frame: .zero, configuration: config)
-        view.isOpaque = false
+    func makeUIView(context: Context) -> RTCMTLVideoView {
+        let view = RTCMTLVideoView()
+        view.videoContentMode = fill ? .scaleAspectFill : .scaleAspectFit
         view.backgroundColor = .black
-        view.scrollView.isScrollEnabled = false
-        view.load(URLRequest(url: url))
+        track.add(view)
+        context.coordinator.attached = track
         return view
     }
 
-    func updateUIView(_ view: WKWebView, context: Context) {}
+    func updateUIView(_ view: RTCMTLVideoView, context: Context) {
+        // Swapping tracks without detaching the old one leaves it rendering
+        // into a view nobody can see, and holding the camera open with it.
+        guard context.coordinator.attached !== track else { return }
+        context.coordinator.attached?.remove(view)
+        track.add(view)
+        context.coordinator.attached = track
+    }
+
+    static func dismantleUIView(_ view: RTCMTLVideoView, coordinator: Coordinator) {
+        coordinator.attached?.remove(view)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var attached: RTCVideoTrack?
+    }
 }
 
 /// Paying for a conversation.

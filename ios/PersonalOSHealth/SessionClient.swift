@@ -86,33 +86,6 @@ struct SessionClient {
         }
     }
 
-    struct Room: Decodable {
-        let url: String
-        /// Whether the room is protected by a signed token. False means the
-        /// server has no token plugin, and anybody who learns the room's name
-        /// could join — worth saying out loud rather than hiding.
-        let secured: Bool
-
-        var link: URL? { URL(string: url) }
-    }
-
-    /// Opens the call and returns the room to join.
-    ///
-    /// The room is made on first ask and reused after, so a dropped connection
-    /// rejoins the same call rather than starting a second one beside it.
-    func joinCall(id: String) async throws -> Room {
-        do {
-            let data = try await transport.action("health/call:join", ["id": id])
-            return try JSONDecoder().decode(Room.self, from: data)
-        } catch TransportError.server(let message) {
-            // Convex raises the function's own sentence; these two are worth
-            // saying in the app's words rather than the server's.
-            if message.contains("No video service") { throw CallUnavailable.noService }
-            if message.contains("not been paid") { throw CallUnavailable.unpaid }
-            throw TransportError.server(message)
-        }
-    }
-
     /// Asks the server, which asks the processor. The redirect back from a
     /// checkout page is not evidence and is never treated as any.
     func isPaid(id: String) async -> Bool {
@@ -121,6 +94,47 @@ struct SessionClient {
             "/api/well-being/pay?id=\(id)", method: "GET", body: nil
         ) else { return false }
         return (try? JSONDecoder().decode(Settled.self, from: data))?.paid ?? false
+    }
+
+    // MARK: Signalling, for calls this app runs itself
+
+    struct IceServer: Decodable {
+        let urls: String
+        let username: String?
+        let credential: String?
+    }
+
+    struct IceConfig: Decodable {
+        let servers: [IceServer]
+        /// False when no relay is configured, which is worth surfacing: a
+        /// fifth of calls need one and will otherwise fail without saying why.
+        let relayAvailable: Bool
+    }
+
+    struct Signal: Decodable {
+        let kind: String
+        let payload: String
+        let at: Double
+    }
+
+    func iceServers(id: String) async throws -> IceConfig {
+        let data = try await transport.query("health/signal:iceServers")
+        return try JSONDecoder().decode(IceConfig.self, from: data)
+    }
+
+    func signals(id: String, after: Double) async throws -> [Signal] {
+        let data = try await transport.query("health/signal:since", ["id": id, "after": after])
+        return try JSONDecoder().decode([Signal].self, from: data)
+    }
+
+    func postSignal(id: String, kind: String, payload: String) async throws {
+        _ = try await transport.mutation(
+            "health/signal:post", ["id": id, "kind": kind, "payload": payload]
+        )
+    }
+
+    func clearSignals(id: String) async throws {
+        _ = try await transport.mutation("health/signal:clear", ["id": id])
     }
 
     func send(id: String, body text: String) async throws {
@@ -144,16 +158,3 @@ enum PaymentUnavailable: LocalizedError {
 }
 
 
-enum CallUnavailable: LocalizedError {
-    case noService
-    case unpaid
-
-    var errorDescription: String? {
-        switch self {
-        case .noService:
-            return "No video service is connected yet, so the call cannot open."
-        case .unpaid:
-            return "This call has not been paid for."
-        }
-    }
-}
