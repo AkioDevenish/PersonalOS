@@ -15,12 +15,40 @@ struct SpecialistsClient {
         let specialties: [String]
         let offers_video: Bool
         let photo_url: String?
+        /// When their app was last awake. Zero means never.
+        let last_seen: Double
         /// Whole minor units of `currency`. Zero means free.
         let price_minor: Int
         let currency: String
 
         /// Whether talking to this person costs anything at all.
         var free: Bool { price_minor == 0 }
+
+        /// How present somebody is, said honestly.
+        ///
+        /// Three states rather than a green dot, because a dot claims more
+        /// than a phone can know. Somebody whose app checked in a minute ago
+        /// is probably there; somebody last seen this morning is not, and
+        /// saying so is more use than an optimistic light.
+        enum Presence: Equatable {
+            case here
+            case recently(String)
+            case away
+        }
+
+        var presence: Presence {
+            guard last_seen > 0 else { return .away }
+            let gap = Date().timeIntervalSince1970 - last_seen / 1000
+            if gap < 180 { return .here }
+            if gap < 60 * 60 * 12 {
+                let f = RelativeDateTimeFormatter()
+                f.unitsStyle = .full
+                return .recently(f.localizedString(for: Date(timeIntervalSince1970: last_seen / 1000), relativeTo: Date()))
+            }
+            return .away
+        }
+
+        var online: Bool { presence == .here }
 
         /// The country in words, which is what someone wants to know before
         /// asking about food or exercise.
@@ -99,6 +127,12 @@ struct SpecialistsClient {
         if let photo { body["photo"] = photo }
         let data = try await transport.mutation("health/consult:apply", body)
         return (try? JSONDecoder().decode(Result.self, from: data))?.status ?? "pending"
+    }
+
+    /// Says this practitioner's app is awake. Silent for anybody not listed,
+    /// since it is called on a timer and a failure a minute helps nobody.
+    func heartbeat() async {
+        _ = try? await transport.mutation("health/consult:heartbeat")
     }
 
     /// One consultation waiting on the practitioner reading this.

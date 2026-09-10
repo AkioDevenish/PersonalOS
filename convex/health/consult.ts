@@ -98,11 +98,21 @@ export const directory = query({
 
     const rows = await ctx.db.query("nutritionists").collect()
 
+    const fresh = Date.now() - 3 * 60 * 1000
+
     const listed = rows
       // Being on the environment allowlist is itself an approval: those rows
       // predate applications and were vetted by whoever added the id.
       .filter((r) => r.active && (r.status === "approved" || staff().includes(r.userId)))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      // Whoever can answer now, first. Somebody scanning this list wants a
+      // reply today, and alphabetical order answers a question nobody asked.
+      .sort((a, b) => {
+        const onA = (a.last_seen ?? 0) > fresh
+        const onB = (b.last_seen ?? 0) > fresh
+        if (onA !== onB) return onA ? -1 : 1
+        if (onA && onB) return (b.last_seen ?? 0) - (a.last_seen ?? 0)
+        return a.name.localeCompare(b.name)
+      })
 
     // Signed URLs are minted at read time rather than stored, so a photo can
     // be replaced or withdrawn without anything else having to be rewritten.
@@ -116,6 +126,7 @@ export const directory = query({
         specialties: r.specialties ?? [],
         offers_video: r.offers_video ?? false,
         photo_url: r.photo ? await ctx.storage.getUrl(r.photo) : null,
+        last_seen: r.last_seen ?? 0,
         price_minor: r.price_minor ?? 0,
         currency: r.currency ?? "TTD",
       }))
@@ -408,6 +419,34 @@ export const attachPayment = mutation({
  * not to fulfil on it alone.
  */
 /** Records the room a call was actually given, once one has been made. */
+/**
+ * "I am here."
+ *
+ * Sent by a listed practitioner's app while it is open. Presence is derived
+ * from this rather than from a switch somebody sets, because a switch marked
+ * online is always stale — nobody remembers to turn it off when they put the
+ * phone down. A heartbeat is only wrong for as long as the interval.
+ *
+ * Silent for anybody not listed. It is called on a timer and an error every
+ * minute in somebody's console helps nobody.
+ */
+export const heartbeat = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) return { beat: false }
+
+    const row = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first()
+    if (!row) return { beat: false }
+
+    await ctx.db.patch(row._id, { last_seen: Date.now() })
+    return { beat: true }
+  },
+})
+
 export const attachRoom = mutation({
   args: { id: v.id("consults"), room: v.string() },
   handler: async (ctx, args) => {

@@ -35,11 +35,29 @@ struct SpecialistProfileView: View {
                     .padding(.top, 6)
                     .flowIn(1)
 
-                Text(specialist.place)
-                    .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
-                    .padding(.top, 3)
-                    .flowIn(1)
+                HStack(spacing: 7) {
+                    Text(specialist.place)
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+
+                    switch specialist.presence {
+                    case .here:
+                        HStack(spacing: 4) {
+                            Circle().fill(Theme.sage).frame(width: 6, height: 6)
+                            Text("Here now")
+                                .font(Theme.sans(11, medium: true))
+                                .foregroundStyle(Theme.sage)
+                        }
+                    case .recently(let when):
+                        Text("\u{00B7} last here \(when)")
+                            .font(Theme.sans(11))
+                            .foregroundStyle(Theme.dust)
+                    case .away:
+                        EmptyView()
+                    }
+                }
+                .padding(.top, 3)
+                .flowIn(1)
 
                 if !specialist.specialties.isEmpty {
                     FlowRow(spacing: 6) {

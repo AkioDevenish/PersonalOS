@@ -277,6 +277,14 @@ export default defineSchema({
      */
     photo: v.optional(v.id("_storage")),
     /**
+     * When this practitioner's app last said it was awake.
+     *
+     * Presence rather than a status they set: a switch marked "online" is
+     * always stale, because nobody remembers to turn it off. A heartbeat is
+     * only ever wrong for as long as the interval.
+     */
+    last_seen: v.optional(v.number()),
+    /**
      * Where the application stands: "pending", "approved", "declined".
      *
      * Separate from `active`, and the difference matters. `active` is the

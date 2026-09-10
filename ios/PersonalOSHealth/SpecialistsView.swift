@@ -16,6 +16,7 @@ struct SpecialistsView: View {
     @State private var query = ""
     /// A tapped specialism, which narrows harder than typing its name would.
     @State private var filter: String?
+    @State private var hereOnly = false
 
     private let client = SpecialistsClient()
 
@@ -73,7 +74,9 @@ struct SpecialistsView: View {
                     .padding(.top, 22)
 
                     if shown.isEmpty {
-                        Text("Nobody here matches that.")
+                        Text(hereOnly
+                             ? "Nobody is here right now. Turn off \u{201C}Here now\u{201D} to see everyone."
+                             : "Nobody here matches that.")
                             .font(Theme.sans(13))
                             .foregroundStyle(Theme.dust)
                             .frame(maxWidth: .infinity)
@@ -110,6 +113,8 @@ struct SpecialistsView: View {
     /// specialism, a qualification, or where somebody is.
     private var shown: [SpecialistsClient.Specialist] {
         var list = desk.specialists
+
+        if hereOnly { list = list.filter(\.online) }
 
         if let filter {
             list = list.filter { $0.specialties.contains(filter) }
@@ -161,6 +166,32 @@ struct SpecialistsView: View {
     private var filterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
+                // First, because "who can answer me now" beats any specialism
+                // when somebody is worried today.
+                Button {
+                    Haptics.select()
+                    withAnimation(Theme.Motion.bouncy) { hereOnly.toggle() }
+                } label: {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(hereOnly ? Theme.warm : Theme.sage)
+                            .frame(width: 6, height: 6)
+                        Text("Here now")
+                    }
+                    .font(Theme.sans(11, medium: hereOnly))
+                    .foregroundStyle(hereOnly ? Theme.warm : Theme.mid)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background {
+                        if hereOnly {
+                            Capsule().fill(Theme.ink)
+                        } else {
+                            Capsule().stroke(Theme.hairline, lineWidth: 1)
+                        }
+                    }
+                }
+                .buttonStyle(.press)
+
                 ForEach(offered, id: \.self) { s in
                     let on = filter == s
                     Button {
@@ -184,6 +215,26 @@ struct SpecialistsView: View {
                 }
             }
             .padding(.vertical, 2)
+        }
+    }
+
+    /// Whether somebody is actually there, in the words the state deserves.
+    @ViewBuilder
+    private func presence(_ one: SpecialistsClient.Specialist) -> some View {
+        switch one.presence {
+        case .here:
+            HStack(spacing: 4) {
+                Circle().fill(Theme.sage).frame(width: 6, height: 6)
+                Text("Here now")
+                    .font(Theme.sans(11, medium: true))
+                    .foregroundStyle(Theme.sage)
+            }
+        case .recently(let when):
+            Text("· \(when)")
+                .font(Theme.sans(11))
+                .foregroundStyle(Theme.dust)
+        case .away:
+            EmptyView()
         }
     }
 
@@ -232,9 +283,12 @@ struct SpecialistsView: View {
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.mid)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(one.place)
-                        .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                    HStack(spacing: 6) {
+                        Text(one.place)
+                            .font(Theme.sans(11))
+                            .foregroundStyle(Theme.dust)
+                        presence(one)
+                    }
                 }
                 Spacer(minLength: 0)
             }

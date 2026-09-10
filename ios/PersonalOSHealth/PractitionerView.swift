@@ -81,6 +81,15 @@ struct PractitionerView: View {
             guard queue.isEmpty else { return }
             Task { await load() }
         }
+        // Somebody with their queue open is as present as this app can know.
+        // A minute apart, against a three minute window, so one missed beat
+        // does not make them vanish from the directory.
+        .task {
+            while !Task.isCancelled {
+                await client.heartbeat()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
         .fullScreenCover(item: $calling) { one in
             VideoCallView(peer: "Your client", sessionId: one.id)
         }

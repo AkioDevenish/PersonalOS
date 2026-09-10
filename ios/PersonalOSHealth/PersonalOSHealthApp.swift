@@ -13,6 +13,7 @@ struct PersonalOSHealthApp: App {
     /// Owned at app level so the notification delegate is set before any
     /// notification can arrive, and so a tap can route the app from anywhere.
     @StateObject private var notifier = Notifier.shared
+    @Environment(\.scenePhase) private var scene
 
     var body: some Scene {
         WindowGroup {
@@ -33,6 +34,13 @@ struct PersonalOSHealthApp: App {
             .environment(store)
             .environment(clerk)
             .onAppear { notifier.start() }
+            // A listed practitioner is present whenever their app is. The
+            // call is a no-op for everybody else, which is nearly everybody,
+            // so it costs one request rather than a check to find out.
+            .onChange(of: scene) { _, phase in
+                guard phase == .active else { return }
+                Task { await SpecialistsClient().heartbeat() }
+            }
         }
     }
 }
