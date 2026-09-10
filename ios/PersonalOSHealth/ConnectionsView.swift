@@ -162,6 +162,30 @@ struct ConnectionsView: View {
                     .padding(.top, 32)
                     .flowIn(4)
 
+                // Only once somebody is actually listed. An approved
+                // practitioner opens their queue from here; everyone else sees
+                // the application below it and nothing more.
+                if application?.approved == true {
+                    NavigationLink(value: Route.practice) {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Your consultations")
+                                    .font(Theme.serif(19))
+                                    .foregroundStyle(Theme.ink)
+                                Text("People who have booked you, oldest unanswered first.")
+                                    .font(Theme.sans(10.5))
+                                    .foregroundStyle(Theme.dust)
+                            }
+                            Spacer()
+                            Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        }
+                        .padding(.vertical, 15)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.pressRow)
+                    .padding(.top, 6)
+                }
+
                 Button {
                     Haptics.tap()
                     applying = true

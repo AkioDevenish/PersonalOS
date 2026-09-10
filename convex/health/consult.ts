@@ -38,6 +38,19 @@ function isStaff(userId: string) {
  * said who they are shouldn't appear on a list of people you might trust with
  * your glucose.
  */
+/**
+ * Whether somebody is party to a consultation.
+ *
+ * The person who booked it, or the one practitioner it was addressed to.
+ * Nobody else, and specifically not "anybody on the staff allowlist" — that
+ * was fine when a nutritionist meant one trusted person, and became a hole
+ * the moment practitioners could sign themselves up. It would have let any
+ * approved practitioner read every health conversation in the app.
+ */
+function party(consult: any, userId: string) {
+  return consult.userId === userId || consult.nutritionistId === userId
+}
+
 export const professionals = query({
   args: {},
   handler: async (ctx) => {
@@ -550,10 +563,7 @@ export const thread = query({
 
     const consult = await ctx.db.get(args.id)
     if (!consult) throw new Error("No such consultation")
-    // Yours, or you are one of the people paid to read it. Nothing else.
-    if (consult.userId !== identity.subject && !isStaff(identity.subject)) {
-      throw new Error("Not yours to read")
-    }
+    if (!party(consult, identity.subject)) throw new Error("Not yours to read")
 
     const messages = await ctx.db
       .query("consult_messages")
@@ -654,9 +664,11 @@ export const send = mutation({
     const consult = await ctx.db.get(args.id)
     if (!consult) throw new Error("No such consultation")
 
+    if (!party(consult, identity.subject)) throw new Error("Not yours to answer")
+    // Which side of the conversation this is. A message reads as "you" to the
+    // person who booked and as the practitioner to them, and the row records
+    // which it was rather than guessing later.
     const mine = consult.userId === identity.subject
-    const professional = isStaff(identity.subject)
-    if (!mine && !professional) throw new Error("Not yours to answer")
 
     const body = args.body.trim()
     if (!body) throw new Error("An empty message says nothing")
@@ -665,7 +677,7 @@ export const send = mutation({
     const now = Date.now()
     await ctx.db.insert("consult_messages", {
       consultId: args.id,
-      from: professional && !mine ? "nutritionist" : "you",
+      from: mine ? "you" : "nutritionist",
       authorId: identity.subject,
       body,
       created_at: now,
@@ -675,7 +687,7 @@ export const send = mutation({
       updated_at: now,
       // Only a real answer changes the state. Sending another message of your
       // own does not mean anybody has read the first one.
-      status: professional && !mine ? "answered" : consult.status,
+      status: mine ? consult.status : "answered",
     })
 
     return { ok: true }
@@ -688,20 +700,58 @@ export const queue = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    if (!isStaff(identity.subject)) throw new Error("Not a nutritionist")
+
+    // Approved practitioners only, and only the consultations addressed to
+    // them. A queue of everybody's conversations is not a queue, it is a
+    // filing cabinet somebody left unlocked.
+    const profile = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first()
+    const approved =
+      (profile && profile.status === "approved") || isStaff(identity.subject)
+    if (!approved) throw new Error("You are not listed as a practitioner")
 
     const rows = await ctx.db
       .query("consults")
-      .withIndex("by_status", (q) => q.eq("status", "waiting"))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect()
 
-    return rows
-      .sort((a, b) => a.created_at - b.created_at)
-      .map((r) => ({
-        id: r._id,
-        topic: r.topic,
-        country: r.country ?? "",
-        created_at: r.created_at,
-      }))
+    // by_user indexes the person who booked; the practitioner's own consults
+    // have to be found the other way round.
+    const all = await ctx.db.query("consults").collect()
+    const mine = all.filter((r) => r.nutritionistId === identity.subject)
+
+    const withLast = await Promise.all(
+      mine.map(async (r) => {
+        const messages = await ctx.db
+          .query("consult_messages")
+          .withIndex("by_consult", (q) => q.eq("consultId", r._id))
+          .collect()
+        const sorted = messages.sort((a, b) => a.created_at - b.created_at)
+        const last = sorted[sorted.length - 1]
+        return {
+          id: r._id,
+          topic: r.topic,
+          kind: r.kind ?? "text",
+          status: r.status,
+          payment_status: r.payment_status ?? "free",
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          replies: sorted.length,
+          last_message: last?.body ?? "",
+          // Waiting on you, rather than on them. The one thing a queue is for.
+          needs_reply: !last || last.from === "you",
+        }
+      })
+    )
+
+    // Oldest unanswered first: somebody who asked yesterday has waited longer
+    // than somebody who asked an hour ago, and a queue sorted by newest hides
+    // exactly the people who have been waiting.
+    return withLast.sort((a, b) => {
+      if (a.needs_reply !== b.needs_reply) return a.needs_reply ? -1 : 1
+      return a.created_at - b.created_at
+    })
   },
 })

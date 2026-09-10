@@ -126,9 +126,9 @@ struct SpecialistProfileView: View {
             if opened.owing {
                 PaymentView(specialist: specialist, session: opened)
             } else if opened.kind == "video" {
-                VideoCallView(specialist: specialist, session: opened)
+                VideoCallView(peer: specialist.name, sessionId: opened.id)
             } else {
-                ChatView(specialist: specialist, sessionId: opened.id)
+                ChatView(peer: specialist.name, sessionId: opened.id)
             }
         }
     }
@@ -232,8 +232,11 @@ extension SessionClient.Opened: Identifiable {}
 /// no subscription to hold open. Three seconds apart is close enough to feel
 /// like a conversation, and it stops the moment the screen goes away.
 struct ChatView: View {
-    let specialist: SpecialistsClient.Specialist
+    /// Who is on the other end, as it should read in the header.
+    let peer: String
     let sessionId: String
+    /// Only the person whose ledger it is can hand it over.
+    var canShareReadings: Bool = true
 
     @Environment(\.dismiss) private var dismiss
 
@@ -269,7 +272,9 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         if thread.messages.isEmpty {
-                            Text("Say what you would like to ask. \(specialist.name) will see your ledger only if you choose to share it.")
+                            Text(canShareReadings
+                     ? "Say what you would like to ask. \(peer) will see your ledger only if you choose to share it."
+                     : "Nothing from their ledger is here unless they chose to send it.")
                                 .font(Theme.sans(12))
                                 .foregroundStyle(Theme.dust)
                                 .lineSpacing(4)
@@ -315,7 +320,7 @@ struct ChatView: View {
         }
         .onDisappear { poller?.cancel() }
         .sheet(isPresented: $sharing) {
-            ShareReadingsSheet(specialist: specialist) { text in
+            ShareReadingsSheet(peerName: peer) { text in
                 try await client.send(id: sessionId, body: text)
                 await refresh()
             }
@@ -331,7 +336,7 @@ struct ChatView: View {
                 .buttonStyle(.press)
             Spacer()
             VStack(spacing: 1) {
-                Text(specialist.name)
+                Text(peer)
                     .font(Theme.serif(19))
                     .foregroundStyle(Theme.ink)
                 Text(thread.status == "answered" ? "Replied" : "Waiting for a reply")
@@ -395,16 +400,18 @@ struct ChatView: View {
             HStack(spacing: 12) {
                 // The reason this app exists: a practitioner reading what was
                 // actually recorded rather than what somebody remembers.
-                Button {
-                    Haptics.tap()
-                    sharing = true
-                } label: {
-                    Image(systemName: "heart.text.square")
+                if canShareReadings {
+                    Button {
+                        Haptics.tap()
+                        sharing = true
+                    } label: {
+                        Image(systemName: "heart.text.square")
                         .font(.system(size: 17, weight: .light))
-                        .foregroundStyle(Theme.amber)
-                        .environment(\.symbolVariants, .none)
+                            .foregroundStyle(Theme.amber)
+                            .environment(\.symbolVariants, .none)
+                    }
+                    .buttonStyle(.press)
                 }
-                .buttonStyle(.press)
 
                 TextField("Write a message", text: $draft, axis: .vertical)
                     .font(Theme.sans(14))
@@ -460,16 +467,16 @@ struct ChatView: View {
 /// own peer connection and are rendered here, so the screen belongs to the
 /// app rather than to whoever was carrying the media.
 struct VideoCallView: View {
-    let specialist: SpecialistsClient.Specialist
-    let session: SessionClient.Opened
+    let peer: String
+    let sessionId: String
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var engine: CallEngine
 
-    init(specialist: SpecialistsClient.Specialist, session: SessionClient.Opened) {
-        self.specialist = specialist
-        self.session = session
-        _engine = StateObject(wrappedValue: CallEngine(sessionId: session.id))
+    init(peer: String, sessionId: String) {
+        self.peer = peer
+        self.sessionId = sessionId
+        _engine = StateObject(wrappedValue: CallEngine(sessionId: sessionId))
     }
 
     var body: some View {
@@ -516,7 +523,7 @@ struct VideoCallView: View {
 
     private var header: some View {
         VStack(spacing: 4) {
-            Text(specialist.name)
+            Text(peer)
                 .font(Theme.serif(20))
                 .foregroundStyle(.white)
             Text(status)
@@ -680,9 +687,9 @@ struct PaymentView: View {
         Group {
             if paid {
                 if session.kind == "video" {
-                    VideoCallView(specialist: specialist, session: session)
+                    VideoCallView(peer: specialist.name, sessionId: session.id)
                 } else {
-                    ChatView(specialist: specialist, sessionId: session.id)
+                    ChatView(peer: specialist.name, sessionId: session.id)
                 }
             } else {
                 asking
@@ -798,7 +805,7 @@ struct PaymentView: View {
 /// person agreed to it — no summary made afterwards, no field they did not
 /// see. That is the difference between sharing health data and leaking it.
 struct ShareReadingsSheet: View {
-    let specialist: SpecialistsClient.Specialist
+    let peerName: String
     let send: (String) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -817,7 +824,7 @@ struct ShareReadingsSheet: View {
                     .font(Theme.serif(30))
                     .foregroundStyle(Theme.ink)
 
-                Text("This is exactly what \(specialist.name) will see, word for word. Nothing else from your ledger goes with it.")
+                Text("This is exactly what \(peerName) will see, word for word. Nothing else from your ledger goes with it.")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.mid)
                     .lineSpacing(4)

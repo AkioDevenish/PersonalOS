@@ -124,6 +124,8 @@ enum Route: Hashable {
     /// link keeps every push in this app inside the one path the tab owns,
     /// which is what lets tapping the tab again empty it.
     case practitioner(SpecialistsClient.Specialist)
+    /// The other side of the desk, for somebody who is listed.
+    case practice
 }
 
 struct RootView: View {
@@ -301,6 +303,7 @@ struct RootView: View {
                     case .specialists:  ExpertsView()
                     case .professionals: SpecialistsView()
                     case .practitioner(let one): SpecialistProfileView(specialist: one)
+                    case .practice: PractitionerView()
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
                     }

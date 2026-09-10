@@ -101,6 +101,31 @@ struct SpecialistsClient {
         return (try? JSONDecoder().decode(Result.self, from: data))?.status ?? "pending"
     }
 
+    /// One consultation waiting on the practitioner reading this.
+    struct Consultation: Decodable, Identifiable, Hashable {
+        let id: String
+        let topic: String
+        let kind: String
+        let status: String
+        let payment_status: String
+        let created_at: Double
+        let updated_at: Double
+        let replies: Int
+        let last_message: String
+        /// Whether the ball is in the practitioner's court.
+        let needs_reply: Bool
+
+        var asked: Date { Date(timeIntervalSince1970: created_at / 1000) }
+        var isCall: Bool { kind == "video" }
+        var unpaid: Bool { payment_status == "pending" }
+    }
+
+    /// The practitioner's own queue. Throws when the caller is not listed.
+    func queue() async throws -> [Consultation] {
+        let data = try await transport.query("health/consult:queue")
+        return try JSONDecoder().decode([Consultation].self, from: data)
+    }
+
     /// Sends a photograph to storage and returns its id.
     ///
     /// Two steps on purpose. The route hands back a one-time URL and the image
