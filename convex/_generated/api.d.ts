@@ -22,6 +22,7 @@ import type * as health_metrics from "../health/metrics.js";
 import type * as health_providers from "../health/providers.js";
 import type * as health_resolve from "../health/resolve.js";
 import type * as health_samples from "../health/samples.js";
+import type * as health_signal from "../health/signal.js";
 import type * as health_tokens from "../health/tokens.js";
 import type * as marketing from "../marketing.js";
 import type * as time from "../time.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "health/providers": typeof health_providers;
   "health/resolve": typeof health_resolve;
   "health/samples": typeof health_samples;
+  "health/signal": typeof health_signal;
   "health/tokens": typeof health_tokens;
   marketing: typeof marketing;
   time: typeof time;

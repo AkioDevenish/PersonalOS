@@ -357,6 +357,31 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_status", ["status"]),
 
+  /**
+   * How two phones find each other for a call.
+   *
+   * WebRTC cannot introduce two devices by itself: each has to describe what
+   * it can do and where it can be reached, and something has to carry those
+   * descriptions between them. That is all signalling is, and it is the part
+   * a hosted video service was doing on our behalf.
+   *
+   * Rows are short-lived and read once. A call needs perhaps a dozen of them
+   * over a few seconds, then never again, which is why they are swept rather
+   * than kept.
+   */
+  call_signals: defineTable({
+    consultId: v.id("consults"),
+    /** Who sent it, so a phone never answers its own message. */
+    from: v.string(),
+    /** "offer", "answer", "candidate", or "bye". */
+    kind: v.string(),
+    /** The SDP or ICE candidate, as the browser stack produced it. */
+    payload: v.string(),
+    created_at: v.number(),
+  })
+    .index("by_consult", ["consultId"])
+    .index("by_consult_time", ["consultId", "created_at"]),
+
   consult_messages: defineTable({
     consultId: v.id("consults"),
     /** "you" or "nutritionist" — who the message reads as, not who wrote it. */
