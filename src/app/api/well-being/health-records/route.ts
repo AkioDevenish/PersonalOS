@@ -1,129 +1,65 @@
-import { NextResponse } from 'next/server'
-import { ensureSaasHealthTables, INTRADAY_SOURCES_SQL, queryJson } from '@/lib/health-db'
-import { getRequestActor } from '@/lib/request-actor'
+import { NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
+import { getConvexClient } from "@/lib/convex-client"
+import { api } from "../../../../../convex/_generated/api"
+import {
+  toLegacyRecords,
+  toLegacySummary,
+  rangeFor,
+  type ResolvedDay,
+} from "@/lib/health/legacy-shape"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
+/**
+ * Health records for the Well Being tab.
+ *
+ * Now reads the per-user Convex store through the source resolver instead of a
+ * SQLite file. Two things change as a result:
+ *
+ *  - Identity comes from the Clerk session. The previous version used
+ *    getRequestActor, which read an `x-personal-os-user-id` header and
+ *    otherwise fell back to a shared "local-user" — so every signed-in account
+ *    read the same rows.
+ *  - There is no local database. The old path opened
+ *    ~/personal_os/Well Being/data/health.db, which exists on exactly one
+ *    machine and cannot exist on a serverless host at all.
+ *
+ * The response shape is deliberately unchanged so the existing charts keep
+ * working. Converting canonical units back to what they expect happens in
+ * lib/health/legacy-shape.
+ */
 export async function GET(request: Request) {
+  const { userId, getToken } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const url = new URL(request.url)
+  const requested = Number(url.searchParams.get("days"))
+  const days = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 365) : 7
+  // the viewer's clock decides which day "today" is
+  const timeZone = url.searchParams.get("tz") || "UTC"
+
   try {
-    const auth = getRequestActor(request)
-    if (!auth.ok) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status })
-    }
-    const { actor } = auth
-    const { searchParams } = new URL(request.url)
-    const requestedDays = parseInt(searchParams.get('days') || '7', 10)
-    const days = Number.isFinite(requestedDays) ? Math.min(Math.max(requestedDays, 1), 365) : 7
+    const token = await getToken({ template: "convex" })
+    const convex = getConvexClient(token)
 
-    if (actor.authMode === 'saas') {
-      await ensureSaasHealthTables()
-    }
+    const { from, to } = rangeFor(days, timeZone)
+    const result = (await convex.query(api.health.resolve.dailyMatrix, {
+      from,
+      to,
+    })) as { days: ResolvedDay[] }
 
-    const metricSource =
-      actor.authMode === 'saas'
-        ? `
-          SELECT
-            recorded_at as date,
-            metric_type,
-            value,
-            source as source_file
-          FROM health_samples
-          WHERE user_id = '${actor.userId.replaceAll("'", "''")}'
-        `
-        : `
-          SELECT date, metric_type, value, source_file
-          FROM health_metrics
-          WHERE source_file IN ${INTRADAY_SOURCES_SQL}
-        `
-
-    const pivotedCTE = `
-      WITH Pivoted AS (
-        SELECT
-          date,
-          MAX(CASE WHEN metric_type = 'steps' THEN value END) as steps,
-          MAX(CASE WHEN metric_type = 'distance_km' THEN value END) as distance_km,
-          MAX(CASE WHEN metric_type = 'flights_climbed' THEN value END) as flights_climbed,
-          MAX(CASE WHEN metric_type = 'walking_speed' THEN value END) as walking_speed,
-          MAX(CASE WHEN metric_type = 'walking_steadiness' THEN value END) as walking_steadiness,
-          MAX(CASE WHEN metric_type = 'walking_asymmetry_pct' THEN value END) as walking_asymmetry_pct,
-          MAX(CASE WHEN metric_type = 'walking_step_length' THEN value END) as walking_step_length,
-          MAX(CASE WHEN metric_type = 'walking_double_support_pct' THEN value END) as walking_double_support_pct,
-          MAX(CASE WHEN metric_type = 'stair_ascent_speed' THEN value END) as stair_ascent_speed,
-          MAX(CASE WHEN metric_type = 'active_energy_burned' THEN value END) as active_energy_burned,
-          MAX(CASE WHEN metric_type = 'basal_energy_burned' THEN value END) as basal_energy_burned,
-          MAX(CASE WHEN metric_type = 'headphone_audio_exposure' THEN value END) as headphone_audio_exposure,
-          MAX(CASE WHEN metric_type = 'mindful_session_mins' THEN value END) as mindful_session_mins,
-          MAX(CASE WHEN metric_type = 'time_in_daylight' THEN value END) as time_in_daylight,
-          MAX(CASE WHEN metric_type = 'total_sleep_hours' THEN value END) as total_sleep_hours,
-          source_file
-        FROM (${metricSource})
-        GROUP BY date, source_file
-      )
-    `
-
-    const query = `
-      ${pivotedCTE}
-      SELECT *
-      FROM Pivoted
-      WHERE datetime(date) >= datetime('now', 'localtime', '-${days} days')
-      ORDER BY datetime(date) ASC
-    `
-
-    const summaryQuery = `
-      ${pivotedCTE}
-      SELECT
-        MAX(date) as date,
-        AVG(steps) as steps,
-        AVG(distance_km) as distance_km,
-        AVG(flights_climbed) as flights_climbed,
-        AVG(walking_speed) as walking_speed,
-        AVG(walking_steadiness) as walking_steadiness,
-        AVG(walking_asymmetry_pct) as walking_asymmetry_pct,
-        AVG(walking_step_length) as walking_step_length,
-        AVG(walking_double_support_pct) as walking_double_support_pct,
-        AVG(stair_ascent_speed) as stair_ascent_speed,
-        SUM(active_energy_burned) as active_energy_burned,
-        SUM(basal_energy_burned) as basal_energy_burned,
-        AVG(headphone_audio_exposure) as headphone_audio_exposure,
-        SUM(mindful_session_mins) as mindful_session_mins,
-        SUM(time_in_daylight) as time_in_daylight,
-        MAX(total_sleep_hours) as total_sleep_hours
-      FROM (
-        SELECT date(date) as day,
-               MAX(date) as date,
-               MAX(steps) as steps,
-               MAX(distance_km) as distance_km,
-               MAX(flights_climbed) as flights_climbed,
-               AVG(walking_speed) as walking_speed,
-               AVG(walking_steadiness) as walking_steadiness,
-               AVG(walking_asymmetry_pct) as walking_asymmetry_pct,
-               AVG(walking_step_length) as walking_step_length,
-               AVG(walking_double_support_pct) as walking_double_support_pct,
-               AVG(stair_ascent_speed) as stair_ascent_speed,
-               MAX(active_energy_burned) as active_energy_burned,
-               MAX(basal_energy_burned) as basal_energy_burned,
-               MAX(headphone_audio_exposure) as headphone_audio_exposure,
-               MAX(mindful_session_mins) as mindful_session_mins,
-               MAX(time_in_daylight) as time_in_daylight,
-               MAX(total_sleep_hours) as total_sleep_hours
-        FROM Pivoted
-        WHERE ${days === 1 
-          ? "date(date) = date('now', 'localtime')" 
-          : `datetime(date) >= datetime('now', 'localtime', '-${days} days')`}
-        GROUP BY day
-      )
-    `
-
-    const [records, summaries] = await Promise.all([
-      queryJson<Record<string, unknown>>(query),
-      queryJson<Record<string, unknown>>(summaryQuery),
-    ])
-    
-    const summary = summaries[0] || null
+    const records = toLegacyRecords(result.days)
+    const summary = toLegacySummary(records)
 
     return NextResponse.json({ records, summary })
   } catch (error) {
-    console.error('Error reading health records:', error)
-    return NextResponse.json({ error: 'Failed to read health records' }, { status: 500 })
+    console.error("Error reading health records:", error)
+    const message =
+      error instanceof Error ? error.message : "Failed to read health records"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

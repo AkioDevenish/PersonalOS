@@ -1,0 +1,105 @@
+{
+  "identifier" : "A1B2C3D4",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "C0000001",
+      "localizations" : [
+        {
+          "description" : "50 hosted readings, yours to spend whenever.",
+          "displayName" : "50 readings",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "os.personal.credits.50",
+      "referenceName" : "50 readings",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "C0000002",
+      "localizations" : [
+        {
+          "description" : "200 hosted readings, yours to spend whenever.",
+          "displayName" : "200 readings",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "os.personal.credits.200",
+      "referenceName" : "200 readings",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "S0000001",
+      "localizations" : [],
+      "name" : "Personal OS",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "6.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "S0000002",
+          "introductoryOffer" : {
+            "internalID" : "I0000001",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Hosted readings, cloud sync and wearable connections.",
+              "displayName" : "Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "os.personal.sub.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Personal OS monthly",
+          "subscriptionGroupID" : "S0000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "S0000003",
+          "introductoryOffer" : {
+            "internalID" : "I0000002",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "Hosted readings, cloud sync and wearable connections.",
+              "displayName" : "Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "os.personal.sub.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Personal OS yearly",
+          "subscriptionGroupID" : "S0000001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
