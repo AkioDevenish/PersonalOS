@@ -83,7 +83,7 @@ struct SignInView: View {
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
 enum AppTab: CaseIterable, Hashable {
-    case home, health, finance, map, settings
+    case home, health, finance, time, settings
 
     /// The system fills the selected one and tints it, so only the outline is
     /// named here. The hand-rolled bar used to keep a `.fill` twin for that
@@ -93,7 +93,7 @@ enum AppTab: CaseIterable, Hashable {
         case .home: return "house"
         case .health: return "heart"
         case .finance: return "dollarsign.gauge.chart.leftthird.topthird.rightthird"
-        case .map: return "map"
+        case .time: return "clock"
         case .settings: return "person"
         }
     }
@@ -105,7 +105,7 @@ enum AppTab: CaseIterable, Hashable {
         case .home: return "Home"
         case .health: return "Health"
         case .finance: return "Finance"
-        case .map: return "Map"
+        case .time: return "Time"
         case .settings: return "Profile"
         }
     }
@@ -118,7 +118,7 @@ enum AppTab: CaseIterable, Hashable {
 /// driven by a path can be emptied from anywhere, which is what makes tapping
 /// the tab you're already on take you home.
 enum Route: Hashable {
-    case briefing, history, nutrition, specialists, professionals, paywall, goals, time
+    case briefing, history, nutrition, specialists, professionals, paywall, goals
     /// One practitioner's page.
     ///
     /// Carries the whole record rather than an id, because the directory has
@@ -248,7 +248,7 @@ struct RootView: View {
             Tab(value: AppTab.home) { stack(for: .home) } label: { glyph(.home) }
             Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
             Tab(value: AppTab.finance) { stack(for: .finance) } label: { glyph(.finance) }
-            Tab(value: AppTab.map) { stack(for: .map) } label: { glyph(.map) }
+            Tab(value: AppTab.time) { stack(for: .time) } label: { glyph(.time) }
             Tab(value: AppTab.settings) { stack(for: .settings) } label: { glyph(.settings) }
         }
         // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
@@ -306,7 +306,6 @@ struct RootView: View {
                     case .professionals: SpecialistsView()
                     case .practitioner(let one): SpecialistProfileView(specialist: one)
                     case .practice: PractitionerView()
-                    case .time: TimeView()
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
                     }
@@ -320,16 +319,10 @@ struct RootView: View {
         switch t {
         // The rows on Home send you to a tab, which only the bar's selection
         // can do, so it is handed the way to ask.
-        case .home:
-            HomeView(
-                go: { tab = $0 },
-                // Time lives in the drawer now, so its tile pushes rather
-                // than switching tab.
-                openTime: { paths[.home, default: []].append(.time) }
-            )
+        case .home:     HomeView { tab = $0 }
         case .health:   HealthView()
         case .finance:  FinanceView()
-        case .map:      MapView()
+        case .time:     TimeView()
         case .settings: ConnectionsView()
         }
     }

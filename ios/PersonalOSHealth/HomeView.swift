@@ -17,8 +17,6 @@ struct HomeView: View {
     /// Sends you to the tab that owns a tile. The bar's selection lives in
     /// RootView, so the tile asks rather than reaches.
     var go: (AppTab) -> Void
-    /// Time is no longer a tab, so its tile pushes the route instead.
-    var openTime: () -> Void
 
     @EnvironmentObject private var health: HealthKitManager
     @AppStorage("ledger_currency") private var currency = Money.deviceDefault
@@ -204,7 +202,7 @@ struct HomeView: View {
     private var timeTile: some View {
         Button {
             Haptics.select()
-            openTime()
+            go(.time)
         } label: {
             Tile {
                 VStack(alignment: .leading, spacing: 8) {
