@@ -38,7 +38,9 @@ struct TrailCanvas: View {
     private static let ground = Color(red: 0.07, green: 0.07, blue: 0.08)
     private static let core = Color(red: 0.82, green: 0.90, blue: 1.0)
     private static let glow = Color(red: 0.44, green: 0.68, blue: 1.0)
-    private static let grid = Color(red: 0.30, green: 0.36, blue: 0.46)
+    private static let grid = Color(red: 0.42, green: 0.52, blue: 0.66)
+    /// A band where the ground meets nothing, so the plane has an edge.
+    private static let sky = Color(red: 0.13, green: 0.16, blue: 0.22)
 
     var body: some View {
         Canvas { context, size in
@@ -106,21 +108,44 @@ struct TrailCanvas: View {
     /// A grid on the ground, which is what gives the projection something to
     /// be seen against. Without it the trail floats and the tilt is invisible.
     private func draw(grid context: GraphicsContext, size: CGSize, horizon: CGFloat) {
+        // The ground fades up into nothing rather than stopping at a hard
+        // line, which is what stops the far distance reading as a wall.
+        context.fill(
+            Path(CGRect(x: 0, y: 0, width: size.width, height: horizon + 40)),
+            with: .linearGradient(
+                Gradient(colors: [Self.sky, Self.ground]),
+                startPoint: CGPoint(x: 0, y: 0),
+                endPoint: CGPoint(x: 0, y: horizon + 40)
+            )
+        )
+
         // Spacing widens as the camera pulls back, so the grid never becomes
         // a solid wash at distance.
         let step = max(25.0, (back / 6).rounded() * 10)
         let reach = back * 6
 
-        var lines = Path()
         var line = -reach
         while line <= reach {
-            // Two rails per grid line, drawn as many short segments so the
-            // perspective divide bends them correctly.
-            appendRail(&lines, along: .depth, at: line, step: step, reach: reach, size: size, horizon: horizon)
-            appendRail(&lines, along: .across, at: line, step: step, reach: reach, size: size, horizon: horizon)
+            // Each rail drawn on its own so it can fade with distance. One
+            // flat stroke for the whole grid was the bug: at a low enough
+            // opacity to survive the near lines, the far ones vanished — and
+            // the opacity that was there made every line invisible against
+            // the ground.
+            for rail in [Rail.depth, Rail.across] {
+                var path = Path()
+                appendRail(&path, along: rail, at: line, step: step, reach: reach,
+                           size: size, horizon: horizon)
+
+                // How far away this line is, as a fraction of what is drawn.
+                let distance = rail == .depth
+                    ? abs(line) / reach                 // sideways: fades at the edges
+                    : max(0, (line + back) / (reach + back))  // ahead: fades into the horizon
+                let strength = max(0.06, 0.5 * (1 - distance))
+
+                context.stroke(path, with: .color(Self.grid.opacity(strength)), lineWidth: 1)
+            }
             line += step
         }
-        context.stroke(lines, with: .color(Self.grid.opacity(0.16)), lineWidth: 1)
     }
 
     private enum Rail { case depth, across }

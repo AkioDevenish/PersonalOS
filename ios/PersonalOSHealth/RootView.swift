@@ -42,12 +42,17 @@ struct SignInView: View {
                 Text("Begin your ledger")
                     .font(Theme.sans(15, medium: true))
                     .foregroundStyle(Theme.warm)
-                    .frame(width: 313)
+                    // Was a fixed 313 points, which is one phone's width and
+                    // nobody else's: narrow and off-centre on a Pro Max, tight
+                    // on an SE, and liable to clip the label at larger text
+                    // sizes.
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Theme.ink)
                     .clipShape(Capsule())
             }
             .buttonStyle(.press)
+            .padding(.horizontal, 40)
             .padding(.top, 44)
 
             Text("Your ledger stays yours.")

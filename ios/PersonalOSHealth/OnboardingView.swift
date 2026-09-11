@@ -82,6 +82,10 @@ struct OnboardingView: View {
                 .padding(.bottom, 26)
 
             actions
+                // The page's own margin. The leaves carry 38 and the buttons
+                // sit slightly wider, which keeps them reading as the thing
+                // you act on rather than another paragraph.
+                .padding(.horizontal, 30)
                 .padding(.bottom, 34)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -134,6 +138,7 @@ struct OnboardingView: View {
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
                 .flowIn(2)
 
@@ -142,6 +147,7 @@ struct OnboardingView: View {
                 .foregroundStyle(Theme.mid)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 14)
                 .flowIn(3)
         }
@@ -167,6 +173,7 @@ struct OnboardingView: View {
                     .font(Theme.sans(11))
                     .foregroundStyle(Theme.amber)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 38)
                     .padding(.bottom, 14)
                     .transition(.opacity)
@@ -186,7 +193,9 @@ struct OnboardingView: View {
                 }
                 .font(Theme.sans(15, medium: true))
                 .foregroundStyle(Theme.warm)
-                .frame(width: 313)
+                // Was a fixed 313 points — one phone's width and nobody
+                // else's.
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Theme.ink)
                 .clipShape(Capsule())

@@ -188,6 +188,7 @@ struct FinanceView: View {
                 .foregroundStyle(Theme.dust)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
