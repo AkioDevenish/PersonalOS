@@ -28,6 +28,7 @@ struct LedgerDrawer: View {
         // read your ledger and write back.
         (.specialists, "Specialists", "Read by an expert on this phone"),
         (.professionals, "Practitioners", "Real people you can ask"),
+        (.time, "Time", "Where the hours went"),
         (.goals, "Goals", "What you're aiming at"),
     ]
 
