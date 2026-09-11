@@ -490,6 +490,11 @@ struct VideoCallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var engine: CallEngine
+    @State private var chatting = false
+    /// How many messages had arrived when the chat was last closed, so the
+    /// badge counts what has not been read rather than what exists.
+    @State private var readUpTo = 0
+    @State private var messageCount = 0
 
     init(peer: String, sessionId: String) {
         self.peer = peer
@@ -511,6 +516,7 @@ struct VideoCallView: View {
             VStack {
                 header
                 Spacer()
+                secondaryControls
                 controls
             }
 
@@ -534,6 +540,24 @@ struct VideoCallView: View {
         .task { await engine.start() }
         .onChange(of: engine.state) { _, state in
             if state == .ended { dismiss() }
+        }
+        // Counted while the call runs so the badge is right when somebody
+        // writes during it, which is the whole reason chat belongs here.
+        .task {
+            while !Task.isCancelled {
+                if let thread = try? await SessionClient().thread(id: sessionId) {
+                    messageCount = thread.messages.count
+                }
+                try? await Task.sleep(for: .seconds(4))
+            }
+        }
+        .sheet(isPresented: $chatting) {
+            ChatView(peer: peer, sessionId: sessionId)
+                // Half height, so the call is still visible behind the words
+                // being typed about it.
+                .presentationDetents([.medium, .large])
+                .presentationBackground(Theme.linen)
+                .onDisappear { readUpTo = messageCount }
         }
     }
 
@@ -604,6 +628,46 @@ struct VideoCallView: View {
                 }
             }
         }
+    }
+
+    /// Flip and chat: useful, but not the three things somebody reaches for
+    /// in a hurry, so they sit smaller and above.
+    private var secondaryControls: some View {
+        HStack(spacing: 14) {
+            small("arrow.triangle.2.circlepath.camera") {
+                Task { await engine.flipCamera() }
+            }
+            .disabled(!engine.cameraOn)
+
+            ZStack(alignment: .topTrailing) {
+                small("bubble.left") { chatting = true }
+                if messageCount > readUpTo {
+                    Text("\(messageCount - readUpTo)")
+                        .font(Theme.sans(9, medium: true))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Theme.amber, in: Capsule())
+                        .offset(x: 5, y: -3)
+                }
+            }
+        }
+        .padding(.bottom, 18)
+    }
+
+    private func small(_ symbol: String, _ action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .light))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(.white.opacity(0.18), in: Circle())
+                .environment(\.symbolVariants, .none)
+        }
+        .buttonStyle(.press)
     }
 
     private var controls: some View {

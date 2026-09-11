@@ -28,6 +28,9 @@ final class CallEngine: NSObject, ObservableObject {
     @Published private(set) var localTrack: RTCVideoTrack?
     @Published private(set) var micOn = true
     @Published private(set) var cameraOn = true
+    /// Which way the camera is pointing. Front to begin with, because a
+    /// consultation is a conversation before it is anything else.
+    @Published private(set) var usingFront = true
     /// Whether a relay is configured. Without one, a fifth of calls cannot
     /// connect and it is better to say so than to let them fail mysteriously.
     @Published private(set) var relayAvailable = true
@@ -125,11 +128,19 @@ final class CallEngine: NSObject, ObservableObject {
         peer.add(track, streamIds: ["stream0"])
         localTrack = track
 
-        guard let device = RTCCameraVideoCapturer.captureDevices()
-            .first(where: { $0.position == .front }) else { throw CallFailure.noCamera }
+        try await point(capturer, front: true)
+    }
 
-        // 640x480 at 30fps: enough for a face on a phone, and cheap enough
-        // that a weak connection is not fighting the encoder as well.
+    /// Points the capturer at one camera and starts it.
+    ///
+    /// 640 by 480 at 30fps: enough for a face on a phone, and cheap enough
+    /// that a weak connection is not fighting the encoder as well as the
+    /// network.
+    private func point(_ capturer: RTCCameraVideoCapturer, front: Bool) async throws {
+        let position: AVCaptureDevice.Position = front ? .front : .back
+        guard let device = RTCCameraVideoCapturer.captureDevices()
+            .first(where: { $0.position == position }) else { throw CallFailure.noCamera }
+
         let format = RTCCameraVideoCapturer.supportedFormats(for: device)
             .min(by: { a, b in
                 let aw = CMVideoFormatDescriptionGetDimensions(a.formatDescription).width
@@ -139,6 +150,21 @@ final class CallEngine: NSObject, ObservableObject {
         guard let format else { throw CallFailure.noCamera }
 
         try await capturer.startCapture(with: device, format: format, fps: 30)
+        usingFront = front
+    }
+
+    /// Turns the camera round.
+    ///
+    /// The capture has to stop before it can start on the other device — the
+    /// same session cannot hold two cameras — so there is a visible blink.
+    /// That is the hardware, not a bug worth hiding behind a fade.
+    func flipCamera() async {
+        guard let capturer, state != .ended else { return }
+        let wanted = !usingFront
+        await withCheckedContinuation { done in
+            capturer.stopCapture { done.resume() }
+        }
+        try? await point(capturer, front: wanted)
     }
 
     // MARK: The exchange
