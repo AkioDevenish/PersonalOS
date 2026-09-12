@@ -71,7 +71,7 @@ final class CallEngine: NSObject, ObservableObject {
         state = .connecting
 
         do {
-            let ice = try await client.iceServers(id: sessionId)
+            let ice = try await client.iceServers()
             relayAvailable = ice.relayAvailable
             try openPeer(with: ice.servers)
             try await attachCamera()

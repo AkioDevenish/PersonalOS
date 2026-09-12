@@ -12,16 +12,6 @@ protocol AuthProvider {
     var isSignedIn: Bool { get }
 }
 
-enum AuthError: LocalizedError {
-    case notSignedIn
-
-    var errorDescription: String? {
-        switch self {
-        case .notSignedIn: return "Sign in to sync your health data"
-        }
-    }
-}
-
 /// Real implementation, backed by the Clerk iOS SDK.
 ///
 /// The template name must be "convex": it matches the JWT template in the

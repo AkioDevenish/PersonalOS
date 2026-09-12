@@ -212,25 +212,3 @@ async function touchConnection(
   }
 }
 
-/** Raw samples for one metric, all providers — for debugging and provenance UI. */
-export const listRaw = query({
-  args: {
-    metric: v.string(),
-    since: v.optional(v.number()),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
-    const since = args.since ?? Date.now() - 7 * 24 * 60 * 60 * 1000
-
-    return await ctx.db
-      .query("health_samples")
-      .withIndex("by_user_metric_recorded", (q) =>
-        q.eq("userId", identity.subject).eq("metric", args.metric).gte("recorded_at", since),
-      )
-      .order("desc")
-      .take(args.limit ?? 500)
-  },
-})

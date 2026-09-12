@@ -117,7 +117,7 @@ struct SessionClient {
         let at: Double
     }
 
-    func iceServers(id: String) async throws -> IceConfig {
+    func iceServers() async throws -> IceConfig {
         let data = try await transport.query("health/signal:iceServers")
         return try JSONDecoder().decode(IceConfig.self, from: data)
     }

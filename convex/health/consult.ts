@@ -31,14 +31,6 @@ function isStaff(userId: string) {
 }
 
 /**
- * The nutritionists a person can choose from.
- *
- * Only those who have written a profile and marked it active: being on the
- * allowlist makes you able to answer, not visible to ask. Someone who hasn't
- * said who they are shouldn't appear on a list of people you might trust with
- * your glucose.
- */
-/**
  * Whether somebody is party to a consultation.
  *
  * The person who booked it, or the one practitioner it was addressed to.
@@ -51,6 +43,14 @@ function party(consult: any, userId: string) {
   return consult.userId === userId || consult.nutritionistId === userId
 }
 
+/**
+ * The nutritionists a person can choose from.
+ *
+ * Only those who have written a profile and marked it active: being on the
+ * allowlist makes you able to answer, not visible to ask. Someone who hasn't
+ * said who they are shouldn't appear on a list of people you might trust with
+ * your glucose.
+ */
 export const professionals = query({
   args: {},
   handler: async (ctx) => {
@@ -76,12 +76,6 @@ export const professionals = query({
   },
 })
 
-/**
- * A nutritionist writing their own profile.
- *
- * Their own, and only their own: the allowlist decides who may answer, and
- * this decides nothing except how they introduce themselves.
- */
 /**
  * Everyone a person may actually choose to ask.
  *
@@ -270,7 +264,6 @@ export const review = mutation({
   },
 })
 
-
 /**
  * Opening a conversation with one specialist, in writing or on a call.
  *
@@ -357,7 +350,6 @@ export const photoUploadUrl = mutation({
   },
 })
 
-
 /**
  * What a session owes, for the payment route.
  *
@@ -411,15 +403,6 @@ export const attachPayment = mutation({
 })
 
 /**
- * Marks a session paid.
- *
- * Only ever called after the processor has been asked directly what happened.
- * Being returned to the app from a checkout page proves nothing: the redirect
- * is a URL the payer could type themselves, and both processors say plainly
- * not to fulfil on it alone.
- */
-/** Records the room a call was actually given, once one has been made. */
-/**
  * "I am here."
  *
  * Sent by a listed practitioner's app while it is open. Presence is derived
@@ -447,20 +430,14 @@ export const heartbeat = mutation({
   },
 })
 
-export const attachRoom = mutation({
-  args: { id: v.id("consults"), room: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
-    const row = await ctx.db.get(args.id)
-    if (!row || row.userId !== identity.subject) throw new Error("No such session")
-
-    await ctx.db.patch(args.id, { room: args.room, updated_at: Date.now() })
-    return { ok: true }
-  },
-})
-
+/**
+ * Marks a session paid.
+ *
+ * Only ever called after the processor has been asked directly what happened.
+ * Being returned to the app from a checkout page proves nothing: the redirect
+ * is a URL the payer could type themselves, and both processors say plainly
+ * not to fulfil on it alone.
+ */
 export const markPaid = mutation({
   args: { id: v.id("consults") },
   handler: async (ctx, args) => {
@@ -473,43 +450,6 @@ export const markPaid = mutation({
 
     await ctx.db.patch(args.id, { payment_status: "paid", updated_at: Date.now() })
     return { already: false }
-  },
-})
-
-export const upsertProfile = mutation({
-  args: {
-    name: v.string(),
-    country: v.string(),
-    credentials: v.string(),
-    bio: v.string(),
-    price_credits: v.number(),
-    active: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-    if (!isStaff(identity.subject)) throw new Error("Not a nutritionist")
-
-    const existing = await ctx.db
-      .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .first()
-
-    const doc = {
-      userId: identity.subject,
-      name: args.name.trim(),
-      country: args.country.trim().toUpperCase(),
-      credentials: args.credentials.trim(),
-      bio: args.bio.trim(),
-      price_credits: Math.max(0, Math.floor(args.price_credits)),
-      active: args.active,
-      updated_at: Date.now(),
-    }
-    if (existing) {
-      await ctx.db.patch(existing._id, doc)
-      return existing._id
-    }
-    return await ctx.db.insert("nutritionists", doc)
   },
 })
 
@@ -750,11 +690,6 @@ export const queue = query({
     const approved =
       (profile && profile.status === "approved") || isStaff(identity.subject)
     if (!approved) throw new Error("You are not listed as a practitioner")
-
-    const rows = await ctx.db
-      .query("consults")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .collect()
 
     // by_user indexes the person who booked; the practitioner's own consults
     // have to be found the other way round.
