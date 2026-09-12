@@ -61,14 +61,3 @@ export async function generateWithGemma({ prompt, model = GEMMA_MODEL, temperatu
   }
   return { text, model }
 }
-
-export function modelPackageManifest() {
-  return {
-    runtimeMode: AI_RUNTIME_MODE,
-    packageId: INCLUDED_DEVICE_MODEL_PACKAGE,
-    model: GEMMA_MODEL,
-    delivery: 'included-with-plan',
-    supportedPlatforms: ['ios'],
-    reportUploadEndpoint: '/api/well-being/device-report',
-  }
-}
