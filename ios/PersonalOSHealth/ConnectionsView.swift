@@ -221,7 +221,7 @@ struct ConnectionsView: View {
                             Text("Model and keys")
                                 .font(Theme.serif(19))
                                 .foregroundStyle(Theme.ink)
-                            Text("Claude, ChatGPT, Kimi, Gemini or your own Mac")
+                            Text(intelligenceSubtitle)
                                 .font(Theme.sans(10.5))
                                 .foregroundStyle(Theme.dust)
                         }
@@ -318,6 +318,19 @@ struct ConnectionsView: View {
         let linked = wearables.filter(\.isConnected).count
         if linked == 0 { return "Apple Health · connect a watch or ring" }
         return "Apple Health and \(linked) more"
+    }
+
+    /// What the row can honestly promise.
+    ///
+    /// It used to name four hosted platforms unconditionally. Those need the
+    /// web service to verify a key and run a reading, and when there isn't one
+    /// the row was an advertisement for a screen that opens on an error. The
+    /// engine on the phone needs nothing and is the truthful headline when it
+    /// is there.
+    private var intelligenceSubtitle: String {
+        ModelChoice.deviceEngineReady
+            ? "Reading on this phone · add a hosted model or your own Mac"
+            : "Claude, ChatGPT, Kimi, Gemini or your own Mac"
     }
 
     private var planTitle: String {

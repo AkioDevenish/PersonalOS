@@ -21,20 +21,16 @@ struct IngestResponse: Decodable {
     }
 }
 
+/// The one thing that can go wrong here that isn't the transport's to explain.
+///
+/// Everything else — no session, no network, a mutation that refused the
+/// write — arrives as a `TransportError` already phrased for a person.
 enum IngestError: LocalizedError {
-    case invalidURL
-    case notSignedIn
-    case http(Int, String)
     case decode
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid server URL"
-        case .notSignedIn: return "Sign in to sync your health data"
-        case .http(let code, let body):
-            if code == 401 { return "Your session expired. Sign in again" }
-            return "HTTP \(code): \(body)"
-        case .decode: return "Unexpected server response"
+        case .decode: return "The sync finished but the reply made no sense"
         }
     }
 }
@@ -46,62 +42,64 @@ enum IngestError: LocalizedError {
 /// secret, which meant the phone declared whose data it was writing — anyone
 /// with the secret could write into any account. There is now no way to name a
 /// user: whoever the token belongs to is whose ledger this lands in.
+///
+/// Writes to Convex directly, as the ledgers and the consultation already do.
+/// It used to POST to a Next route that did nothing but forward the same body
+/// to the same mutation, which meant a sync could only succeed while a server
+/// was up — and both of them were down: the debug build pointed at a Mac on a
+/// LAN address with nothing listening, and the production URL answered 404 to
+/// everything, including its own static pages. Two buttons on the settings
+/// screen that could not work under any circumstances.
 struct IngestClient {
-    private let auth: AuthProvider
+    private let transport: Transport
 
+    /// Sixty seconds: a thirty day backfill is several hundred samples a
+    /// batch, and the default is tuned for a screen waiting on one answer.
     init(auth: AuthProvider = Auth.provider) {
-        self.auth = auth
+        transport = Transport(auth: auth, timeout: 60)
     }
 
-    private var deviceName: String {
-        UIDevice.current.model
-    }
-
-    private func makeRequest(url: URL, body: Data) async throws -> URLRequest {
-        guard let token = await auth.currentToken() else {
-            throw IngestError.notSignedIn
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 60
-        request.httpBody = body
-        return request
-    }
-
-    private func endpoint() throws -> URL {
-        guard let base = URL(string: AppConfig.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw IngestError.invalidURL
-        }
-        return base.appendingPathComponent(AppConfig.ingestPath)
-    }
-
+    /// Convex takes arguments as JSON, and `CanonicalSample` already encodes
+    /// to exactly the object its validator expects, so the samples are round
+    /// tripped through `Encodable` rather than rebuilt field by field here —
+    /// one place for the shape instead of two that can drift apart.
     private func send(_ samples: [CanonicalSample], cursor: String?) async throws -> IngestResponse {
-        let payload = IngestPayload(
-            provider: AppConfig.provider,
-            samples: samples,
-            // so the server buckets a 23:30 walk on today, not tomorrow in UTC
-            timeZone: TimeZone.current.identifier,
-            cursor: cursor
-        )
-
-        let request = try await makeRequest(
-            url: try endpoint(),
-            body: try JSONEncoder().encode(payload)
-        )
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw IngestError.decode }
-
-        guard (200...299).contains(http.statusCode) else {
-            throw IngestError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
-        }
-        guard let decoded = try? JSONDecoder().decode(IngestResponse.self, from: data) else {
+        let encoded = try JSONEncoder().encode(samples)
+        guard let rows = try JSONSerialization.jsonObject(with: encoded) as? [[String: Any]] else {
             throw IngestError.decode
         }
-        return decoded
+
+        var args: [String: Any] = [
+            "provider": AppConfig.provider,
+            "samples": rows,
+            // so the day a 23:30 walk lands on is today, not tomorrow in UTC
+            "timeZone": TimeZone.current.identifier,
+        ]
+        if let cursor { args["cursor"] = cursor }
+
+        let data = try await transport.mutation("health/samples:ingest", args)
+
+        // The mutation answers with the counts alone; there is no envelope to
+        // report success separately, because a failure arrives as a thrown
+        // error rather than as a field.
+        struct Written: Decodable {
+            let inserted: Int
+            let updated: Int
+            let rejected: [IngestResponse.Rejection]?
+        }
+        guard let written = try? JSONDecoder().decode(Written.self, from: data) else {
+            throw IngestError.decode
+        }
+        return IngestResponse(
+            success: true,
+            inserted: written.inserted,
+            updated: written.updated,
+            rejected: written.rejected,
+            error: nil
+        )
     }
+
+    private var deviceName: String { UIDevice.current.model }
 
     /// Today's snapshot.
     @discardableResult
@@ -115,11 +113,10 @@ struct IngestClient {
 
     /// Historical backfill.
     ///
-    /// Batches by sample rather than by day: the server caps a request at 1000
-    /// samples, and one day now yields up to ~19 of them, so counting days
-    /// would overshoot. Re-sending is harmless — ingest upserts on
-    /// (user, provider, metric, recorded_at) — so a partial run can simply be
-    /// repeated.
+    /// Batches by sample rather than by day: one day yields up to ~19 of them,
+    /// so counting days would overshoot whatever the real limit is. Re-sending
+    /// is harmless — ingest upserts on (user, provider, metric, recorded_at) —
+    /// so a partial run can simply be repeated.
     func uploadHistory(snapshots: [HealthSnapshot]) async throws -> (inserted: Int, updated: Int) {
         let all = snapshots.flatMap { CanonicalMapper.samples(from: $0, device: deviceName) }
 

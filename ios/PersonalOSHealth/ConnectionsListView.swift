@@ -127,7 +127,7 @@ struct ConnectionsListView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(c.label)
                     .font(Theme.serif(19))
-                    .foregroundStyle(c.configured ? Theme.ink : Theme.mid)
+                    .foregroundStyle(c.canConnect ? Theme.ink : Theme.mid)
                 Text(subtitle(c))
                     .font(Theme.sans(10.5))
                     .foregroundStyle(Theme.dust)
@@ -143,7 +143,7 @@ struct ConnectionsListView: View {
     }
 
     private func subtitle(_ c: ConnectionsClient.Connection) -> String {
-        if !c.configured { return "Not set up yet" }
+        if !c.canConnect { return "Not set up yet" }
         if c.isConnected {
             guard let t = c.last_sync_at, t > 0 else { return "Connected" }
             let f = RelativeDateTimeFormatter()
@@ -189,7 +189,7 @@ private struct SourceDetailView: View {
                     .lineSpacing(5)
                     .padding(.top, 10)
 
-                if connection.configured {
+                if connection.canConnect {
                     Button {
                         Task { await act() }
                     } label: {
@@ -260,8 +260,8 @@ private struct SourceDetailView: View {
     }
 
     private var blurb: String {
-        if !connection.configured {
-            return "Personal OS needs to be registered as an app with \(connection.label) before this can be linked. The sync is written and waiting on that."
+        if !connection.canConnect {
+            return "Linking \(connection.label) needs the Personal OS web service to hold the registration and run the sign-in redirect, and there isn't one running. The sync is written and waiting on that. Apple Health needs none of it and is already reading."
         }
         if connection.isConnected {
             return "Connected. Syncing pulls the last two weeks; anything already recorded is left alone."

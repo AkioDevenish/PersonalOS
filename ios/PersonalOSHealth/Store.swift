@@ -182,8 +182,15 @@ struct BillingClient {
         return true
     }
 
+    /// Read straight from Convex.
+    ///
+    /// What the plan row says about somebody is a fact in the database, and
+    /// asking a web server to read it back was only ever a detour. Verifying a
+    /// purchase still needs one, because that means checking a signature
+    /// against Apple's roots, which is not a thing to do on the device whose
+    /// purchase is being checked.
     func entitlement() async throws -> Store.Entitlement {
-        let data = try await send(try await request("/api/billing/entitlement", method: "GET"))
+        let data = try await Transport(auth: auth).query("billing/entitlements:mine")
         return try JSONDecoder().decode(Store.Entitlement.self, from: data)
     }
 

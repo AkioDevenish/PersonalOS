@@ -40,9 +40,9 @@ final class ConnectionsClient: NSObject {
 
         var id: String { key }
         var isConnected: Bool { status == "connected" }
+        var canConnect: Bool { configured == true }
     }
 
-    private struct ListResponse: Decodable { let connections: [Connection] }
     private struct LinkResponse: Decodable { let url: String?; let error: String? }
     private struct SyncResponse: Decodable {
         let pulled: Int?
@@ -53,21 +53,31 @@ final class ConnectionsClient: NSObject {
 
     /// The providers this phone can actually offer to link.
     ///
-    /// The route returns every connectable provider the product knows about,
-    /// because the same registry serves the web. Two kinds of row in that list
-    /// are wrong on an iPhone: Apple Health, which the app draws itself from
-    /// what HealthKit reports rather than from a server row — it appeared
-    /// twice otherwise — and the Android device providers, which no amount of
-    /// tapping here can connect. Filtered at the transport so every caller
-    /// sees the same honest list.
+    /// Read straight from Convex. The route this replaced added two fields the
+    /// database does not hold — whether the deployment holds OAuth credentials
+    /// for a provider, and whether anything can pull from one — and then
+    /// failed outright, so the screen behind it showed nothing at all rather
+    /// than the list without those two answers.
+    ///
+    /// Convex returns every connectable provider the product knows about,
+    /// because the same registry serves the web. The Android device providers
+    /// in it are rows no amount of tapping here can connect, so they are
+    /// dropped at the transport and every caller sees the same honest list.
     func list() async throws -> [Connection] {
-        let data = try await send(try await request("/api/health/connections", method: "GET"))
-        let all = try JSONDecoder().decode(ListResponse.self, from: data).connections
+        let data = try await Transport(auth: auth).query("health/connections:available")
+        let all = try JSONDecoder().decode([Connection].self, from: data)
         return all.filter { $0.kind != "device" }
     }
 
     /// Opens the provider's login, returns once the callback lands.
+    ///
+    /// This one needs the web server and always will: OAuth hands its answer
+    /// to a redirect URL, and a redirect URL has to be somewhere that is
+    /// listening. `list()` says whether the deployment holds credentials for
+    /// the provider; if it does not, the honest answer is this sentence rather
+    /// than a login page that cannot complete.
     func connect(_ provider: String) async throws {
+        guard await ServerReachability.shared.isUp() else { throw ConnectionError.noServer }
         let data = try await send(
             try await request("/api/health/oauth/\(provider)/link-url", method: "GET")
         )
@@ -102,8 +112,13 @@ final class ConnectionsClient: NSObject {
     }
 
     /// Pulls a window of days from a connected provider into the ledger.
+    ///
+    /// Also the server's, and for a better reason than the redirect: pulling
+    /// from Oura or Whoop means holding their client secret, and a secret in
+    /// an app is a secret anybody can read out of it.
     @discardableResult
     func sync(_ provider: String, days: Int = 7) async throws -> String {
+        guard await ServerReachability.shared.isUp() else { throw ConnectionError.noServer }
         var r = try await request("/api/health/sync/\(provider)", method: "POST")
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         r.httpBody = try JSONSerialization.data(withJSONObject: ["days": days])
@@ -153,7 +168,7 @@ extension ConnectionsClient: ASWebAuthenticationPresentationContextProviding {
 }
 
 enum ConnectionError: LocalizedError {
-    case badURL, badResponse, notSignedIn, cancelled
+    case badURL, badResponse, notSignedIn, cancelled, noServer
     case server(String)
 
     var errorDescription: String? {
@@ -162,6 +177,8 @@ enum ConnectionError: LocalizedError {
         case .badResponse: return "Unexpected server response"
         case .notSignedIn: return "Sign in to manage connections"
         case .cancelled: return "Connection cancelled."
+        case .noServer:
+            return "Connecting a watch or ring needs the Personal OS web service, which isn't running. Apple Health works without it."
         case .server(let m): return m
         }
     }

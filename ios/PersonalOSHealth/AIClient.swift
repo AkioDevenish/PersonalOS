@@ -58,6 +58,7 @@ struct AIClient {
     // MARK: Calls
 
     func settings() async throws -> Settings {
+        guard await ServerReachability.shared.isUp() else { throw AIError.noServer }
         let data = try await send(request("/api/ai/settings", method: "GET", body: nil))
         return try JSONDecoder().decode(Settings.self, from: data)
     }
@@ -66,6 +67,7 @@ struct AIClient {
     /// so a slow return here means it is genuinely being checked.
     @discardableResult
     func saveKey(provider: String, apiKey: String) async throws -> String? {
+        guard await ServerReachability.shared.isUp() else { throw AIError.noServer }
         var r = try await request("/api/ai/keys", method: "POST",
                                   body: ["provider": provider, "apiKey": apiKey])
         // Verification is a live round trip to someone else's API.
@@ -75,11 +77,13 @@ struct AIClient {
     }
 
     func deleteKey(provider: String) async throws {
+        guard await ServerReachability.shared.isUp() else { throw AIError.noServer }
         let path = "/api/ai/keys?provider=\(provider.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? provider)"
         _ = try await send(request(path, method: "DELETE", body: nil))
     }
 
     func select(provider: String, model: String) async throws {
+        guard await ServerReachability.shared.isUp() else { throw AIError.noServer }
         _ = try await send(request("/api/ai/settings", method: "PUT",
                                    body: ["provider": provider, "model": model]))
     }
@@ -114,7 +118,7 @@ struct AIClient {
 }
 
 enum AIError: LocalizedError {
-    case badURL, badResponse, notSignedIn
+    case badURL, badResponse, notSignedIn, noServer
     case server(String)
 
     var errorDescription: String? {
@@ -122,6 +126,14 @@ enum AIError: LocalizedError {
         case .badURL: return "Invalid server URL"
         case .badResponse: return "Unexpected server response"
         case .notSignedIn: return "Sign in to manage models"
+        case .noServer:
+            return """
+            Hosted models need the Personal OS web service, which isn't \
+            running. A key is checked against the provider and stored \
+            encrypted there, and the readings themselves are written there \
+            too, so none of it can happen from the phone alone. The on-device \
+            engine needs none of that and is what this app falls back to.
+            """
         case .server(let m): return m
         }
     }

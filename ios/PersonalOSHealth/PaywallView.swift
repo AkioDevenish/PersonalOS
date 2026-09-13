@@ -58,29 +58,50 @@ struct PaywallView: View {
                 }
                 .padding(.top, 14)
 
-                if !store.entitlement.isSubscribed {
-                    SectionRule(text: "Subscription").padding(.top, 30)
+                // Two headings over two empty lists is what this page was
+                // before: the App Store returns nothing until the products
+                // exist in App Store Connect, which needs the paid developer
+                // account. A page that says so is worth reading; one that
+                // rules off a void is not.
+                if nothingToBuy {
+                    SectionRule(text: "Not yet").padding(.top, 30)
+                    Text("""
+                    The App Store has no products to offer for this build, so \
+                    there is nothing to buy here yet. Everything the app does \
+                    on the phone — reading Apple Health, the day's briefing, \
+                    goals, and writing to a practitioner — is unaffected and \
+                    costs nothing.
+                    """)
+                        .font(Theme.serifBody(16))
+                        .foregroundStyle(Theme.mid)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 12)
+                } else {
+                    if !store.entitlement.isSubscribed {
+                        SectionRule(text: "Subscription").padding(.top, 30)
+                        VStack(spacing: 0) {
+                            ForEach(store.subscriptions(), id: \.id) { p in
+                                purchaseRow(p, note: p.subscription.map(periodLabel) ?? "")
+                            }
+                        }
+                        .padding(.top, 14)
+                    }
+
+                    SectionRule(text: "Or buy readings").padding(.top, 30)
+                    Text("No subscription. Credits don't expire, and a subscription never spends them.")
+                        .font(Theme.sans(11))
+                        .foregroundStyle(Theme.dust)
+                        .lineSpacing(3)
+                        .padding(.top, 10)
+
                     VStack(spacing: 0) {
-                        ForEach(store.subscriptions(), id: \.id) { p in
-                            purchaseRow(p, note: p.subscription.map(periodLabel) ?? "")
+                        ForEach(store.creditPacks(), id: \.id) { p in
+                            purchaseRow(p, note: "one-off")
                         }
                     }
                     .padding(.top, 14)
                 }
-
-                SectionRule(text: "Or buy readings").padding(.top, 30)
-                Text("No subscription. Credits don't expire, and a subscription never spends them.")
-                    .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
-                    .lineSpacing(3)
-                    .padding(.top, 10)
-
-                VStack(spacing: 0) {
-                    ForEach(store.creditPacks(), id: \.id) { p in
-                        purchaseRow(p, note: "one-off")
-                    }
-                }
-                .padding(.top, 14)
 
                 if let err = store.lastError {
                     Text(err)
@@ -119,6 +140,10 @@ struct PaywallView: View {
             await store.loadProducts()
             await store.refresh()
         }
+    }
+
+    private var nothingToBuy: Bool {
+        store.subscriptions().isEmpty && store.creditPacks().isEmpty
     }
 
     private var blurb: String {
