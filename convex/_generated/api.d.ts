@@ -8,9 +8,24 @@
  * @module
  */
 
+import type * as ai_keys from "../ai/keys.js";
+import type * as ai_preferences from "../ai/preferences.js";
+import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as business from "../business.js";
 import type * as datascience from "../datascience.js";
+import type * as finance from "../finance.js";
+import type * as health_call from "../health/call.js";
+import type * as health_connections from "../health/connections.js";
+import type * as health_consult from "../health/consult.js";
+import type * as health_cuisine from "../health/cuisine.js";
+import type * as health_metrics from "../health/metrics.js";
+import type * as health_providers from "../health/providers.js";
+import type * as health_resolve from "../health/resolve.js";
+import type * as health_samples from "../health/samples.js";
+import type * as health_signal from "../health/signal.js";
+import type * as health_tokens from "../health/tokens.js";
 import type * as marketing from "../marketing.js";
+import type * as time from "../time.js";
 import type * as wellbeing from "../wellbeing.js";
 
 import type {
@@ -20,9 +35,24 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "ai/keys": typeof ai_keys;
+  "ai/preferences": typeof ai_preferences;
+  "billing/entitlements": typeof billing_entitlements;
   business: typeof business;
   datascience: typeof datascience;
+  finance: typeof finance;
+  "health/call": typeof health_call;
+  "health/connections": typeof health_connections;
+  "health/consult": typeof health_consult;
+  "health/cuisine": typeof health_cuisine;
+  "health/metrics": typeof health_metrics;
+  "health/providers": typeof health_providers;
+  "health/resolve": typeof health_resolve;
+  "health/samples": typeof health_samples;
+  "health/signal": typeof health_signal;
+  "health/tokens": typeof health_tokens;
   marketing: typeof marketing;
+  time: typeof time;
   wellbeing: typeof wellbeing;
 }>;
 

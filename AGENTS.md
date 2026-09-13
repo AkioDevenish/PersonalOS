@@ -12,13 +12,29 @@ All env vars are documented in `.env.example`. Key groups:
 - **Convex:** `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_DEPLOYMENT_KEY`
 - **Auth mode:** `PERSONAL_OS_AUTH_MODE` (`local`|`saas`), `PERSONAL_OS_LOCAL_USER_ID`, `PERSONAL_OS_LOCAL_WORKSPACE_ID`
 - **AI:** `GEMMA_URL`/`GEMMA_MODEL`, `OLLAMA_URL`/`OLLAMA_MODEL` (aliases)
-- **Data paths:** `HEALTH_DB_PATH`, `MARKETING_DB_PATH`, `ACTIVITY_SYNC_SCRIPT_PATH`, `DS_TRACKER_PATH`
+- **Data paths:** `HEALTH_DB_PATH`
 
-Routes that depend on Ollama/Gemma (music recommendation, marketing generate, nutrition AI) prefer `GEMMA_URL`/`GEMMA_MODEL` over `OLLAMA_*` over inline defaults.
+The two routes that reach a local model, `well-being/analyze` and `well-being/nutrition-ai`, prefer `GEMMA_URL`/`GEMMA_MODEL` over `OLLAMA_*` over inline defaults.
 
 # Codebase Conventions
 
 - **Auth:** Clerk JWT token is passed to Convex via `getToken({ template: 'convex' })`. See `src/lib/convex-client.ts`.
 - **API routes:** Use `getRequestActor(request)` from `src/lib/request-actor.ts` for multi-tenant support.
 - **Health SQLite:** DB path is resolved via `HEALTH_DB_PATH` env var, then `~/personal_os/Well Being/data/health.db`.
-- **Landing page:** Auth-aware; redirects signed-in users to `/hub`.
+- **No web UI:** this is an API surface for the iOS app, plus the privacy and
+  terms pages. Every route here has a caller in `ios/PersonalOSHealth`; the
+  ledgers, the directory and the consultation both reach Convex directly.
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->

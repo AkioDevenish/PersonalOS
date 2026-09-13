@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
+import { generateForUser, readSettings, requireCaller } from '@/lib/ai/user-model'
 
 const dbPath = process.env.HEALTH_DB_PATH || path.join(os.homedir(), 'personal_os', 'Well Being', 'data', 'health.db')
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate'
@@ -49,6 +50,28 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const userQuery = body.query || ''
     const mealContext = body.context || '' // e.g. "breakfast", "pre-workout", "snack"
+    /**
+     * Where the person cooks and shops.
+     *
+     * Without it the model reaches for the same handful of Californian
+     * wellness food every time, and a meal you can't buy the ingredients for
+     * is not a recommendation. Sent as a display name rather than a code so
+     * the prompt reads as English.
+     */
+    const country = typeof body.country === 'string' ? body.country.trim() : ''
+    /**
+     * The dishes people who eat there have actually named.
+     *
+     * Recalling a country's everyday food is the hard version of the task, and
+     * the one models get wrong by inventing plausible-sounding names. Choosing
+     * from a list is the easy version — and this list is built by the people
+     * doing the eating.
+     */
+    const dishes: string[] = Array.isArray(body.dishes)
+      ? body.dishes
+          .filter((d: unknown): d is string => typeof d === 'string' && d.trim() !== '')
+          .slice(0, 40)
+      : []
 
     const db = new Database(dbPath)
 
@@ -168,7 +191,10 @@ export async function POST(request: Request) {
     const prompt = `You are a Senior Sports Nutritionist & Diabetic Meal Planning Specialist. You have deep expertise in glycemic index optimization, macronutrient timing, and performance nutrition. You are creative and never repeat yourself.
 
 CURRENT TIME: ${timeStr} on ${dayStr}
-MEAL TIMING: ${mealTiming}
+MEAL TIMING: ${mealTiming}${country ? `
+WHERE THEY EAT: ${country}. Every recommendation must be a dish eaten in ${country}, built from ingredients ordinarily sold there. Use the local name for the dish where it has one. Do not recommend anything that would have to be imported or specially ordered.` : ''}${dishes.length ? `
+DISHES PEOPLE THERE ACTUALLY EAT — choose from these and use the names exactly as written. Only go outside this list if nothing on it suits the readings, and say so if you do:
+${dishes.map((d) => `  - ${d}`).join('\n')}` : ''}
 
 CONTEXT — Today's Metabolic Events:
 ${eventsContext}
@@ -197,8 +223,8 @@ RULES:
 - If 30-day avg glucose is trending higher than 7-day, note the improvement or call out the regression.
 - If sleep is chronically low (< 7hrs avg over 30 days), recommend sleep-promoting nutrients.
 - Account for the time of day when recommending meals vs snacks.
-- Be CREATIVE and DIVERSE. Use foods from various cuisines.
-- Consider foods that are seasonal and practical.
+- Be CREATIVE and DIVERSE${country ? ` within the food of ${country} — vary the dish, the protein and the method, not the country` : '. Use foods from various cuisines'}.
+- Consider foods that are seasonal and practical${country ? ` in ${country}` : ''}.
 
 FORMAT each recommendation exactly like this:
 [MEAL_REC]
@@ -212,6 +238,31 @@ After the 3 recommendations, add one line:
 [NUTRITION_INSIGHT] <A single-sentence metabolic insight about their current nutritional state based on the data>
 
 No greetings. No disclaimers. No markdown headers. Just the structured output.`
+
+    /**
+     * A user who picked a hosted model gets it here.
+     *
+     * Only the local Ollama path streams. The hosted providers each have their
+     * own streaming protocol, and the app doesn't consume this incrementally
+     * anyway — it reads the whole body before rendering — so a single
+     * non-streaming call buys nothing but simplicity. The response shape and
+     * content type stay identical either way, so the client can't tell.
+     */
+    const caller = await requireCaller(request).catch(() => null)
+    const selection = caller ? (await readSettings(caller)).selection : null
+
+    if (caller && selection && selection.provider !== 'ollama') {
+      const { text } = await generateForUser(caller, prompt, { temperature: 1.0 })
+      const db = new Database(dbPath)
+      try {
+        saveRecommendation(db, mealContext || mealTiming, text)
+      } finally {
+        db.close()
+      }
+      return new Response(text, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      })
+    }
 
     const ollamaRes = await fetch(OLLAMA_URL, {
       method: 'POST',
