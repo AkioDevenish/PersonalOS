@@ -82,8 +82,13 @@ struct SignInView: View {
 /// cases below and the matching lines in the switch, nothing more. They were
 /// removed from view rather than deleted because they work and are wired to
 /// live Convex modules.
+///
+/// Finance and Time are parked the same way. FinanceView.swift, TimeView.swift
+/// and the Convex ledgers behind them are untouched and still deployed; only
+/// the two cases here, their two `Tab`s and their two lines in the switch came
+/// out. Home lost the tiles that pointed at them in the same breath.
 enum AppTab: CaseIterable, Hashable {
-    case home, health, finance, time, settings
+    case home, health, settings
 
     /// The system fills the selected one and tints it, so only the outline is
     /// named here. The hand-rolled bar used to keep a `.fill` twin for that
@@ -92,8 +97,6 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .home: return "house"
         case .health: return "heart"
-        case .finance: return "dollarsign.gauge.chart.leftthird.topthird.rightthird"
-        case .time: return "clock"
         case .settings: return "person"
         }
     }
@@ -104,8 +107,6 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .home: return "Home"
         case .health: return "Health"
-        case .finance: return "Finance"
-        case .time: return "Time"
         case .settings: return "Profile"
         }
     }
@@ -247,8 +248,6 @@ struct RootView: View {
         TabView(selection: selection) {
             Tab(value: AppTab.home) { stack(for: .home) } label: { glyph(.home) }
             Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
-            Tab(value: AppTab.finance) { stack(for: .finance) } label: { glyph(.finance) }
-            Tab(value: AppTab.time) { stack(for: .time) } label: { glyph(.time) }
             Tab(value: AppTab.settings) { stack(for: .settings) } label: { glyph(.settings) }
         }
         // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
@@ -321,8 +320,6 @@ struct RootView: View {
         // can do, so it is handed the way to ask.
         case .home:     HomeView { tab = $0 }
         case .health:   HealthView()
-        case .finance:  FinanceView()
-        case .time:     TimeView()
         case .settings: ConnectionsView()
         }
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The landing page, and the only screen that looks across all three ledgers.
+/// The landing page, and the one screen that summarises rather than reads.
 ///
 /// Every other tab is a page of writing. This one is a dashboard, and it is
 /// laid out like one: a greeting, one wide card carrying the day's read, then
@@ -8,35 +8,27 @@ import SwiftUI
 ///
 /// That means shapes with fills, which the rest of the app deliberately gave
 /// up — `Plate` in Theme.swift records why, and it was right about a page of
-/// prose. A summary is the exception: without something to hold them, six
-/// figures on bare linen read as a list of unrelated numbers rather than four
+/// prose. A summary is the exception: without something to hold them, the
+/// figures on bare linen read as a list of unrelated numbers rather than
 /// things you can check on. The fills are the same warm the type sits on, and
 /// nothing is outlined, so the tiles lift off the ground rather than being
 /// drawn onto it.
+///
+/// The money and hours tiles sat beside the health one until Finance and Time
+/// were pulled from the bar. They are not deleted, only unbuilt: the tiles
+/// went with the tabs because a tile whose whole job is to switch to a tab
+/// has nowhere to send you once that tab is gone, and the two write buttons
+/// under them went for the same reason — an entry you can record and never
+/// read back is worse than no button at all.
 struct HomeView: View {
     /// Sends you to the tab that owns a tile. The bar's selection lives in
     /// RootView, so the tile asks rather than reaches.
     var go: (AppTab) -> Void
 
     @EnvironmentObject private var health: HealthKitManager
-    @AppStorage("ledger_currency") private var currency = Money.deviceDefault
-
     @State private var snapshot: HealthSnapshot?
-    @State private var moneyLedger = FinanceClient.Ledger.empty
-    @State private var timeLedger = TimeClient.Ledger.empty
 
-    // One flag per ledger rather than one for the page. HealthKit can take its
-    // time, or on a simulator never answer at all, and a single flag let it
-    // hold the money and the hours hostage behind a read never coming back.
     @State private var healthLoading = true
-    @State private var moneyLoading = true
-    @State private var timeLoading = true
-
-    @State private var writingMoney = false
-    @State private var writingTime = false
-
-    private let finance = FinanceClient()
-    private let clock = TimeClient()
 
     private var dateKicker: String {
         let f = DateFormatter()
@@ -60,19 +52,9 @@ struct HomeView: View {
                 healthTile
                     .flowIn(2)
 
-                HStack(spacing: 14) {
-                    moneyTile
-                    timeTile
-                }
-                .flowIn(3)
-
                 if !goals.isEmpty {
-                    goalsTile(goals).flowIn(4)
+                    goalsTile(goals).flowIn(3)
                 }
-
-                writeRow
-                    .padding(.top, 6)
-                    .flowIn(5)
 
                 Ornament()
                     .padding(.top, 34)
@@ -84,24 +66,6 @@ struct HomeView: View {
         .background(Theme.linen)
         .refreshable { await load() }
         .task { await load() }
-        .sheet(isPresented: $writingMoney) {
-            FinanceEntrySheet(currency: currency) { date, minor, category, note in
-                try await finance.add(
-                    date: date, minor: minor, currency: currency,
-                    category: category, note: note
-                )
-                await loadMoney()
-            }
-        }
-        .sheet(isPresented: $writingTime) {
-            TimeBlockSheet { start, minutes, activity, category, note in
-                try await clock.add(
-                    start: start, minutes: minutes, activity: activity,
-                    category: category, note: note
-                )
-                await loadTime()
-            }
-        }
     }
 
     // MARK: The page
@@ -174,56 +138,6 @@ struct HomeView: View {
         .buttonStyle(.pressRow)
     }
 
-    private var moneyTile: some View {
-        Button {
-            Haptics.select()
-            go(.finance)
-        } label: {
-            Tile {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Kicker(text: "Money", size: 9)
-                        Spacer(minLength: 0)
-                        glyph("dollarsign", Theme.amber, size: 15)
-                    }
-                    figure(moneyFigure, loading: moneyLoading, size: 26)
-                    Text(moneyLoading ? "Reading" : moneyNote)
-                        .font(Theme.sans(11))
-                        .foregroundStyle(Theme.mid)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .buttonStyle(.pressRow)
-    }
-
-    private var timeTile: some View {
-        Button {
-            Haptics.select()
-            go(.time)
-        } label: {
-            Tile {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Kicker(text: "Time", size: 9)
-                        Spacer(minLength: 0)
-                        glyph("clock", Theme.sage, size: 15)
-                    }
-                    figure(timeFigure, loading: timeLoading, size: 26)
-                    Text(timeLoading ? "Reading" : timeNote)
-                        .font(Theme.sans(11))
-                        .foregroundStyle(Theme.mid)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .buttonStyle(.pressRow)
-    }
-
     /// Goals as a row of marks rather than a number.
     ///
     /// "3 of 5" makes you do the arithmetic to find out whether that is a good
@@ -260,30 +174,6 @@ struct HomeView: View {
         case .unmeasured: return Theme.hairline
         case .missed: return Theme.amber.opacity(0.45)
         }
-    }
-
-    /// The two things you might have opened the app to write down.
-    private var writeRow: some View {
-        HStack(spacing: 12) {
-            writeButton("Record an entry") { writingMoney = true }
-            writeButton("Log some time") { writingTime = true }
-        }
-    }
-
-    private func writeButton(_ title: String, _ action: @escaping () -> Void) -> some View {
-        Button {
-            Haptics.tap()
-            action()
-        } label: {
-            Text(title)
-                .font(Theme.sans(12, medium: true))
-                .foregroundStyle(Theme.warm)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Theme.ink)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.press)
     }
 
     // MARK: Small parts
@@ -334,51 +224,11 @@ struct HomeView: View {
         return (spec.phrase ?? spec.label).lowercased() + " today"
     }
 
-    private var moneyFigure: String? {
-        guard let t = moneyLedger.totals.first(where: { $0.currency == currency })
-                ?? moneyLedger.totals.first else { return nil }
-        return Money.text(t.net, t.currency, showingSign: true)
-    }
-
-    private var moneyNote: String {
-        moneyLedger.entries.isEmpty ? "Nothing written this week" : "net this week"
-    }
-
-    private var timeFigure: String? {
-        timeLedger.blocks.isEmpty ? nil : Duration.hours(timeLedger.totalMinutes) + "h"
-    }
-
-    private var timeNote: String {
-        timeLedger.blocks.isEmpty ? "Nothing logged this week" : "logged this week"
-    }
-
     // MARK: Behaviour
 
     private func load() async {
-        // Three independent reads, each landing on its own tile as it arrives.
-        // Awaiting all three together meant the slowest decided when any of
-        // them appeared, and one that never returns meant never.
-        async let body: Void = loadHealth()
-        async let purse: Void = loadMoney()
-        async let hours: Void = loadTime()
-        _ = await (body, purse, hours)
-    }
-
-    private func loadHealth() async {
         snapshot = try? await health.fetchTodaySnapshot()
         healthLoading = false
-    }
-
-    private func loadMoney() async {
-        let week = LedgerSpan.week.window()
-        moneyLedger = (try? await finance.ledger(from: week.from, to: week.to)) ?? .empty
-        moneyLoading = false
-    }
-
-    private func loadTime() async {
-        let week = LedgerSpan.week.window()
-        timeLedger = (try? await clock.ledger(from: week.from, to: week.to)) ?? .empty
-        timeLoading = false
     }
 }
 
