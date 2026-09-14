@@ -7,9 +7,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Personal OS uses the camera for video consultations with a practitioner you have chosen.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub.</string>
+	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub. If you use the cycle page, it also reads your period from Health; that stays on this phone and is never sent anywhere.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Personal OS does not write to Health.</string>
+	<string>Personal OS writes one thing to Health: a period you record on the cycle page. It is saved to Health so your watch can use it and so you can delete it there yourself.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Personal OS uses the microphone for video consultations with a practitioner you have chosen.</string>
 	<key>UIAppFonts</key>

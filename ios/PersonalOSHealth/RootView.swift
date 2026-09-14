@@ -119,7 +119,7 @@ enum AppTab: CaseIterable, Hashable {
 /// driven by a path can be emptied from anywhere, which is what makes tapping
 /// the tab you're already on take you home.
 enum Route: Hashable {
-    case briefing, history, nutrition, specialists, professionals, paywall, goals
+    case briefing, history, nutrition, specialists, professionals, paywall, goals, cycle
     /// One practitioner's page.
     ///
     /// Carries the whole record rather than an id, because the directory has
@@ -391,6 +391,7 @@ struct RootView: View {
                     case .practice: PractitionerView()
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
+                    case .cycle:        CycleView()
                     }
                 }
                 .toolbarBackground(Theme.linen, for: .navigationBar)

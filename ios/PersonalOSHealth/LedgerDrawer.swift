@@ -29,6 +29,9 @@ struct LedgerDrawer: View {
         (.specialists, "Specialists", "Read by an expert on this phone"),
         (.professionals, "Practitioners", "Real people you can ask"),
         (.goals, "Goals", "What you're aiming at"),
+        // Kept on the phone and out of the sync, which is the note worth
+        // making on the way in rather than once somebody is already inside.
+        (.cycle, "Cycle", "Where you are, kept on this phone only"),
     ]
 
     var body: some View {
