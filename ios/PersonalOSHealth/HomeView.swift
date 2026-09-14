@@ -60,6 +60,10 @@ struct HomeView: View {
                     goalsTile(goals).flowIn(3)
                 }
 
+                elsewhere
+                    .padding(.top, 4)
+                    .flowIn(4)
+
                 Ornament()
                     .padding(.top, 34)
                     .padding(.bottom, 26)
@@ -137,6 +141,72 @@ struct HomeView: View {
                     Spacer(minLength: 0)
                     glyph("heart", Theme.amber)
                 }
+            }
+        }
+        .buttonStyle(.pressRow)
+    }
+
+    /// Everything that isn't today.
+    ///
+    /// These five were behind a drawer, which hid three of the app's verbs
+    /// behind a gesture nobody had been told about — a risk LedgerDrawer's own
+    /// comment named when it was built. On the page they are simply there.
+    ///
+    /// Paired across two columns, with an odd one left full width rather than
+    /// floated beside a gap. Nothing here carries a figure: a card that had to
+    /// read a ledger to draw itself would make opening the app wait on five
+    /// answers, and the cycle would put a permission prompt on the home
+    /// screen, which is exactly where it should not be.
+    private var elsewhere: some View {
+        VStack(spacing: 14) {
+            ForEach(Array(Self.places.chunked(into: 2).enumerated()), id: \.offset) { _, pair in
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(pair, id: \.route) { place in
+                        placeCard(place)
+                    }
+                    // A single card on the last row takes the full width; an
+                    // invisible partner would leave it half-wide beside a hole.
+                }
+            }
+        }
+    }
+
+    private struct Place {
+        let route: Route
+        let title: String
+        let note: String
+        let symbol: String
+    }
+
+    private static let places: [Place] = [
+        .init(route: .history, title: "Records", note: "Any measurement, over time", symbol: "chart.xyaxis.line"),
+        .init(route: .nutrition, title: "Nutrition", note: "What to eat next", symbol: "leaf"),
+        .init(route: .specialists, title: "Specialists", note: "Read on this phone", symbol: "sparkles"),
+        .init(route: .professionals, title: "Practitioners", note: "Real people you can ask", symbol: "person.2"),
+        .init(route: .cycle, title: "Cycle", note: "Kept on this phone only", symbol: "circle.dotted"),
+    ]
+
+    private func placeCard(_ place: Place) -> some View {
+        NavigationLink(value: place.route) {
+            Tile {
+                VStack(alignment: .leading, spacing: 10) {
+                    glyph(place.symbol, Theme.amber, size: 16)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(place.title)
+                            .font(Theme.serif(20))
+                            .foregroundStyle(Theme.ink)
+                        Text(place.note)
+                            .font(Theme.sans(10.5))
+                            .foregroundStyle(Theme.dust)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                // Fills the row's height so a pair whose notes wrap to
+                // different depths still reads as two cards of one size
+                // rather than one card and a short one.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .buttonStyle(.pressRow)
@@ -252,5 +322,18 @@ private struct Tile<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.warm, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+}
+
+extension Array {
+    /// Fixed-size runs, for laying a list out in columns.
+    ///
+    /// The last run is short rather than padded, which is what lets a lone
+    /// card take the full width instead of sitting half-wide beside nothing.
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [self] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
     }
 }
