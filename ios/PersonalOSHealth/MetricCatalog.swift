@@ -103,9 +103,7 @@ struct MetricSpec: Identifiable, Hashable {
     }
 
     static func grouped(_ v: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: Int(v.rounded()))) ?? String(Int(v))
+        Formatters.grouped.string(from: NSNumber(value: Int(v.rounded()))) ?? String(Int(v))
     }
 }
 

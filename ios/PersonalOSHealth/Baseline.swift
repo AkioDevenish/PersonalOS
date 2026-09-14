@@ -99,12 +99,9 @@ struct Baseline {
             ? (values[mid - 1] + values[mid]) / 2
             : values[mid]
 
-        let name = DateFormatter()
-        name.dateFormat = "EEEE"
-
         return Baseline(
             spec: spec,
-            weekday: name.string(from: day),
+            weekday: Formatters.weekday.string(from: day),
             typical: median,
             samples: values.count
         )

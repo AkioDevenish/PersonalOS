@@ -15,16 +15,36 @@ import Foundation
 enum Goals {
     private static let key = "personal_os_goals"
 
+    /// Decoded once and kept.
+    ///
+    /// This used to read UserDefaults and decode the whole dictionary on every
+    /// access, and `target(_:)` is one access per metric — so asking for the
+    /// day's progress meant a dozen reads and a dozen JSON decodes. Cheap once
+    /// a second; the home screen asks for it inside `body`, which on a drag is
+    /// every frame, and a hundred-odd decodes a second on the main thread is
+    /// something you can feel under your thumb.
+    ///
+    /// Goals change when somebody sets one, which happens on a screen with a
+    /// stepper on it. Nothing else writes this key, so the cache is correct as
+    /// long as the setter clears it, which is the only way in.
+    private static var cache: [String: Double]?
+
     /// Metric id to target. Absent means no goal, which is different from a
     /// target of zero.
     static var all: [String: Double] {
         get {
+            if let cache { return cache }
             guard let data = UserDefaults.standard.data(forKey: key),
                   let decoded = try? JSONDecoder().decode([String: Double].self, from: data)
-            else { return [:] }
+            else {
+                cache = [:]
+                return [:]
+            }
+            cache = decoded
             return decoded
         }
         set {
+            cache = newValue
             guard let data = try? JSONEncoder().encode(newValue) else { return }
             UserDefaults.standard.set(data, forKey: key)
         }

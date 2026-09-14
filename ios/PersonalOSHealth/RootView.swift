@@ -148,10 +148,32 @@ struct RootView: View {
     /// thumb instead of waiting for the gesture to finish and then jumping.
     @State private var dragged: CGFloat = 0
 
+    /// Where the finger was when this drag's first movement was reported.
+    ///
+    /// `DragGesture(minimumDistance:)` does not begin reporting until the
+    /// finger has already travelled that far, and then reports the whole
+    /// distance — so the page jumped the threshold in one frame the instant it
+    /// started moving. Subtracting the first reading makes the page start
+    /// where the finger is.
+    @State private var dragAnchor: CGFloat?
+
     private var shift: CGFloat {
         let base = drawer ? LedgerDrawer.width : 0
         return min(max(base + dragged, 0), LedgerDrawer.width)
     }
+
+    /// How far open, nought to one.
+    private var progress: CGFloat { shift / LedgerDrawer.width }
+
+    /// Grown over the first eighth of the travel rather than switched on at
+    /// the first pixel. A corner that appears in one frame invalidates the
+    /// whole clip at exactly the moment the finger starts moving, which is the
+    /// moment there is least to spare.
+    private var pageRadius: CGFloat { 30 * min(1, progress * 8) }
+
+    private var pageOverhang: CGFloat { 80 * (1 - progress) }
+
+    private var pageScale: CGFloat { 1 - progress * 0.06 }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -164,6 +186,24 @@ struct RootView: View {
                     tab = .health
                     paths[.health] = [route]
                 }
+            }
+
+            // The page's shadow, cast by a shape rather than by the page.
+            //
+            // `.shadow` on the page itself meant Core Animation had to render
+            // the entire app — TabView, scroll views, every tile — into an
+            // offscreen buffer and Gaussian blur it, once per frame, for the
+            // whole drag. Blurring this instead costs a rounded rectangle.
+            // It is filled rather than stroked so the page sits on it exactly
+            // and only the fringe shows, which is what a shadow is.
+            if shift > 0 {
+                PageReveal(radius: pageRadius, overhang: pageOverhang)
+                    .fill(Theme.linen)
+                    .ignoresSafeArea()
+                    .scaleEffect(pageScale, anchor: .center)
+                    .offset(x: shift)
+                    .shadow(color: Theme.ink.opacity(0.16), radius: 22, x: -6)
+                    .allowsHitTesting(false)
             }
 
             page
@@ -193,23 +233,16 @@ struct RootView: View {
                     if !drawer { DrawerHandle(open: $drawer) }
                 }
                 .gesture(edgeDrag)
-                .clipShape(
-                    PageReveal(
-                        radius: shift > 0 ? 30 : 0,
-                        // While the drawer is shut the clip runs past the
-                        // bottom of the page, because the system draws the
-                        // floating tab bar partly outside the TabView's own
-                        // bounds and a clip that stops at the edge shears the
-                        // labels off. As the page slides across, the overhang
-                        // closes to nothing: by then the page has shrunk away
-                        // from the bottom of the screen and the real corner is
-                        // what should be showing.
-                        overhang: 80 * (1 - shift / LedgerDrawer.width)
-                    )
-                )
-                .scaleEffect(1 - (shift / LedgerDrawer.width) * 0.06, anchor: .center)
+                // While the drawer is shut the clip runs past the bottom of
+                // the page, because the system draws the floating tab bar
+                // partly outside the TabView's own bounds and a clip that
+                // stops at the edge shears the labels off. As the page slides
+                // across, the overhang closes to nothing: by then the page has
+                // shrunk away from the bottom of the screen and the real
+                // corner is what should be showing.
+                .clipShape(PageReveal(radius: pageRadius, overhang: pageOverhang))
+                .scaleEffect(pageScale, anchor: .center)
                 .offset(x: shift)
-                .shadow(color: Theme.ink.opacity(shift > 0 ? 0.16 : 0), radius: 22, x: -6)
         }
         .background(Theme.linen)
     }
@@ -221,10 +254,13 @@ struct RootView: View {
                 // Only from the edge when closed, so a swipe inside the page
                 // is still the page's own gesture.
                 guard drawer || value.startLocation.x < 28 else { return }
-                dragged = value.translation.width
+                let anchor = dragAnchor ?? value.translation.width
+                if dragAnchor == nil { dragAnchor = anchor }
+                dragged = value.translation.width - anchor
             }
             .onEnded { value in
-                let travelled = value.translation.width
+                let travelled = value.translation.width - (dragAnchor ?? 0)
+                dragAnchor = nil
                 guard drawer || value.startLocation.x < 28 else { return }
                 withAnimation(Theme.Motion.flow) {
                     if drawer { drawer = travelled > -60 } else { drawer = travelled > 60 }

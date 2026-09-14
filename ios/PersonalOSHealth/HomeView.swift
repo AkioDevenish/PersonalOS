@@ -30,17 +30,21 @@ struct HomeView: View {
 
     @State private var healthLoading = true
 
-    private var dateKicker: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE · MMMM d"
-        return f.string(from: Date())
-    }
+    /// Worked out when the reading changes, not while the page is drawn.
+    ///
+    /// Both of these used to be the first two lines of `body`. That is fine
+    /// when a body runs because something changed, and not fine when it runs
+    /// because a finger is moving: dragging the drawer redraws the whole page
+    /// every frame, and every frame was recomposing the briefing's prose and
+    /// re-deriving every goal. Neither depends on anything but the snapshot,
+    /// so both are worked out once when that arrives.
+    @State private var briefing = Briefing.compose(from: nil)
+    @State private var goals: [Goals.Progress] = []
+
+    private var dateKicker: String { Formatters.dayAndDate.string(from: Date()) }
 
     var body: some View {
-        let briefing = Briefing.compose(from: snapshot)
-        let goals = Goals.progress(on: snapshot)
-
-        return ScrollView {
+        ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
                     .padding(.bottom, 4)
@@ -228,6 +232,8 @@ struct HomeView: View {
 
     private func load() async {
         snapshot = try? await health.fetchTodaySnapshot()
+        briefing = Briefing.compose(from: snapshot)
+        goals = Goals.progress(on: snapshot)
         healthLoading = false
     }
 }

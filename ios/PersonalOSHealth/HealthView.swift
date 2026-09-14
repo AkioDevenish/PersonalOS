@@ -15,11 +15,7 @@ struct HealthView: View {
     @State private var loadFailed = false
     @State private var appeared = false
 
-    private var dateKicker: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE · MMMM d"
-        return f.string(from: Date())
-    }
+    private var dateKicker: String { Formatters.dayAndDate.string(from: Date()) }
 
     /// Which groups this page prints. Recovery & environment is not one of
     /// them: its two figures are large at the top, and what remained under the
@@ -203,11 +199,7 @@ struct HealthView: View {
         }
     }
 
-    private var weekdayName: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE"
-        return f.string(from: Date())
-    }
+    private var weekdayName: String { Formatters.weekday.string(from: Date()) }
 
     private func usually(_ spec: MetricSpec, _ baseline: Baseline) -> String {
         let figure = spec.format(baseline.typical)
