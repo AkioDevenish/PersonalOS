@@ -157,9 +157,20 @@ struct RootView: View {
     /// where the finger is.
     @State private var dragAnchor: CGFloat?
 
+    /// Rounded to whole points, and that rounding is the fix for the seam.
+    ///
+    /// A finger held still is not still: touch coordinates wobble by fractions
+    /// of a point, so `shift` wobbled with them. The page and the shape
+    /// casting its shadow are two layers that share an edge, and a fractional
+    /// offset lets Core Animation round them to different device pixels — on
+    /// some frames and not others. What that looks like is a hairline of the
+    /// shape winking in and out along the edge of the page, which is exactly
+    /// what a drawer held half closed was doing.
+    ///
+    /// On the same grid they cannot disagree.
     private var shift: CGFloat {
         let base = drawer ? LedgerDrawer.width : 0
-        return min(max(base + dragged, 0), LedgerDrawer.width)
+        return min(max(base + dragged, 0), LedgerDrawer.width).rounded()
     }
 
     /// How far open, nought to one.
@@ -196,10 +207,17 @@ struct RootView: View {
             // whole drag. Blurring this instead costs a rounded rectangle.
             // It is filled rather than stroked so the page sits on it exactly
             // and only the fringe shows, which is what a shadow is.
+            //
+            // Inset a couple of points so the page overlaps it on every side.
+            // Two layers meeting exactly on an edge is a seam waiting for a
+            // rounding disagreement; two layers where one is wholly inside the
+            // other cannot show one. The blur reaches twenty two points, so
+            // losing two off the source costs nothing you can see.
             if shift > 0 {
                 PageReveal(radius: pageRadius, overhang: pageOverhang)
                     .fill(Theme.linen)
                     .ignoresSafeArea()
+                    .padding(2)
                     .scaleEffect(pageScale, anchor: .center)
                     .offset(x: shift)
                     .shadow(color: Theme.ink.opacity(0.16), radius: 22, x: -6)
