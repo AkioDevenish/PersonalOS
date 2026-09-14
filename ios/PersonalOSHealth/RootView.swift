@@ -223,16 +223,36 @@ struct RootView: View {
                 // 268 points now showing the drawer. The invisible sheet that
                 // closes the drawer was lying across the entries, swallowing
                 // every tap. Inside the offset, it travels with the page.
+                //
+                // The drag lives on these two layers rather than on the page,
+                // and that is the whole of the flicker fix. A `.gesture` on
+                // the page is a gesture on everything inside it: the TabView,
+                // its scroll views, and a floating bar that minimises itself
+                // when it thinks the content is scrolling. All of them were
+                // being offered the same touch, and they took turns claiming
+                // it — which is what a finger held still was showing.
+                //
+                // Both layers are plain colour with nothing underneath them
+                // that wants a pan, so there is nothing left to arbitrate
+                // against and the drag simply tracks.
                 .overlay {
                     if drawer {
                         Theme.ink.opacity(0.05)
+                            .contentShape(Rectangle())
+                            .gesture(pageDrag)
                             .onTapGesture { withAnimation(Theme.Motion.flow) { drawer = false } }
                     }
                 }
                 .overlay(alignment: .leading) {
-                    if !drawer { DrawerHandle(open: $drawer) }
+                    if !drawer {
+                        // A strip the width of the reach, not the whole page.
+                        Color.clear
+                            .frame(width: 28)
+                            .contentShape(Rectangle())
+                            .gesture(pageDrag)
+                            .overlay(alignment: .leading) { DrawerHandle(open: $drawer) }
+                    }
                 }
-                .gesture(edgeDrag)
                 // While the drawer is shut the clip runs past the bottom of
                 // the page, because the system draws the floating tab bar
                 // partly outside the TabView's own bounds and a clip that
@@ -247,21 +267,31 @@ struct RootView: View {
         .background(Theme.linen)
     }
 
-    /// Drag from the left edge to open, drag back to close.
-    private var edgeDrag: some Gesture {
+    /// Drag from the left edge to open, drag back over the page to close.
+    ///
+    /// Whichever layer is showing owns this: the edge strip when the drawer is
+    /// shut, the dimming sheet when it is open. Neither has anything beneath
+    /// it that competes for a pan, so it no longer matters that the page is
+    /// full of scroll views.
+    private var pageDrag: some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
-                // Only from the edge when closed, so a swipe inside the page
-                // is still the page's own gesture.
-                guard drawer || value.startLocation.x < 28 else { return }
+                // A drag that is mostly up or down is somebody scrolling, or
+                // starting to, and the page should not slide because of it.
+                guard abs(value.translation.width) > abs(value.translation.height) else {
+                    dragAnchor = nil
+                    return
+                }
                 let anchor = dragAnchor ?? value.translation.width
                 if dragAnchor == nil { dragAnchor = anchor }
                 dragged = value.translation.width - anchor
             }
             .onEnded { value in
+                // Reset first and unconditionally. A gesture that is cancelled
+                // rather than ended leaves nothing behind to poison the next
+                // one with an offset measured from a finger that has gone.
                 let travelled = value.translation.width - (dragAnchor ?? 0)
                 dragAnchor = nil
-                guard drawer || value.startLocation.x < 28 else { return }
                 withAnimation(Theme.Motion.flow) {
                     if drawer { drawer = travelled > -60 } else { drawer = travelled > 60 }
                     dragged = 0
