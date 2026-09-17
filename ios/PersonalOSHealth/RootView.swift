@@ -137,6 +137,8 @@ enum Route: Hashable {
     case practiceHub
     /// Articles waiting for a reviewer.
     case reviewArticles
+    /// A practitioner's Stripe account, and what the platform keeps.
+    case payouts
     /// One article, carried whole like a practitioner: the card already has it.
     case article(Article)
     /// Every article, or one category's.
@@ -219,6 +221,7 @@ struct RootView: View {
                     case .practiceHub:  PracticeHubView()
                     case .myArticles:   MyArticlesView()
                     case .reviewArticles: ArticleReviewQueueView()
+                    case .payouts:      PayoutsView()
                     case .article(let one): ArticleView(article: one)
                     case .articles(let category): ArticleListView(category: category)
                     }

@@ -248,6 +248,9 @@ struct PracticeHubView: View {
                 Button { editing = true } label: {
                     Label("Your listing", systemImage: "person.text.rectangle")
                 }
+                NavigationLink(value: Route.payouts) {
+                    Label("Getting paid", systemImage: "building.columns")
+                }
             } footer: {
                 Text(application?.active == false
                      ? "Your listing is switched off, so people can't book you right now."

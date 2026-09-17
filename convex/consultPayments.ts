@@ -4,6 +4,7 @@ import { v } from "convex/values"
 import crypto from "crypto"
 import { action } from "./_generated/server"
 import { api, internal } from "./_generated/api"
+import { feeOn } from "./fees"
 
 /**
  * Taking payment for a consultation, from Convex rather than a web server.
@@ -119,6 +120,8 @@ async function wamSettled(paymentId: string): Promise<boolean> {
  */
 async function stripeCheckout(args: {
   amountMinor: number; currency: string; reference: string; description: string
+  /** The practitioner's own Stripe account, when they have finished onboarding. */
+  destination?: string
 }): Promise<Raised> {
   const form = new URLSearchParams({
     mode: "payment",
@@ -130,6 +133,15 @@ async function stripeCheckout(args: {
     "line_items[0][price_data][unit_amount]": String(args.amountMinor),
     "line_items[0][price_data][product_data][name]": args.description,
   })
+
+  // Split at the moment of payment. The practitioner is paid directly and the
+  // platform's share is taken out in the same transaction, so nothing is owed
+  // to anybody afterwards and no money of theirs sits in our account.
+  if (args.destination) {
+    form.set("payment_intent_data[transfer_data][destination]", args.destination)
+    form.set("payment_intent_data[application_fee_amount]", String(feeOn(args.amountMinor)))
+  }
+
   const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
     headers: {
@@ -172,6 +184,10 @@ export const checkout = action({
       return { url: null, paid: false, error: "No payment processor is connected yet." }
     }
 
+    // Where the practitioner's share goes, if they have finished onboarding.
+    const payee = await ctx.runQuery(internal.payoutsData.profileFor, { userId: bill.practitionerId })
+    const destination = payee?.payouts_enabled ? payee.stripe_account : undefined
+
     const raised = provider === "wam"
       ? await wamCheckout({
           amountMinor: bill.price_minor, currency: bill.currency,
@@ -180,13 +196,19 @@ export const checkout = action({
       : await stripeCheckout({
           amountMinor: bill.price_minor, currency: bill.currency,
           reference: bill.id, description: bill.topic || "Consultation",
+          destination,
         })
 
     // Recorded before the payer leaves, so a payment that completes can be
-    // traced back even if they close the app on the checkout page.
+    // traced back even if they close the app on the checkout page. The fee is
+    // recorded either way; `owed` marks the ones that were not split, which is
+    // every Wam payment and any Stripe one to a practitioner who has not
+    // finished onboarding.
     await ctx.runMutation(api.health.consult.attachPayment, {
       id: args.id,
       ref: `${raised.provider}:${raised.ref}`,
+      feeMinor: feeOn(bill.price_minor),
+      owed: !(raised.provider === "stripe" && destination),
     })
     return { url: raised.url, paid: false }
   },

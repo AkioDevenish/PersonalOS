@@ -338,6 +338,7 @@ export const billing = query({
 
     return {
       id: row._id,
+      practitionerId: row.nutritionistId ?? "",
       price_minor: row.price_minor ?? 0,
       currency: row.currency ?? "TTD",
       payment_status: row.payment_status ?? "free",
@@ -357,7 +358,14 @@ export const billing = query({
  * on the way.
  */
 export const attachPayment = mutation({
-  args: { id: v.id("consults"), ref: v.string() },
+  args: {
+    id: v.id("consults"),
+    ref: v.string(),
+    /** The platform's share, worked out server-side from the price. */
+    feeMinor: v.optional(v.number()),
+    /** True when the payment was not split and the practitioner is owed. */
+    owed: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
@@ -365,7 +373,12 @@ export const attachPayment = mutation({
     const row = await ctx.db.get(args.id)
     if (!row || row.userId !== identity.subject) throw new Error("No such session")
 
-    await ctx.db.patch(args.id, { payment_ref: args.ref, updated_at: Date.now() })
+    await ctx.db.patch(args.id, {
+      payment_ref: args.ref,
+      platform_fee_minor: args.feeMinor,
+      payout_owed: args.owed,
+      updated_at: Date.now(),
+    })
     return { ok: true }
   },
 })

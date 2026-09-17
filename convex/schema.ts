@@ -312,6 +312,17 @@ export default defineSchema({
      */
     price_minor: v.optional(v.number()),
     currency: v.optional(v.string()),      // ISO 4217
+    /**
+     * The practitioner's own Stripe account, created through Connect.
+     *
+     * Their fee is paid to them directly at the moment a client pays, with
+     * the platform's share taken out in the same transaction. Before this
+     * existed the money landed in our account with no way onward, which is a
+     * debt to somebody rather than a payment.
+     */
+    stripe_account: v.optional(v.string()),
+    /** Whether Stripe says that account can actually be paid yet. */
+    payouts_enabled: v.optional(v.boolean()),
     active: v.boolean(),
     updated_at: v.number(),
   })
@@ -359,6 +370,14 @@ export default defineSchema({
     payment_status: v.optional(v.string()),
     /** The processor's own reference, once there is a processor. */
     payment_ref: v.optional(v.string()),
+    /** The platform's share of this consultation, in minor units. */
+    platform_fee_minor: v.optional(v.number()),
+    /**
+     * True when the fee was collected without a split, so the practitioner is
+     * owed their share. Wam has no equivalent of Connect, so a payment through
+     * it lands whole and is settled by hand.
+     */
+    payout_owed: v.optional(v.boolean()),
     country: v.optional(v.string()),
     created_at: v.number(),
     updated_at: v.number(),
