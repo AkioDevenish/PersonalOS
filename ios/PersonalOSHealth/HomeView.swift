@@ -1,4 +1,5 @@
 import SwiftUI
+import ClerkKit
 
 /// The landing page, laid out as a reading catalogue.
 ///
@@ -16,6 +17,7 @@ struct HomeView: View {
     var go: (AppTab) -> Void
 
     @EnvironmentObject private var health: HealthKitManager
+    @Environment(Clerk.self) private var clerk
     @State private var snapshot: HealthSnapshot?
     @State private var query = ""
     /// Which most-read card is centred, for the page indicator.
@@ -80,16 +82,34 @@ struct HomeView: View {
 
     // MARK: Search
 
+    /// A large title with your face on the right, and a search field under it.
+    ///
+    /// The face is the way to Profile from the top of the page, where people
+    /// look for it, as well as from the bar.
     private var header: some View {
-        VStack(spacing: 18) {
-            Text("Start your search")
-                .font(Theme.sans(24))
-                .foregroundStyle(Theme.text)
-                .frame(maxWidth: .infinity)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
+                Text("Home")
+                    .font(Theme.serif(38))
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                Button {
+                    Haptics.select()
+                    go(.settings)
+                } label: {
+                    Avatar(user: clerk.user, size: 38)
+                }
+                .buttonStyle(.press)
+                .accessibilityLabel("Profile")
+            }
 
-            HStack(spacing: 10) {
-                TextField("Find articles, readings or pages", text: $query)
-                    .font(Theme.sans(16))
+            HStack(spacing: 9) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundStyle(Theme.tertiaryText)
+                    .accessibilityHidden(true)
+                TextField("Search articles, readings or pages", text: $query)
+                    .font(Theme.sans(15))
                     .foregroundStyle(Theme.text)
                     .focused($searchFocused)
                     .submitLabel(.search)
@@ -97,30 +117,20 @@ struct HomeView: View {
                 if searching {
                     Button { query = "" } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18))
                             .foregroundStyle(Theme.tertiaryText)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear search")
-                } else {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(Theme.text)
-                        .accessibilityHidden(true)
                 }
             }
-            .padding(.horizontal, 18)
-            .frame(height: 58)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Theme.accent, lineWidth: searchFocused ? 2 : 1.5)
-            }
-            .contentShape(Rectangle())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Theme.surface, in: Capsule())
+            .contentShape(Capsule())
             .onTapGesture { searchFocused = true }
         }
         .padding(.horizontal, margin)
-        .padding(.top, 18)
+        .padding(.top, 12)
         .padding(.bottom, 24)
     }
 
