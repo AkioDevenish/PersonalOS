@@ -287,3 +287,68 @@ describe("the path to Home", () => {
     await expect(author.mutation(api.articles.submit, { id })).rejects.toThrow("three articles waiting")
   })
 })
+
+describe("the archive", () => {
+  /** Publishes an article, then lets its paid time run out. */
+  async function expired(t: Awaited<ReturnType<typeof setup>>) {
+    const id = await verified(t)
+    await pay(t, id, "tx_archive")
+    vi.setSystemTime(Date.now() + 31 * DAY)
+    await t.mutation(internal.articles.expire, { id })
+    return id
+  }
+
+  test("an expired article leaves Home and appears in the archive", async () => {
+    const t = await setup()
+    await expired(t)
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.archive, { now: Date.now() })).toHaveLength(1)
+  })
+
+  test("without a subscription the words are withheld but the title is not", async () => {
+    const t = await setup()
+    await expired(t)
+    const [row] = await t.withIdentity(AUTHOR).query(api.articles.archive, { now: Date.now() })
+    expect(row.locked).toBe(true)
+    expect(row.body).toEqual([])
+    expect(row.title).toBe(good.title)
+    expect(row.summary).toBe(good.summary)
+  })
+
+  test("a subscription unlocks the words", async () => {
+    const t = await setup()
+    await expired(t)
+    await t.run(async (ctx) => {
+      await ctx.db.insert("entitlements", {
+        userId: AUTHOR.subject, subscription_status: "active",
+        product_id: "os.personal.sub.monthly", updated_at: Date.now(),
+      })
+    })
+    const [row] = await t.withIdentity(AUTHOR).query(api.articles.archive, { now: Date.now() })
+    expect(row.locked).toBe(false)
+    expect(row.body).toHaveLength(3)
+  })
+
+  test("a lapsed subscription does not", async () => {
+    const t = await setup()
+    await expired(t)
+    await t.run(async (ctx) => {
+      await ctx.db.insert("entitlements", {
+        userId: AUTHOR.subject, subscription_status: "active",
+        product_id: "os.personal.sub.monthly",
+        expires_at: Date.now() - DAY, updated_at: Date.now(),
+      })
+    })
+    const [row] = await t.withIdentity(AUTHOR).query(api.articles.archive, { now: Date.now() })
+    expect(row.locked).toBe(true)
+    expect(row.body).toEqual([])
+  })
+
+  test("what is on Home is free to everyone, subscription or not", async () => {
+    const t = await setup()
+    const id = await verified(t)
+    await pay(t, id, "tx_live")
+    const [live] = await t.query(api.articles.published, {})
+    expect(live.body).toHaveLength(3)
+  })
+})

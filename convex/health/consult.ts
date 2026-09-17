@@ -45,39 +45,6 @@ function party(consult: any, userId: string) {
 }
 
 /**
- * The nutritionists a person can choose from.
- *
- * Only those who have written a profile and marked it active: being on the
- * allowlist makes you able to answer, not visible to ask. Someone who hasn't
- * said who they are shouldn't appear on a list of people you might trust with
- * your glucose.
- */
-export const professionals = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
-    const rows = await ctx.db
-      .query("nutritionists")
-      .withIndex("by_active", (q) => q.eq("active", true))
-      .collect()
-
-    return rows
-      .filter((r) => staff().includes(r.userId))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((r) => ({
-        id: r.userId,
-        name: r.name,
-        country: r.country,
-        credentials: r.credentials,
-        bio: r.bio,
-        price_credits: r.price_credits,
-      }))
-  },
-})
-
-/**
  * Everyone a person may actually choose to ask.
  *
  * Approved and taking questions, nothing else. A pending application is
@@ -459,86 +426,6 @@ export const markPaidVerified = internalMutation({
   },
 })
 
-/**
- * Charges for a consultation, the same way the rest of the app charges.
- *
- * A subscription covers it; otherwise it costs credits, and the ledger records
- * the spend so a balance can always be explained. Enforced here rather than in
- * the app, because a price the client can decide not to charge is not a price.
- */
-async function charge(ctx: any, userId: string, amount: number, reason: string) {
-  if (amount <= 0) return
-
-  const row = await ctx.db
-    .query("entitlements")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
-    .first()
-
-  const subscribed =
-    row?.subscription_status === "active" &&
-    (typeof row.expires_at !== "number" || row.expires_at > Date.now())
-  if (subscribed) return
-
-  const balance = row?.credits ?? 0
-  if (balance < amount) {
-    throw new Error(
-      `This consultation costs ${amount} ${amount === 1 ? "credit" : "credits"}. Subscribe or add credits to send it.`
-    )
-  }
-
-  await ctx.db.patch(row._id, { credits: balance - amount, updated_at: Date.now() })
-  await ctx.db.insert("ai_credit_ledger", {
-    userId,
-    delta: -amount,
-    reason,
-    created_at: Date.now(),
-  })
-}
-
-/** Whether anyone is actually on the other end. The app says so plainly. */
-export const staffed = query({
-  args: {},
-  handler: async () => ({ staffed: staff().length > 0 }),
-})
-
-/**
- * Your consultations, newest first, each with its last message.
- */
-export const mine = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
-    const rows = await ctx.db
-      .query("consults")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .collect()
-
-    const withLast = await Promise.all(
-      rows.map(async (row) => {
-        const messages = await ctx.db
-          .query("consult_messages")
-          .withIndex("by_consult", (q) => q.eq("consultId", row._id))
-          .collect()
-        const last = messages.sort((a, b) => b.created_at - a.created_at)[0]
-        return {
-          id: row._id,
-          topic: row.topic,
-          status: row.status,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-          last_message: last?.body ?? "",
-          last_from: last?.from ?? "",
-          replies: messages.filter((m) => m.from === "nutritionist").length,
-        }
-      })
-    )
-
-    return withLast.sort((a, b) => b.updated_at - a.updated_at)
-  },
-})
-
 /** One conversation, in order. */
 export const thread = query({
   args: { id: v.id("consults") },
@@ -570,68 +457,6 @@ export const thread = query({
           created_at: m.created_at,
         })),
     }
-  },
-})
-
-/**
- * Opens a consultation.
- *
- * `shared` is the readings the person chose to hand over, already rendered as
- * the text they saw. Stored rather than re-read later, so the nutritionist is
- * looking at what was consented to and not at whatever the numbers say today.
- */
-export const start = mutation({
-  args: {
-    topic: v.string(),
-    question: v.string(),
-    nutritionistId: v.optional(v.string()),
-    shared: v.optional(v.string()),
-    country: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
-    const topic = args.topic.trim()
-    const question = args.question.trim()
-    if (!question) throw new Error("A question needs asking")
-    if (question.length > 4000) throw new Error("That is longer than a question")
-
-    // Charged before anything is written. A consultation that exists but was
-    // never paid for is worse than one that was refused: the person waits for
-    // an answer that isn't coming.
-    let price = 0
-    if (args.nutritionistId) {
-      const profile = await ctx.db
-        .query("nutritionists")
-        .withIndex("by_user", (q) => q.eq("userId", args.nutritionistId!))
-        .first()
-      if (!profile || !profile.active) throw new Error("That nutritionist isn't taking questions")
-      price = profile.price_credits
-    }
-    await charge(ctx, identity.subject, price, `consult:${args.nutritionistId ?? "any"}`)
-
-    const now = Date.now()
-    const id = await ctx.db.insert("consults", {
-      userId: identity.subject,
-      nutritionistId: args.nutritionistId,
-      topic: topic || "Nutrition",
-      status: "waiting",
-      shared: args.shared,
-      country: args.country,
-      created_at: now,
-      updated_at: now,
-    })
-
-    await ctx.db.insert("consult_messages", {
-      consultId: id,
-      from: "you",
-      authorId: identity.subject,
-      body: question,
-      created_at: now,
-    })
-
-    return { id }
   },
 })
 

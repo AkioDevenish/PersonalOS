@@ -54,6 +54,25 @@ struct HomeView: View {
                     }
                     .flowIn(2)
 
+                    if !library.archive.isEmpty {
+                        section("Archive", seeAll: .articles(nil))
+                            .flowIn(3)
+                        row {
+                            ForEach(library.archive) { article in
+                                NavigationLink(value: Route.article(article)) {
+                                    ContentCard(
+                                        title: article.title,
+                                        note: article.isLocked ? "Subscribers" : "\(article.minutes) min read",
+                                        symbol: article.isLocked ? "lock" : article.symbol,
+                                        tint: article.tint
+                                    )
+                                }
+                                .buttonStyle(.pressRow)
+                            }
+                        }
+                        .flowIn(3)
+                    }
+
                     ForEach(Array(library.categories.enumerated()), id: \.element) { index, category in
                         section(category, seeAll: .articles(category))
                             .flowIn(3 + index)

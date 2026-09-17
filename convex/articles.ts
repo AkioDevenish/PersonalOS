@@ -95,7 +95,24 @@ const articleFields = {
 
 // MARK: Reading
 
-/** Everything on Home: published, newest first. */
+/**
+ * Whether this reader has the archive.
+ *
+ * Read inline rather than through the entitlements query, because a query
+ * calling a query is two transactions where one will do.
+ */
+async function hasArchive(ctx: QueryCtx, now: number): Promise<boolean> {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity) return false
+  const row = await ctx.db
+    .query("entitlements")
+    .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+    .first()
+  if (row?.subscription_status !== "active") return false
+  return typeof row.expires_at !== "number" || row.expires_at > now
+}
+
+/** Everything on Home: published, newest first. Free, always. */
 export const published = query({
   args: {},
   handler: async (ctx) => {
@@ -105,6 +122,39 @@ export const published = query({
       .order("desc")
       .take(60)
     return await Promise.all(rows.map((row) => presented(ctx, row)))
+  },
+})
+
+/**
+ * The archive: articles whose paid time on Home has run out.
+ *
+ * This is what a subscription buys, and the split is deliberate. A
+ * practitioner pays for thirty days on Home so that people read them, so
+ * charging readers for those same days would be selling the practitioner's
+ * own placement back to them. What is behind the subscription is the back
+ * catalogue, which nobody is paying to promote any more.
+ *
+ * A locked article still carries its title and summary. A shelf of blank
+ * cards is not a reason to subscribe; knowing what is behind them is.
+ *
+ * `now` comes from the caller because a query is not rerun as time passes,
+ * so an expiry decided inside one would go stale.
+ */
+export const archive = query({
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
+    const unlocked = await hasArchive(ctx, args.now)
+    const rows = await ctx.db
+      .query("articles")
+      .withIndex("by_status_and_published_at", (q) => q.eq("status", "expired"))
+      .order("desc")
+      .take(60)
+    return await Promise.all(
+      rows.map(async (row) => {
+        const shown = await presented(ctx, row)
+        return { ...shown, body: unlocked ? shown.body : [], locked: !unlocked }
+      }),
+    )
   },
 })
 

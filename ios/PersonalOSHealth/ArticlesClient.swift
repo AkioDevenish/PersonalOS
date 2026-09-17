@@ -77,6 +77,15 @@ struct ArticlesClient {
         try JSONDecoder().decode([Article].self, from: try await transport.query("articles:published"))
     }
 
+    /// The back catalogue. `now` travels with the request because a Convex
+    /// query is not rerun as time passes, so it cannot read the clock itself.
+    func archive() async throws -> [Article] {
+        let data = try await transport.query(
+            "articles:archive", ["now": Date().timeIntervalSince1970 * 1000]
+        )
+        return try JSONDecoder().decode([Article].self, from: data)
+    }
+
     func abilities() async throws -> Abilities {
         try JSONDecoder().decode(Abilities.self, from: try await transport.query("articles:abilities"))
     }
@@ -148,11 +157,16 @@ final class ArticleLibrary: ObservableObject {
     static let shared = ArticleLibrary()
 
     @Published private(set) var all: [Article] = Articles.bundled
+    /// Articles whose time on Home has run out. Locked without a subscription.
+    @Published private(set) var archive: [Article] = []
 
     func refresh() async {
-        guard let published = try? await ArticlesClient().published() else { return }
-        let ids = Set(published.map(\.id))
-        all = published + Articles.bundled.filter { !ids.contains($0.id) }
+        let client = ArticlesClient()
+        if let published = try? await client.published() {
+            let ids = Set(published.map(\.id))
+            all = published + Articles.bundled.filter { !ids.contains($0.id) }
+        }
+        archive = (try? await client.archive()) ?? []
     }
 
     var categories: [String] {

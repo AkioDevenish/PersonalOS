@@ -3,36 +3,6 @@
   "nonRenewingSubscriptions": [],
   "products": [
     {
-      "displayPrice": "4.99",
-      "familyShareable": false,
-      "internalID": "C0000001",
-      "localizations": [
-        {
-          "description": "50 hosted readings, yours to spend whenever.",
-          "displayName": "50 readings",
-          "locale": "en_US"
-        }
-      ],
-      "productID": "os.personal.credits.50",
-      "referenceName": "50 readings",
-      "type": "Consumable"
-    },
-    {
-      "displayPrice": "14.99",
-      "familyShareable": false,
-      "internalID": "C0000002",
-      "localizations": [
-        {
-          "description": "200 hosted readings, yours to spend whenever.",
-          "displayName": "200 readings",
-          "locale": "en_US"
-        }
-      ],
-      "productID": "os.personal.credits.200",
-      "referenceName": "200 readings",
-      "type": "Consumable"
-    },
-    {
       "displayPrice": "9.99",
       "familyShareable": false,
       "internalID": "C0000010",

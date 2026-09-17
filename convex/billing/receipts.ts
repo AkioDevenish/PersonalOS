@@ -23,13 +23,14 @@ import { internal } from "../_generated/api"
 
 const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
 
-/** What can be bought, and what each one is worth. Never the client's to say. */
-const PRODUCTS: Record<string, { kind: "subscription" | "credits"; credits?: number }> = {
-  "os.personal.sub.monthly": { kind: "subscription" },
-  "os.personal.sub.yearly": { kind: "subscription" },
-  "os.personal.credits.50": { kind: "credits", credits: 50 },
-  "os.personal.credits.200": { kind: "credits", credits: 200 },
-}
+/**
+ * What can be bought, and never the client's to say which.
+ *
+ * Two products, both the same subscription: the article archive. The credit
+ * packs that were here bought readings that ran on a server, and those are
+ * written on the phone now, for nothing.
+ */
+const SUBSCRIPTIONS = new Set(["os.personal.sub.monthly", "os.personal.sub.yearly"])
 
 function environment(): Environment {
   switch (process.env.APPLE_IAP_ENVIRONMENT) {
@@ -49,7 +50,7 @@ function appleRoots(): Buffer[] {
 
 export const verify = action({
   args: { signedTransaction: v.string() },
-  handler: async (ctx, args): Promise<{ applied: boolean; credits: number }> => {
+  handler: async (ctx, args): Promise<{ applied: boolean }> => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
@@ -67,19 +68,18 @@ export const verify = action({
       throw new Error("That purchase could not be verified with Apple")
     }
 
-    const product = tx.productId ? PRODUCTS[tx.productId] : undefined
-    if (!product || !tx.productId) throw new Error(`Unrecognised product "${tx.productId}"`)
+    if (!tx.productId || !SUBSCRIPTIONS.has(tx.productId)) {
+      throw new Error(`Unrecognised product "${tx.productId}"`)
+    }
     if (!tx.transactionId) throw new Error("That purchase has no transaction id")
 
     const result = await ctx.runMutation(internal.billing.entitlements.applyVerified, {
       userId: identity.subject,
       verifiedTransactionId: tx.transactionId,
-      kind: product.kind,
       productId: tx.productId,
-      expiresAt: product.kind === "subscription" ? tx.expiresDate : undefined,
+      expiresAt: tx.expiresDate,
       originalTransactionId: tx.originalTransactionId,
-      creditsGranted: product.credits,
     })
-    return { applied: result.applied, credits: result.credits }
+    return { applied: result.applied }
   },
 })

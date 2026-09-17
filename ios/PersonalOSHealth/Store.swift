@@ -29,22 +29,20 @@ final class Store {
     var lastError: String?
 
     static let subscriptionIDs = ["os.personal.sub.monthly", "os.personal.sub.yearly"]
-    static let creditIDs = ["os.personal.credits.50", "os.personal.credits.200"]
+    /// Credit packs are gone. They bought readings that ran on a server, and
+    /// those are written on the phone now, for nothing.
 
     struct Entitlement: Decodable, Equatable {
         let subscription_status: String
         let product_id: String?
         let expires_at: Double?
-        let credits: Int
 
         static let empty = Entitlement(
-            subscription_status: "none", product_id: nil, expires_at: nil, credits: 0
+            subscription_status: "none", product_id: nil, expires_at: nil
         )
 
+        /// What a subscription buys: the article archive.
         var isSubscribed: Bool { subscription_status == "active" }
-        /// Anything the hosted engines cost money for is available if either
-        /// holds — a subscriber never spends credits.
-        var canUseHostedAI: Bool { isSubscribed || credits > 0 }
     }
 
     /// `deinit` is nonisolated, so the handle it cancels has to be reachable
@@ -79,10 +77,9 @@ final class Store {
 
     func loadProducts() async {
         do {
-            let all = try await Product.products(for: Store.subscriptionIDs + Store.creditIDs)
-            // Cheapest first within each group reads as a ladder rather than
-            // an arbitrary order.
-            products = all.sorted { $0.price < $1.price }
+            // Cheapest first reads as a ladder rather than an arbitrary order.
+            products = try await Product.products(for: Store.subscriptionIDs)
+                .sorted { $0.price < $1.price }
         } catch {
             lastError = "Couldn't load the store: \(error.localizedDescription)"
         }
@@ -90,10 +87,6 @@ final class Store {
 
     func subscriptions() -> [Product] {
         products.filter { Store.subscriptionIDs.contains($0.id) }
-    }
-
-    func creditPacks() -> [Product] {
-        products.filter { Store.creditIDs.contains($0.id) }
     }
 
     // MARK: Buying

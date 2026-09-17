@@ -19,6 +19,11 @@ struct Article: Decodable, Hashable, Identifiable {
     /// the app's own and carry no byline.
     var author: String? = nil
     var credentials: String? = nil
+    /// True for an archive article without a subscription: the title and
+    /// summary are here, the words are not.
+    var locked: Bool? = nil
+
+    var isLocked: Bool { locked == true }
 
     var tint: Color { Article.tint(for: colour) }
 

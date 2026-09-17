@@ -184,13 +184,13 @@ export default defineSchema({
   /**
    * What a user has paid for.
    *
-   * Written only by the verification route, after Apple's signature on the
+   * Written only by billing/receipts.ts, after Apple's signature on the
    * transaction has been checked. Nothing the app sends can grant an
-   * entitlement directly — a client that could write here could give itself a
+   * entitlement directly: a client that could write here could give itself a
    * subscription for free, which is the whole reason receipts are signed.
    *
-   * `credits` is a running balance rather than a log because the balance is
-   * what every read wants; ai_credit_ledger keeps the history.
+   * A subscription is the only thing sold to readers, and what it buys is the
+   * article archive — everything whose paid time on Home has run out.
    */
   entitlements: defineTable({
     userId: v.string(),
@@ -200,27 +200,28 @@ export default defineSchema({
     expires_at: v.optional(v.number()),
     /** Apple's stable per-user id, for reconciling renewals. */
     original_transaction_id: v.optional(v.string()),
-    credits: v.number(),
     updated_at: v.number(),
   }).index("by_user", ["userId"]),
 
   /**
-   * Every credit movement, so a balance can always be explained.
+   * Every App Store purchase that has been applied.
    *
-   * A bare number that only ever goes down is impossible to support when
-   * someone asks where their credits went. `transaction_id` is unique per
-   * purchase and is what makes granting idempotent — Apple can and does
-   * deliver the same transaction more than once.
+   * Only to claim a transaction id. Apple redelivers transactions routinely —
+   * on reinstall, on restore, on every launch until they are finished — and
+   * applying one twice would be a free month.
+   *
+   * This was a credit ledger, when a purchase bought credits for readings that
+   * ran on a server. The readings are written on the phone now, so there is
+   * nothing to meter and nothing to keep a running balance of.
    */
-  ai_credit_ledger: defineTable({
+  purchase_receipts: defineTable({
     userId: v.string(),
-    delta: v.number(), // positive for a purchase, negative for a spend
-    reason: v.string(),
-    transaction_id: v.optional(v.string()),
+    transactionId: v.string(),
+    productId: v.string(),
     created_at: v.number(),
   })
-    .index("by_user", ["userId"])
-    .index("by_transaction", ["transaction_id"]),
+    .index("by_userId", ["userId"])
+    .index("by_transactionId", ["transactionId"]),
 
   /**
    * Which platform and model this user's insights should run on. One row per

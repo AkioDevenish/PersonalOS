@@ -22,82 +22,42 @@ struct PaywallView: View {
                     .padding(.top, 12)
                     .flowIn(0)
 
-                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Go further.")
+                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Read the archive.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
-                    .padding(.top, 8)
-                    .flowIn(1)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(blurb)
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
-                    .padding(.top, 10)
-                    .flowIn(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
 
-                if store.entitlement.credits > 0 {
-                    Plate {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Kicker(text: "Balance", size: 9)
-                            Text("\(store.entitlement.credits)")
-                                .font(Theme.serif(30))
-                                .foregroundStyle(Theme.text)
-                            Text("hosted readings left")
-                                .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.tertiaryText)
-                        }
-                    }
-                    .padding(.top, 20)
+                VStack(alignment: .leading, spacing: 10) {
+                    point("Every article, including ones no longer on Home")
+                    point("New writing stays free while it is on Home")
+                    point("Readings, goals and the cycle are free and always were")
                 }
+                .padding(.top, 24)
 
-                SectionRule(text: "Always free").padding(.top, 30)
-                VStack(alignment: .leading, spacing: 8) {
-                    freeLine("Readings written on this iPhone, privately")
-                    freeLine("Every chart, metric and correlation")
-                    freeLine("Your own API key, if you have one")
-                }
-                .padding(.top, 14)
-
-                // Two headings over two empty lists is what this page was
-                // before: the App Store returns nothing until the products
-                // exist in App Store Connect, which needs the paid developer
-                // account. A page that says so is worth reading; one that
-                // rules off a void is not.
                 if nothingToBuy {
                     SectionRule(text: "Not yet").padding(.top, 30)
                     Text("""
-                    The App Store has no products to offer for this build, so \
-                    there is nothing to buy here yet. Everything the app does \
-                    on the phone — reading Apple Health, the day's briefing, \
-                    goals, and writing to a practitioner — is unaffected and \
-                    costs nothing.
+                    The App Store has no subscription to offer for this build \
+                    yet, so there is nothing to buy here. Everything the app \
+                    does on the phone is unaffected and costs nothing.
                     """)
                         .font(Theme.serifBody(16))
                         .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 12)
-                } else {
-                    if !store.entitlement.isSubscribed {
-                        SectionRule(text: "Subscription").padding(.top, 30)
-                        VStack(spacing: 0) {
-                            ForEach(store.subscriptions(), id: \.id) { p in
-                                purchaseRow(p, note: p.subscription.map(periodLabel) ?? "")
-                            }
-                        }
-                        .padding(.top, 14)
-                    }
-
-                    SectionRule(text: "Or buy readings").padding(.top, 30)
-                    Text("No subscription. Credits don't expire, and a subscription never spends them.")
-                        .font(Theme.sans(11))
-                        .foregroundStyle(Theme.tertiaryText)
-                        .lineSpacing(3)
-                        .padding(.top, 10)
-
+                } else if !store.entitlement.isSubscribed {
+                    SectionRule(text: "Subscription").padding(.top, 30)
                     VStack(spacing: 0) {
-                        ForEach(store.creditPacks(), id: \.id) { p in
-                            purchaseRow(p, note: "one-off")
+                        ForEach(store.subscriptions(), id: \.id) { p in
+                            purchaseRow(p, note: p.subscription.map(periodLabel) ?? "")
                         }
                     }
                     .padding(.top, 14)
@@ -130,7 +90,6 @@ struct PaywallView: View {
             // restore should redraw it in one movement rather than three.
             .animation(Theme.Motion.flow, value: store.lastError)
             .animation(Theme.Motion.flow, value: store.entitlement.isSubscribed)
-            .animation(Theme.Motion.flow, value: store.entitlement.credits)
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
@@ -143,15 +102,27 @@ struct PaywallView: View {
         }
     }
 
-    private var nothingToBuy: Bool {
-        store.subscriptions().isEmpty && store.creditPacks().isEmpty
-    }
+    private var nothingToBuy: Bool { store.subscriptions().isEmpty }
 
     private var blurb: String {
         if store.entitlement.isSubscribed {
-            return "Hosted readings, cloud sync and the wearable connections are all yours."
+            return "The whole archive is open to you, and stays open while the subscription runs."
         }
-        return "The app works without paying. A subscription adds hosted readings without needing your own API key, cloud sync, and the wearable connections."
+        return "The app works without paying, and the parts that read your body always will. What a subscription buys is the writing: every article, including the ones whose time on Home has passed."
+    }
+
+    /// One line of what the subscription includes.
+    private func point(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 9) {
+            Text("\u{2767}")
+                .font(Theme.serif(12))
+                .foregroundStyle(Theme.accent)
+                .padding(.top, 3)
+            Text(text)
+                .font(Theme.sans(14.5))
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func freeLine(_ text: String) -> some View {
