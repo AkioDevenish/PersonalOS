@@ -10,6 +10,8 @@
 
 import type * as ai_keys from "../ai/keys.js";
 import type * as ai_preferences from "../ai/preferences.js";
+import type * as articleRules from "../articleRules.js";
+import type * as articles from "../articles.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as business from "../business.js";
 import type * as datascience from "../datascience.js";
@@ -36,6 +38,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   "ai/keys": typeof ai_keys;
   "ai/preferences": typeof ai_preferences;
+  articleRules: typeof articleRules;
+  articles: typeof articles;
   "billing/entitlements": typeof billing_entitlements;
   business: typeof business;
   datascience: typeof datascience;

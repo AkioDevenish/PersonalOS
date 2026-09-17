@@ -9,6 +9,7 @@ struct ConnectionsView: View {
     // yourself, which is what the rest of this screen is for.
     @State private var application: SpecialistsClient.Application?
     @State private var applying = false
+    @State private var abilities = ArticlesClient.Abilities(canWrite: false, canReview: false)
 
     @EnvironmentObject var health: HealthKitManager
     @Environment(Store.self) private var store
@@ -27,6 +28,28 @@ struct ConnectionsView: View {
     @State private var debugToken = DebugTokenAuthProvider.token
     #endif
 
+
+    private func articleRow(_ title: String, _ note: String, _ route: Route) -> some View {
+        NavigationLink(value: route) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(Theme.serif(19))
+                        .foregroundStyle(Theme.text)
+                    Text(note)
+                        .font(Theme.sans(10.5))
+                        .foregroundStyle(Theme.tertiaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
+            }
+            .padding(.vertical, 15)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressRow)
+        .padding(.top, 6)
+    }
 
     private func loadApplication() async {
         // Nothing to show for the overwhelming majority of people, who are not
@@ -209,6 +232,16 @@ struct ConnectionsView: View {
                 .buttonStyle(.pressRow)
                 .padding(.top, 6)
 
+                // Writing is for approved practitioners and reviewing for the
+                // staff list. Both are decided on the server; these rows only
+                // appear for the people the server says they are for.
+                if abilities.canWrite {
+                    articleRow("Your articles", "Write for Home. Every article is reviewed before it appears.", .myArticles)
+                }
+                if abilities.canReview {
+                    articleRow("Review articles", "Approve or send back what practitioners have written.", .reviewArticles)
+                }
+
                 SectionRule(text: "Intelligence")
                     .padding(.top, 32)
                     .flowIn(4)
@@ -296,6 +329,7 @@ struct ConnectionsView: View {
         .background(Theme.background)
         .task { await loadConnections() }
         .task { await loadApplication() }
+        .task { if let a = try? await ArticlesClient().abilities() { abilities = a } }
         .sheet(isPresented: $applying) {
             SpecialistApplicationSheet(
                 existing: application,

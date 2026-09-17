@@ -20,6 +20,7 @@ struct HomeView: View {
     @Environment(Clerk.self) private var clerk
     @State private var snapshot: HealthSnapshot?
     @State private var query = ""
+    @ObservedObject private var library = ArticleLibrary.shared
     /// Which most-read card is centred, for the page indicator.
     @State private var featured: String?
     @FocusState private var searchFocused: Bool
@@ -53,11 +54,11 @@ struct HomeView: View {
                     }
                     .flowIn(2)
 
-                    ForEach(Array(Articles.categories.enumerated()), id: \.element) { index, category in
+                    ForEach(Array(library.categories.enumerated()), id: \.element) { index, category in
                         section(category, seeAll: .articles(category))
                             .flowIn(3 + index)
                         row {
-                            ForEach(Articles.filed(under: category)) { article in
+                            ForEach(library.filed(under: category)) { article in
                                 NavigationLink(value: Route.article(article)) {
                                     ContentCard(
                                         title: article.title,
@@ -78,6 +79,8 @@ struct HomeView: View {
         .scrollDismissesKeyboard(.immediately)
         .background(Theme.background)
         .task { snapshot = try? await health.fetchTodaySnapshot() }
+        .task { await library.refresh() }
+        .refreshable { await library.refresh() }
     }
 
     // MARK: Search
@@ -93,10 +96,7 @@ struct HomeView: View {
                     .font(Theme.serif(28))
                     .foregroundStyle(Theme.text)
                 Spacer()
-                Button {
-                    Haptics.select()
-                    go(.settings)
-                } label: {
+                NavigationLink(value: Route.profile) {
                     Avatar(user: clerk.user, size: 32)
                 }
                 .buttonStyle(.press)
@@ -143,7 +143,7 @@ struct HomeView: View {
     @ViewBuilder
     private var results: some View {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let articles = Articles.all.filter {
+        let articles = library.all.filter {
             [$0.title, $0.summary, $0.category].contains { $0.lowercased().contains(needle) }
         }
         let places = Self.places.filter {
@@ -207,20 +207,20 @@ struct HomeView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: Most read
+    // MARK: Daily News
 
     /// On a band of its own, cards snapping one at a time, with a dot per card.
     private var mostRead: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Most read")
-                .font(Theme.sans(26, medium: true))
+            Text("Daily News")
+                .font(Theme.sans(19, medium: true))
                 .foregroundStyle(Theme.text)
                 .padding(.horizontal, margin)
                 .padding(.bottom, 16)
 
             ScrollView(.horizontal) {
                 HStack(spacing: 14) {
-                    ForEach(Articles.all) { article in
+                    ForEach(library.all) { article in
                         NavigationLink(value: Route.article(article)) {
                             ContentCard(
                                 title: article.title,
@@ -240,9 +240,9 @@ struct HomeView: View {
             .scrollPosition(id: $featured, anchor: .leading)
 
             HStack(spacing: 8) {
-                ForEach(Articles.all) { article in
+                ForEach(library.all) { article in
                     Circle()
-                        .fill((featured ?? Articles.all.first?.id) == article.id
+                        .fill((featured ?? library.all.first?.id) == article.id
                               ? Theme.text : Theme.tertiaryText.opacity(0.5))
                         .frame(width: 7, height: 7)
                 }
@@ -260,7 +260,7 @@ struct HomeView: View {
     private func section(_ title: String, seeAll route: Route? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(Theme.sans(26, medium: true))
+                .font(Theme.sans(19, medium: true))
                 .foregroundStyle(Theme.text)
             Spacer()
             if let route {
@@ -269,15 +269,15 @@ struct HomeView: View {
                         Text("See all")
                         Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
                     }
-                    .font(Theme.sans(16))
+                    .font(Theme.sans(14))
                     .foregroundStyle(Theme.accent)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, margin)
-        .padding(.top, 34)
-        .padding(.bottom, 14)
+        .padding(.top, 28)
+        .padding(.bottom, 12)
     }
 
     private func row<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

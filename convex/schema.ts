@@ -377,6 +377,51 @@ export default defineSchema({
    * over a few seconds, then never again, which is why they are swept rather
    * than kept.
    */
+  /**
+   * Articles written by practitioners, and where each one stands.
+   *
+   * Nothing reaches Home without two things: an author who is an approved
+   * practitioner, checked when they applied, and a reviewer on the staff
+   * allowlist who is not the author. The automatic checks in articleRules.ts
+   * run on every save and again on submission, on the server.
+   *
+   * The body is one string with paragraphs separated by blank lines rather
+   * than an array of paragraphs: it is bounded by the rules, and a single
+   * field means an edit is one write rather than a rewritten list.
+   *
+   * Ownership is by tokenIdentifier, the stable identity Convex guarantees.
+   * authorId is the Clerk subject, kept only to find the author's practitioner
+   * profile, which is keyed that way.
+   */
+  articles: defineTable({
+    authorToken: v.string(),
+    authorId: v.string(),
+    title: v.string(),
+    category: v.string(),
+    summary: v.string(),
+    body: v.string(),
+    symbol: v.string(),
+    colour: v.string(),
+    minutes: v.number(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("submitted"),
+      v.literal("changes_requested"),
+      v.literal("published"),
+      v.literal("withdrawn"),
+    ),
+    /** Soft findings from the automatic check, for the reviewer to weigh. */
+    flags: v.array(v.string()),
+    review_note: v.optional(v.string()),
+    reviewed_by: v.optional(v.string()),
+    submitted_at: v.optional(v.number()),
+    published_at: v.optional(v.number()),
+    updated_at: v.number(),
+  })
+    .index("by_authorToken_and_updated_at", ["authorToken", "updated_at"])
+    .index("by_status_and_submitted_at", ["status", "submitted_at"])
+    .index("by_status_and_published_at", ["status", "published_at"]),
+
   call_signals: defineTable({
     consultId: v.id("consults"),
     /** Who sent it, so a phone never answers its own message. */

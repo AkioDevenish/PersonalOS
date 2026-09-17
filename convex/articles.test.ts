@@ -1,0 +1,192 @@
+/// <reference types="vite/client" />
+import { convexTest } from "convex-test"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
+import { api } from "./_generated/api"
+import schema from "./schema"
+import { check } from "./articleRules"
+
+const modules = import.meta.glob("./**/*.ts")
+
+const REVIEWER = { subject: "user_reviewer", tokenIdentifier: "clerk|user_reviewer" }
+const AUTHOR = { subject: "user_author", tokenIdentifier: "clerk|user_author" }
+const STRANGER = { subject: "user_stranger", tokenIdentifier: "clerk|user_stranger" }
+
+const paragraph =
+  "Sleep and recovery shape how the next day feels, and the pattern across a week matters more than any single night. " +
+  "Going to bed and getting up at similar times helps the body know when to wind down, and it tends to make the same hours feel more restful."
+
+const good = {
+  title: "Why regular sleep timing helps",
+  category: "Sleep & recovery",
+  summary: "Consistent bed and wake times make the same number of hours feel more restful.",
+  body: [paragraph, paragraph, paragraph].join("\n\n"),
+  symbol: "moon.stars",
+  colour: "2F4A7A",
+}
+
+beforeEach(() => {
+  vi.stubEnv("NUTRITIONIST_IDS", REVIEWER.subject)
+})
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
+async function setup() {
+  const t = convexTest(schema, modules)
+  await t.run(async (ctx) => {
+    await ctx.db.insert("nutritionists", {
+      userId: AUTHOR.subject, name: "Dr Author", country: "TT", credentials: "RD",
+      bio: "", price_credits: 0, active: true, status: "approved", updated_at: 0,
+    })
+    await ctx.db.insert("nutritionists", {
+      userId: STRANGER.subject, name: "Pending Person", country: "TT", credentials: "Says RD",
+      bio: "", price_credits: 0, active: true, status: "pending", updated_at: 0,
+    })
+  })
+  return t
+}
+
+describe("automatic checks", () => {
+  test("a well-formed article has no errors", () => {
+    expect(check(good).errors).toEqual([])
+  })
+
+  test("links, emails and phone numbers are refused", () => {
+    expect(check({ ...good, summary: good.summary + " See www.example.com" }).errors)
+      .toContain("Links are not allowed in articles")
+    expect(check({ ...good, summary: good.summary + " Write to me@clinic.org" }).errors)
+      .toContain("Email addresses are not allowed in articles")
+    expect(check({ ...good, summary: good.summary + " Call +1 868 555 0199" }).errors)
+      .toContain("Phone numbers are not allowed in articles")
+  })
+
+  test("a year range is not mistaken for a phone number", () => {
+    expect(check({ ...good, summary: good.summary + " Studies from 2019 - 2023." }).errors).toEqual([])
+  })
+
+  test("too short, wrong category and unknown picture are refused", () => {
+    const errors = check({ ...good, body: "Short.", category: "Crypto", symbol: "flame" }).errors
+    expect(errors.some((e) => e.startsWith("Write at least"))).toBe(true)
+    expect(errors).toContain("Choose one of the listed categories")
+    expect(errors).toContain("Choose one of the listed pictures")
+  })
+
+  test("risky language is flagged for the reviewer, not blocked", () => {
+    const findings = check({ ...good, body: good.body + "\n\nThis detox is guaranteed to cure it. Take 500 mg." })
+    expect(findings.errors).toEqual([])
+    expect(findings.flags).toEqual(expect.arrayContaining([
+      "Uses the word cure", "Makes an absolute promise", "Uses wellness-marketing language", "Mentions a dose",
+    ]))
+  })
+})
+
+describe("who may do what", () => {
+  test("someone who is not an approved practitioner cannot write", async () => {
+    const t = await setup()
+    await expect(t.withIdentity(STRANGER).mutation(api.articles.save, good))
+      .rejects.toThrow("Only approved practitioners can write articles")
+  })
+
+  test("a signed-out request cannot read the review queue", async () => {
+    const t = await setup()
+    await expect(t.query(api.articles.queue, {})).rejects.toThrow("Not authenticated")
+    await expect(t.withIdentity(AUTHOR).query(api.articles.queue, {})).rejects.toThrow("Not allowed")
+  })
+
+  test("an author cannot edit or withdraw someone else's article", async () => {
+    const t = await setup()
+    const { id } = await t.withIdentity(AUTHOR).mutation(api.articles.save, good)
+    await expect(t.withIdentity(REVIEWER).mutation(api.articles.save, { id, ...good, title: "Hijacked title here" }))
+      .rejects.toThrow("No such article")
+    await expect(t.withIdentity(STRANGER).mutation(api.articles.withdraw, { id }))
+      .rejects.toThrow("No such article")
+  })
+
+  test("a reviewer cannot approve their own article", async () => {
+    const t = await setup()
+    const reviewer = t.withIdentity(REVIEWER)
+    const { id } = await reviewer.mutation(api.articles.save, good)
+    await reviewer.mutation(api.articles.submit, { id })
+    await expect(reviewer.mutation(api.articles.review, { id, approve: true }))
+      .rejects.toThrow("Someone else has to review your own article")
+  })
+})
+
+describe("the path to Home", () => {
+  test("nothing is on Home until a reviewer approves it", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const reviewer = t.withIdentity(REVIEWER)
+
+    const { id } = await author.mutation(api.articles.save, good)
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+
+    await author.mutation(api.articles.submit, { id })
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await reviewer.query(api.articles.queue, {})).toHaveLength(1)
+
+    await reviewer.mutation(api.articles.review, { id, approve: true })
+    const live = await t.query(api.articles.published, {})
+    expect(live).toHaveLength(1)
+    expect(live[0]).toMatchObject({ title: good.title, author: "Dr Author", credentials: "RD" })
+    expect(live[0].body).toHaveLength(3)
+  })
+
+  test("a draft that fails the checks cannot be submitted", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const { id, errors } = await author.mutation(api.articles.save, { ...good, body: "Too short to publish." })
+    expect(errors.length).toBeGreaterThan(0)
+    await expect(author.mutation(api.articles.submit, { id })).rejects.toThrow("Write at least")
+  })
+
+  test("sending back needs a note, and the note reaches the author", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const reviewer = t.withIdentity(REVIEWER)
+    const { id } = await author.mutation(api.articles.save, good)
+    await author.mutation(api.articles.submit, { id })
+
+    await expect(reviewer.mutation(api.articles.review, { id, approve: false }))
+      .rejects.toThrow("Say what needs changing")
+    await reviewer.mutation(api.articles.review, { id, approve: false, note: "Please cite where seven hours comes from." })
+
+    const [mineRow] = await author.query(api.articles.mine, {})
+    expect(mineRow.status).toBe("changes_requested")
+    expect(mineRow.review_note).toBe("Please cite where seven hours comes from.")
+  })
+
+  test("editing a published article takes it off Home until it is approved again", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const reviewer = t.withIdentity(REVIEWER)
+    const { id } = await author.mutation(api.articles.save, good)
+    await author.mutation(api.articles.submit, { id })
+    await reviewer.mutation(api.articles.review, { id, approve: true })
+    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+
+    await author.mutation(api.articles.save, { id, ...good, title: "Why regular sleep timing helps you" })
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+  })
+
+  test("withdrawing removes it from Home", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const { id } = await author.mutation(api.articles.save, good)
+    await author.mutation(api.articles.submit, { id })
+    await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
+    await author.mutation(api.articles.withdraw, { id })
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+  })
+
+  test("an author can have at most three articles waiting", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    for (let i = 0; i < 3; i++) {
+      const { id } = await author.mutation(api.articles.save, { ...good, title: `${good.title} ${i}` })
+      await author.mutation(api.articles.submit, { id })
+    }
+    const { id } = await author.mutation(api.articles.save, { ...good, title: `${good.title} 4` })
+    await expect(author.mutation(api.articles.submit, { id })).rejects.toThrow("three articles waiting")
+  })
+})

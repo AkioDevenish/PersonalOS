@@ -88,7 +88,7 @@ struct SignInView: View {
 /// the two cases here, their two `Tab`s and their two lines in the switch came
 /// out. Home lost the tiles that pointed at them in the same breath.
 enum AppTab: CaseIterable, Hashable {
-    case home, health, settings
+    case home, health
 
     /// The system fills the selected one and tints it, so only the outline is
     /// named here. The hand-rolled bar used to keep a `.fill` twin for that
@@ -97,7 +97,6 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .home: return "house"
         case .health: return "heart"
-        case .settings: return "person"
         }
     }
 
@@ -107,7 +106,6 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .home: return "Home"
         case .health: return "Health"
-        case .settings: return "Profile"
         }
     }
 }
@@ -130,6 +128,13 @@ enum Route: Hashable {
     case practitioner(SpecialistsClient.Specialist)
     /// The other side of the desk, for somebody who is listed.
     case practice
+    /// Profile, pushed from the picture at the top right of Home. It was a
+    /// tab as well, and one way in is enough.
+    case profile
+    /// An author's own articles, and the way to write one.
+    case myArticles
+    /// Articles waiting for a reviewer.
+    case reviewArticles
     /// One article, carried whole like a practitioner: the card already has it.
     case article(Article)
     /// Every article, or one category's.
@@ -173,7 +178,6 @@ struct RootView: View {
         TabView(selection: selection) {
             Tab(value: AppTab.home) { stack(for: .home) }
             Tab(value: AppTab.health) { stack(for: .health) }
-            Tab(value: AppTab.settings) { stack(for: .settings) }
         }
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to
@@ -209,6 +213,9 @@ struct RootView: View {
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
                     case .cycle:        CycleView()
+                    case .profile:      ConnectionsView()
+                    case .myArticles:   MyArticlesView()
+                    case .reviewArticles: ArticleReviewQueueView()
                     case .article(let one): ArticleView(article: one)
                     case .articles(let category): ArticleListView(category: category)
                     }
@@ -229,7 +236,6 @@ struct RootView: View {
         // can do, so it is handed the way to ask.
         case .home:     HomeView { tab = $0 }
         case .health:   HealthView()
-        case .settings: ConnectionsView()
         }
     }
 

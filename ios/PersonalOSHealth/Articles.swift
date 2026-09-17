@@ -2,10 +2,9 @@ import SwiftUI
 
 /// Something to read.
 ///
-/// Bundled with the app as `Articles.json` for now. That is a choice about
-/// where the words live, not about the screens: moving them into Convex so
-/// they can be edited without shipping a build changes `Articles.all` and
-/// nothing that draws them.
+/// Two sources, one shape. Practitioners write articles that reach Home only
+/// after review (convex/articles.ts), and a handful ship inside the app in
+/// `Articles.json` so the page is never empty. `ArticleLibrary` merges them.
 struct Article: Decodable, Hashable, Identifiable {
     let id: String
     let title: String
@@ -16,8 +15,14 @@ struct Article: Decodable, Hashable, Identifiable {
     let colour: String
     let summary: String
     let body: [String]
+    /// Who wrote it, for articles from a practitioner. The bundled ones are
+    /// the app's own and carry no byline.
+    var author: String? = nil
+    var credentials: String? = nil
 
-    var tint: Color {
+    var tint: Color { Article.tint(for: colour) }
+
+    static func tint(for colour: String) -> Color {
         let value = UInt32(colour, radix: 16) ?? 0x3F7682
         return Color(
             red: Double((value >> 16) & 0xFF) / 255,
@@ -30,7 +35,7 @@ struct Article: Decodable, Hashable, Identifiable {
 enum Articles {
     /// Read once from the bundle. A file that fails to decode is a build
     /// mistake, so it shows as an empty shelf rather than a crash.
-    static let all: [Article] = {
+    static let bundled: [Article] = {
         guard let url = Bundle.main.url(forResource: "Articles", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode([Article].self, from: data)
@@ -38,15 +43,16 @@ enum Articles {
         return decoded
     }()
 
-    /// Categories in the order their first article appears.
-    static var categories: [String] {
-        var seen = Set<String>()
-        return all.map(\.category).filter { seen.insert($0).inserted }
-    }
-
-    static func filed(under category: String) -> [Article] {
-        all.filter { $0.category == category }
-    }
+    /// What an author may choose from. Mirrors convex/articleRules.ts, which
+    /// is the list that is actually enforced; a mismatch here shows as a
+    /// server error on save, never as an article that slips through.
+    static let categories = ["Your cycle", "Sleep & recovery", "Moving", "Eating", "Mind"]
+    static let symbols = [
+        "circle.dotted", "calendar.badge.clock", "heart", "moon.stars", "figure.walk",
+        "figure.walk.motion", "leaf", "fork.knife", "brain.head.profile", "sparkles",
+        "drop", "sun.max", "bed.double", "lungs", "stethoscope",
+    ]
+    static let colours = ["9E566F", "7A4E8C", "A0322E", "2F4A7A", "4E7A45", "3F6E7A", "8A6A2F", "5A5F6B"]
 }
 
 // MARK: - The card
@@ -114,53 +120,10 @@ struct ArticleView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ZStack {
-                    article.tint
-                    Image(systemName: article.symbol)
-                        .font(.system(size: 72, weight: .light))
-                        .environment(\.symbolVariants, .none)
-                        .foregroundStyle(.white.opacity(0.92))
-                }
-                .frame(height: 210)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .accessibilityHidden(true)
-
-                Text(article.category.uppercased())
-                    .font(Theme.sans(11, medium: true))
-                    .tracking(1.4)
-                    .foregroundStyle(Theme.accent)
-                    .padding(.top, 22)
-
-                Text(article.title)
-                    .font(Theme.serif(32))
-                    .foregroundStyle(Theme.text)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 6)
-
-                Label("\(article.minutes) min read", systemImage: "clock")
-                    .font(Theme.sans(12.5))
-                    .foregroundStyle(Theme.secondaryText)
-                    .padding(.top, 8)
-
-                ForEach(Array(article.body.enumerated()), id: \.offset) { _, paragraph in
-                    Text(paragraph)
-                        .font(Theme.serifBody(18))
-                        .foregroundStyle(Theme.text)
-                        .lineSpacing(6)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 18)
-                }
-
-                Text("General information, not medical advice. If something worries you, ask a practitioner.")
-                    .font(Theme.sans(12))
-                    .foregroundStyle(Theme.tertiaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 30)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 30)
+            ArticleContent(article: article)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 30)
         }
         .compactsTabBar()
         .background(Theme.background)
@@ -168,12 +131,73 @@ struct ArticleView: View {
     }
 }
 
+/// The article itself, without a scroll view around it, so the reviewer's
+/// screen can show exactly what readers will see inside its own page.
+struct ArticleContent: View {
+    let article: Article
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack {
+                article.tint
+                Image(systemName: article.symbol)
+                    .font(.system(size: 72, weight: .light))
+                    .environment(\.symbolVariants, .none)
+                    .foregroundStyle(.white.opacity(0.92))
+            }
+            .frame(height: 210)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityHidden(true)
+
+            Text(article.category.uppercased())
+                .font(Theme.sans(11, medium: true))
+                .tracking(1.4)
+                .foregroundStyle(Theme.accent)
+                .padding(.top, 22)
+
+            Text(article.title)
+                .font(Theme.serif(32))
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+
+            if let author = article.author {
+                Text([author, article.credentials].compactMap { $0 }.joined(separator: ", "))
+                    .font(Theme.sans(14, medium: true))
+                    .foregroundStyle(Theme.text)
+                    .padding(.top, 8)
+            }
+
+            Label("\(article.minutes) min read", systemImage: "clock")
+                .font(Theme.sans(12.5))
+                .foregroundStyle(Theme.secondaryText)
+                .padding(.top, 8)
+
+            ForEach(Array(article.body.enumerated()), id: \.offset) { _, paragraph in
+                Text(paragraph)
+                    .font(Theme.serifBody(18))
+                    .foregroundStyle(Theme.text)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 18)
+            }
+
+            Text("General information, not medical advice. If something worries you, ask a practitioner.")
+                .font(Theme.sans(12))
+                .foregroundStyle(Theme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 30)
+        }
+    }
+}
+
 /// Every article, or every article in one category, as a list.
 struct ArticleListView: View {
     let category: String?
+    @ObservedObject private var library = ArticleLibrary.shared
 
     private var articles: [Article] {
-        category.map { Articles.filed(under: $0) } ?? Articles.all
+        category.map { library.filed(under: $0) } ?? library.all
     }
 
     var body: some View {
