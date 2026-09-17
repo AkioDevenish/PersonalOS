@@ -44,12 +44,10 @@ struct ProfileView: View {
                     .padding(.top, 34)
                     .padding(.bottom, 6)
 
-                row("person.crop.circle", "Personal information") { showAccount = true }
                 row("creditcard", "Plan and payments", route: .paywall)
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }
-                row("lock.shield", "Login and security") { showAccount = true }
 
                 if abilities.canReview {
                     Text("Team")
@@ -107,7 +105,7 @@ struct ProfileView: View {
                     Text(displayName)
                         .font(Theme.sans(18, medium: true))
                         .foregroundStyle(Theme.text)
-                    Text("Show profile")
+                    Text("Show profile and account")
                         .font(Theme.sans(14))
                         .foregroundStyle(Theme.secondaryText)
                 }
