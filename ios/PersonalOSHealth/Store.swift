@@ -58,6 +58,14 @@ final class Store {
             for await update in Transaction.updates {
                 guard let self else { return }
                 if case .verified(let transaction) = update {
+                    // Article placement is paid per article and applied by
+                    // the article server. It is finished only once applied,
+                    // so a failure here means StoreKit offers it again later
+                    // rather than the purchase being lost.
+                    if transaction.productID == ArticlePlacement.productID {
+                        if await ArticlePlacement.confirm(update) { await transaction.finish() }
+                        continue
+                    }
                     await self.submit(transaction)
                     await transaction.finish()
                 }

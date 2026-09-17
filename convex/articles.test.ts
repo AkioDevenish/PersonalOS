@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
-import { api } from "./_generated/api"
+import { api, internal } from "./_generated/api"
 import schema from "./schema"
 import { check } from "./articleRules"
 
@@ -10,6 +10,9 @@ const modules = import.meta.glob("./**/*.ts")
 const REVIEWER = { subject: "user_reviewer", tokenIdentifier: "clerk|user_reviewer" }
 const AUTHOR = { subject: "user_author", tokenIdentifier: "clerk|user_author" }
 const STRANGER = { subject: "user_stranger", tokenIdentifier: "clerk|user_stranger" }
+/** On the practitioner-approval staff list, but not the article team. */
+const STAFF = { subject: "user_staff", tokenIdentifier: "clerk|user_staff" }
+const DAY = 24 * 60 * 60 * 1000
 
 const paragraph =
   "Sleep and recovery shape how the next day feels, and the pattern across a week matters more than any single night. " +
@@ -25,10 +28,14 @@ const good = {
 }
 
 beforeEach(() => {
-  vi.stubEnv("NUTRITIONIST_IDS", REVIEWER.subject)
+  vi.stubEnv("ARTICLE_REVIEWER_IDS", REVIEWER.subject)
+  vi.stubEnv("NUTRITIONIST_IDS", STAFF.subject)
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date("2026-09-17T12:00:00Z"))
 })
 afterEach(() => {
   vi.unstubAllEnvs()
+  vi.useRealTimers()
 })
 
 async function setup() {
@@ -38,12 +45,36 @@ async function setup() {
       userId: AUTHOR.subject, name: "Dr Author", country: "TT", credentials: "RD",
       bio: "", price_credits: 0, active: true, status: "approved", updated_at: 0,
     })
+    // The reviewer is a practitioner too, so the self-review rule can be tested.
+    await ctx.db.insert("nutritionists", {
+      userId: REVIEWER.subject, name: "Dr Reviewer", country: "TT", credentials: "MD",
+      bio: "", price_credits: 0, active: true, status: "approved", updated_at: 0,
+    })
     await ctx.db.insert("nutritionists", {
       userId: STRANGER.subject, name: "Pending Person", country: "TT", credentials: "Says RD",
       bio: "", price_credits: 0, active: true, status: "pending", updated_at: 0,
     })
   })
   return t
+}
+
+/** Writes, submits and verifies an article, returning its id. */
+async function verified(t: Awaited<ReturnType<typeof setup>>, title = good.title) {
+  const { id } = await t.withIdentity(AUTHOR).mutation(api.articles.save, { ...good, title })
+  await t.withIdentity(AUTHOR).mutation(api.articles.submit, { id })
+  await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
+  return id
+}
+
+/** Stands in for a purchase Apple has signed and articlePayments.ts has checked. */
+async function pay(t: Awaited<ReturnType<typeof setup>>, id: any, transactionId: string, who = AUTHOR) {
+  const { token } = await t.withIdentity(AUTHOR).mutation(api.articles.startPayment, { id })
+  return await t.mutation(internal.articles.applyPlacement, {
+    authorToken: who.tokenIdentifier,
+    paymentToken: token,
+    transactionId,
+    productId: "os.personal.article.30days",
+  })
 }
 
 describe("automatic checks", () => {
@@ -87,6 +118,16 @@ describe("who may do what", () => {
       .rejects.toThrow("Only approved practitioners can write articles")
   })
 
+  test("being on the practitioner staff list is not enough to write or to review", async () => {
+    const t = await setup()
+    await expect(t.withIdentity(STAFF).mutation(api.articles.save, good))
+      .rejects.toThrow("Only approved practitioners can write articles")
+    const { id } = await t.withIdentity(AUTHOR).mutation(api.articles.save, good)
+    await t.withIdentity(AUTHOR).mutation(api.articles.submit, { id })
+    await expect(t.withIdentity(STAFF).mutation(api.articles.review, { id, approve: true }))
+      .rejects.toThrow("Not allowed")
+  })
+
   test("a signed-out request cannot read the review queue", async () => {
     const t = await setup()
     await expect(t.query(api.articles.queue, {})).rejects.toThrow("Not authenticated")
@@ -113,23 +154,78 @@ describe("who may do what", () => {
 })
 
 describe("the path to Home", () => {
-  test("nothing is on Home until a reviewer approves it", async () => {
+  test("verified is not published: nothing is on Home until it is paid for", async () => {
     const t = await setup()
     const author = t.withIdentity(AUTHOR)
-    const reviewer = t.withIdentity(REVIEWER)
 
     const { id } = await author.mutation(api.articles.save, good)
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
-
     await author.mutation(api.articles.submit, { id })
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
-    expect(await reviewer.query(api.articles.queue, {})).toHaveLength(1)
+    expect(await t.withIdentity(REVIEWER).query(api.articles.queue, {})).toHaveLength(1)
 
-    await reviewer.mutation(api.articles.review, { id, approve: true })
+    await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
+    expect((await author.query(api.articles.mine, {}))[0].status).toBe("approved")
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+
+    const result = await pay(t, id, "tx_1")
+    expect(result.applied).toBe(true)
+    expect(result.live_until).toBe(Date.now() + 30 * DAY)
+
     const live = await t.query(api.articles.published, {})
     expect(live).toHaveLength(1)
     expect(live[0]).toMatchObject({ title: good.title, author: "Dr Author", credentials: "RD" })
     expect(live[0].body).toHaveLength(3)
+  })
+
+  test("an article cannot be paid for before the team verifies it", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const { id } = await author.mutation(api.articles.save, good)
+    await expect(author.mutation(api.articles.startPayment, { id })).rejects.toThrow("once the team has verified it")
+    await author.mutation(api.articles.submit, { id })
+    await expect(author.mutation(api.articles.startPayment, { id })).rejects.toThrow("once the team has verified it")
+  })
+
+  test("a purchase only counts for the author who made it", async () => {
+    const t = await setup()
+    const id = await verified(t)
+    await expect(pay(t, id, "tx_1", STRANGER)).rejects.toThrow("not for one of your articles")
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+  })
+
+  test("the same transaction redelivered is applied once", async () => {
+    const t = await setup()
+    const id = await verified(t)
+    const first = await pay(t, id, "tx_1")
+    const again = await pay(t, id, "tx_1")
+    expect(again.applied).toBe(false)
+    expect(again.live_until).toBe(first.live_until)
+  })
+
+  test("renewing early adds thirty days to the end rather than restarting", async () => {
+    const t = await setup()
+    const id = await verified(t)
+    const first = await pay(t, id, "tx_1")
+    vi.setSystemTime(Date.now() + 10 * DAY)
+    const second = await pay(t, id, "tx_2")
+    expect(second.live_until).toBe(first.live_until + 30 * DAY)
+  })
+
+  test("it comes off Home when the time runs out, and a renewal puts it back", async () => {
+    const t = await setup()
+    const id = await verified(t)
+    await pay(t, id, "tx_1")
+
+    vi.setSystemTime(Date.now() + 29 * DAY)
+    await t.mutation(internal.articles.expire, { id })
+    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+
+    vi.setSystemTime(Date.now() + 2 * DAY)
+    await t.mutation(internal.articles.expire, { id })
+    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect((await t.withIdentity(AUTHOR).query(api.articles.mine, {}))[0].status).toBe("expired")
+
+    await pay(t, id, "tx_2")
+    expect(await t.query(api.articles.published, {})).toHaveLength(1)
   })
 
   test("a draft that fails the checks cannot be submitted", async () => {
@@ -156,27 +252,28 @@ describe("the path to Home", () => {
     expect(mineRow.review_note).toBe("Please cite where seven hours comes from.")
   })
 
-  test("editing a published article takes it off Home until it is approved again", async () => {
+  test("an edit comes off Home, and re-verification puts it back for the time already paid", async () => {
     const t = await setup()
     const author = t.withIdentity(AUTHOR)
-    const reviewer = t.withIdentity(REVIEWER)
-    const { id } = await author.mutation(api.articles.save, good)
-    await author.mutation(api.articles.submit, { id })
-    await reviewer.mutation(api.articles.review, { id, approve: true })
-    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+    const id = await verified(t)
+    await pay(t, id, "tx_1")
 
     await author.mutation(api.articles.save, { id, ...good, title: "Why regular sleep timing helps you" })
     expect(await t.query(api.articles.published, {})).toHaveLength(0)
-  })
 
-  test("withdrawing removes it from Home", async () => {
-    const t = await setup()
-    const author = t.withIdentity(AUTHOR)
-    const { id } = await author.mutation(api.articles.save, good)
     await author.mutation(api.articles.submit, { id })
     await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
+    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+  })
+
+  test("withdrawing removes it from Home and gives up the time left", async () => {
+    const t = await setup()
+    const author = t.withIdentity(AUTHOR)
+    const id = await verified(t)
+    await pay(t, id, "tx_1")
     await author.mutation(api.articles.withdraw, { id })
     expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect((await author.query(api.articles.mine, {}))[0].live_until).toBeNull()
   })
 
   test("an author can have at most three articles waiting", async () => {

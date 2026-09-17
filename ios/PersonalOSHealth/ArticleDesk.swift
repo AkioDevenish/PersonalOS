@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 // MARK: - Writing
 
@@ -292,6 +293,8 @@ struct MyArticlesView: View {
     @State private var failure: String?
     @State private var editing: ArticlesClient.Draft?
     @State private var writing = false
+    @State private var paying: String?
+    @State private var price: String?
 
     private let client = ArticlesClient()
 
@@ -304,7 +307,7 @@ struct MyArticlesView: View {
                         .foregroundStyle(Theme.accent)
                 }
             } footer: {
-                Text("Articles are checked automatically, then read by a reviewer. Only approved articles appear on Home. Editing a published article takes it off Home until it is approved again.")
+                Text("Articles are checked automatically, then verified by our team. Once verified, pay to put it on Home for 30 days\(price.map { " (\($0))" } ?? ""). You only pay for an article that has been verified. Editing a published article takes it off Home until it is verified again, and any paid time left carries over.")
             }
 
             if let failure {
@@ -327,6 +330,25 @@ struct MyArticlesView: View {
                             Text("Reviewer: " + note)
                                 .font(Theme.sans(13)).foregroundStyle(Theme.accent)
                         }
+                        if draft.status == "published", let until = draft.liveUntil {
+                            Text("On Home until \(until.formatted(date: .abbreviated, time: .omitted))")
+                                .font(Theme.sans(13)).foregroundStyle(Theme.positive)
+                        }
+                        if draft.canPay {
+                            Button {
+                                Task { await pay(draft) }
+                            } label: {
+                                Text(paying == draft.id ? "Opening the App Store…"
+                                     : draft.status == "approved" ? "Publish for 30 days" : "Add 30 days")
+                                    .font(Theme.sans(14, medium: true))
+                                    .foregroundStyle(Theme.background)
+                                    .padding(.horizontal, 14).padding(.vertical, 8)
+                                    .background(Theme.text, in: Capsule())
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(paying != nil)
+                            .padding(.top, 4)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -342,6 +364,7 @@ struct MyArticlesView: View {
         }
         .navigationTitle("Your articles")
         .task { await load() }
+        .task { price = await ArticlePlacement.product()?.displayPrice }
         .refreshable { await load() }
         .sheet(item: $editing) { draft in
             ArticleEditorView(existing: draft) { await load() }
@@ -354,7 +377,7 @@ struct MyArticlesView: View {
     private func status(_ draft: ArticlesClient.Draft) -> some View {
         let tint: Color = switch draft.status {
         case "published": Theme.positive
-        case "changes_requested": Theme.accent
+        case "approved", "changes_requested": Theme.accent
         case "submitted": Theme.secondaryText
         default: Theme.tertiaryText
         }
@@ -363,6 +386,21 @@ struct MyArticlesView: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    private func pay(_ draft: ArticlesClient.Draft) async {
+        paying = draft.id
+        defer { paying = nil }
+        do {
+            switch try await ArticlePlacement.buy(articleID: draft.id) {
+            case .placed: Haptics.tap()
+            case .pending: failure = "Waiting for the purchase to be approved. It goes up once that's done."
+            case .cancelled: break
+            }
+        } catch {
+            failure = error.localizedDescription
+        }
+        await load()
     }
 
     private func load() async {

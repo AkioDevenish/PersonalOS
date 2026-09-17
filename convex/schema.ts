@@ -403,11 +403,18 @@ export default defineSchema({
     symbol: v.string(),
     colour: v.string(),
     minutes: v.number(),
+    /**
+     * approved is verified by the team and waiting for the author to pay;
+     * published is paid and on Home until live_until; expired is a published
+     * article whose paid time ran out, ready to renew.
+     */
     status: v.union(
       v.literal("draft"),
       v.literal("submitted"),
       v.literal("changes_requested"),
+      v.literal("approved"),
       v.literal("published"),
+      v.literal("expired"),
       v.literal("withdrawn"),
     ),
     /** Soft findings from the automatic check, for the reviewer to weigh. */
@@ -416,11 +423,35 @@ export default defineSchema({
     reviewed_by: v.optional(v.string()),
     submitted_at: v.optional(v.number()),
     published_at: v.optional(v.number()),
+    /** When the paid time on Home ends. */
+    live_until: v.optional(v.number()),
+    /**
+     * The UUID StoreKit carries through a purchase as appAccountToken, which
+     * is how a signed transaction is tied to this article and no other.
+     */
+    payment_token: v.optional(v.string()),
     updated_at: v.number(),
   })
     .index("by_authorToken_and_updated_at", ["authorToken", "updated_at"])
+    .index("by_payment_token", ["payment_token"])
     .index("by_status_and_submitted_at", ["status", "submitted_at"])
     .index("by_status_and_published_at", ["status", "published_at"]),
+
+  /**
+   * Every App Store transaction that paid for time on Home.
+   *
+   * The transaction id is the idempotency key. Apple redelivers transactions
+   * routinely — on every launch until they are finished — and applying one
+   * twice would be thirty free days.
+   */
+  article_payments: defineTable({
+    articleId: v.id("articles"),
+    authorToken: v.string(),
+    transactionId: v.string(),
+    productId: v.string(),
+    live_until: v.number(),
+    created_at: v.number(),
+  }).index("by_transactionId", ["transactionId"]),
 
   call_signals: defineTable({
     consultId: v.id("consults"),
