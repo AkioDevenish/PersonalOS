@@ -61,7 +61,6 @@ struct ProfileView: View {
                 Button("Log out") { confirmingSignOut = true }
                     .font(Theme.sans(16, medium: true))
                     .foregroundStyle(Theme.text)
-                    .underline()
                     .padding(.top, 30)
 
                 Text(buildStamp)

@@ -88,6 +88,28 @@ enum Goals {
             : String(format: "%.\(spec.precision)f", value)
     }
 
+    /// How much one tap of the stepper moves a target.
+    ///
+    /// Scaled to what the number means rather than to its digits: steps move
+    /// in hundreds, hours in halves, a heart rate one beat at a time. Typing
+    /// a goal on a decimal keypad was the old way, and a keypad is how you get
+    /// 80000 steps from a thumb that missed.
+    static func step(for spec: MetricSpec) -> Double {
+        if spec.precision > 0 { return (suggestion(for: spec) ?? 1) >= 20 ? 1 : 0.5 }
+        switch suggestion(for: spec) ?? 100 {
+        case 5000...:  return 500
+        case 1000..<5000: return 100
+        case 100..<1000:  return 10
+        default:          return 1
+        }
+    }
+
+    /// Sensible bounds, so a stepper cannot be pushed somewhere absurd.
+    static func range(for spec: MetricSpec) -> ClosedRange<Double> {
+        let base = suggestion(for: spec) ?? 100
+        return (base / 10)...(base * 4)
+    }
+
     /// The metrics a goal can be set on, in the order the catalogue lists them.
     static var settable: [MetricSpec] { Metrics.all.filter { $0.goal.isSettable } }
 
