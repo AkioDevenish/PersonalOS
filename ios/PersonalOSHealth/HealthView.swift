@@ -67,15 +67,21 @@ struct HealthView: View {
                 // The briefing's prose lives on Home now. What stays here is
                 // the way through to it, so this page is the body in figures
                 // rather than the same two paragraphs a second time.
-                NavigationLink(value: Route.briefing) {
-                    Text("READ THE FULL BRIEFING  \u{2192}")
-                        .font(Theme.sans(10, medium: true))
-                        .tracking(1.8)
-                        .foregroundStyle(Theme.accent)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
+                // Goals moved here from Profile: what you are aiming at belongs
+                // beside the readings that measure it, not among account settings.
+                HStack(spacing: 22) {
+                    NavigationLink(value: Route.briefing) {
+                        Text("READ THE FULL BRIEFING  \u{2192}")
+                    }
+                    NavigationLink(value: Route.goals) {
+                        Text("GOALS  \u{2192}")
+                    }
                 }
+                .font(Theme.sans(10, medium: true))
+                .tracking(1.8)
+                .foregroundStyle(Theme.accent)
                 .buttonStyle(.pressRow)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 26)
                 .flowIn(3)
 

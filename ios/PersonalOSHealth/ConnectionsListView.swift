@@ -96,6 +96,7 @@ struct ConnectionsListView: View {
                     ForEach(wearables) { c in
                         NavigationLink {
                             SourceDetailView(connection: c, client: client, onChange: { await load() })
+                                .hidesSystemTabBar()
                         } label: {
                             row(c)
                         }
