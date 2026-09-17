@@ -65,16 +65,19 @@ struct ContentCard: View {
     /// section that is the raised colour; on the plain page it is the surface.
     var raised = false
 
-    static let width: CGFloat = 232
-    static let pictureHeight: CGFloat = 124
-    static let bodyHeight: CGFloat = 78
+    /// Measured off the reference screenshot's Most Read card, which is
+    /// about 185 points wide at iPhone 15 Pro scale. The first cut was a
+    /// quarter bigger again and read as posters rather than a shelf.
+    static let width: CGFloat = 184
+    static let pictureHeight: CGFloat = 98
+    static let bodyHeight: CGFloat = 62
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
                 tint
                 Image(systemName: symbol)
-                    .font(.system(size: 50, weight: .light))
+                    .font(.system(size: 36, weight: .light))
                     .environment(\.symbolVariants, .none)
                     .foregroundStyle(.white.opacity(0.92))
             }
@@ -82,24 +85,24 @@ struct ContentCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(Theme.sans(16, medium: true))
+                    .font(Theme.sans(14, medium: true))
                     .foregroundStyle(Theme.text)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 if let note {
                     Text(note)
-                        .font(Theme.sans(12.5))
+                        .font(Theme.sans(11.5))
                         .foregroundStyle(Theme.secondaryText)
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .frame(height: Self.bodyHeight)
             .background(raised ? Theme.raised : Theme.surface)
         }
         .frame(width: Self.width)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
