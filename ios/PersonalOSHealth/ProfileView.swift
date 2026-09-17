@@ -63,10 +63,6 @@ struct ProfileView: View {
                     row("checkmark.seal", "Review articles", route: .reviewArticles)
                 }
 
-                #if DEBUG
-                row("hammer", "Developer", route: .developer)
-                #endif
-
                 Button("Log out") { confirmingSignOut = true }
                     .font(Theme.sans(16, medium: true))
                     .foregroundStyle(Theme.text)

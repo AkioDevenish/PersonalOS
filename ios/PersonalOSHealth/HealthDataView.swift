@@ -73,27 +73,3 @@ struct HealthDataView: View {
         }
     }
 }
-
-#if DEBUG
-/// The server address and a pasted session token, for development builds only.
-struct DeveloperView: View {
-    @State private var url = AppConfig.baseURL
-    @State private var token = DebugTokenAuthProvider.token
-
-    var body: some View {
-        Form {
-            Section("Server") {
-                TextField("Server URL", text: $url)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onSubmit { AppConfig.baseURL = url }
-            }
-            Section("Session token") {
-                SecureField("Token", text: $token)
-                    .onSubmit { DebugTokenAuthProvider.token = token }
-            }
-        }
-        .navigationTitle("Developer")
-    }
-}
-#endif

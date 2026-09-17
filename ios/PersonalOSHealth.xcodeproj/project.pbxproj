@@ -70,7 +70,6 @@
 				66A6BA172FB78D4D00563D4F /* Sources */,
 				66A6BA182FB78D4D00563D4F /* Frameworks */,
 				66A6BA192FB78D4D00563D4F /* Resources */,
-				AA0DEV0100000000000001 /* Stamp dev server host */,
 			);
 			buildRules = (
 			);
@@ -136,39 +135,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		AA0DEV0100000000000001 /* Stamp dev server host */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
-			);
-			name = "Stamp dev server host";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"$CONFIGURATION\" = \"Debug\" ]; then
-  PLIST=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"
-  for IF in en0 en1 en6; do HOST=$(ipconfig getifaddr $IF 2>/dev/null); [ -n \"$HOST\" ] && break; done
-  if [ -n \"$HOST\" ] && [ -f \"$PLIST\" ]; then
-    /usr/libexec/PlistBuddy -c \"Delete :DevServerHost\" \"$PLIST\" 2>/dev/null
-    /usr/libexec/PlistBuddy -c \"Add :DevServerHost string $HOST\" \"$PLIST\"
-    /usr/libexec/PlistBuddy -c \"Delete :NSAppTransportSecurity\" \"$PLIST\" 2>/dev/null
-    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity dict\" \"$PLIST\"
-    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains dict\" \"$PLIST\"
-    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains:$HOST dict\" \"$PLIST\"
-    /usr/libexec/PlistBuddy -c \"Add :NSAppTransportSecurity:NSExceptionDomains:$HOST:NSExceptionAllowsInsecureHTTPLoads bool true\" \"$PLIST\"
-    echo \"note: dev server host stamped as $HOST\"
-  fi
-fi
-";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		66A6BA172FB78D4D00563D4F /* Sources */ = {

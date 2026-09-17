@@ -30,31 +30,14 @@ struct ClerkAuthProvider: AuthProvider {
     }
 }
 
-#if DEBUG
-/// Escape hatch for development: paste a session token instead of signing in.
-/// Never compiled into a release build.
-struct DebugTokenAuthProvider: AuthProvider {
-    private static let key = "personal_os_debug_token"
-
-    static var token: String {
-        get { UserDefaults.standard.string(forKey: key) ?? "" }
-        set { UserDefaults.standard.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: key) }
-    }
-
-    var isSignedIn: Bool { !Self.token.isEmpty }
-    func currentToken() async -> String? { Self.token.isEmpty ? nil : Self.token }
-}
-#endif
-
 enum Auth {
-    /// Clerk is the identity. In debug builds a pasted token wins if present,
-    /// so a device can sync without a full sign-in when testing.
-    static var provider: AuthProvider {
-        #if DEBUG
-        if !DebugTokenAuthProvider.token.isEmpty { return DebugTokenAuthProvider() }
-        #endif
-        return ClerkAuthProvider()
-    }
+    /// Clerk is the identity, in every build.
+    ///
+    /// A debug build used to accept a token pasted into Settings instead of
+    /// signing in. That is a sign-in bypass shipped in the same binary as the
+    /// real thing, kept apart from it by one compiler flag, and it existed to
+    /// test against a server on a Mac. Both reasons are gone.
+    static var provider: AuthProvider { ClerkAuthProvider() }
 
     /// Publishable key — safe in a client: it names the instance, it grants
     /// nothing. Decoded, it is hopeful-collie-6.clerk.accounts.dev.
