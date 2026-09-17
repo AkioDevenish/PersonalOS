@@ -89,7 +89,7 @@ struct OnboardingView: View {
                 .padding(.bottom, 34)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.linen)
+        .background(Theme.background)
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 24)
@@ -110,7 +110,7 @@ struct OnboardingView: View {
             if !last {
                 Button("Skip") { Haptics.tap(); finish() }
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .buttonStyle(.press)
             }
         }
@@ -122,9 +122,14 @@ struct OnboardingView: View {
 
     private func leaf(_ leaf: Leaf) -> some View {
         VStack(spacing: 0) {
+            // Drawn as a template in the text colour. The plates are black ink
+            // on a transparent ground, which vanishes on a dark page; taking
+            // only their shape lets the ink turn white when the phone does.
             Image(leaf.plate)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
+                .foregroundStyle(Theme.text)
                 .frame(maxWidth: .infinity, maxHeight: 196)
                 .accessibilityHidden(true)
                 .flowIn(0, distance: 16)
@@ -135,7 +140,7 @@ struct OnboardingView: View {
 
             Text(leaf.title)
                 .font(Theme.serif(34))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -144,7 +149,7 @@ struct OnboardingView: View {
 
             Text(leaf.body)
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
                 .fixedSize(horizontal: false, vertical: true)
@@ -158,7 +163,7 @@ struct OnboardingView: View {
         HStack(spacing: 7) {
             ForEach(leaves.indices, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? Theme.amber : Theme.hairline)
+                    .fill(i == page ? Theme.accent : Theme.separator)
                     .frame(width: i == page ? 18 : 6, height: 6)
             }
         }
@@ -171,7 +176,7 @@ struct OnboardingView: View {
             if let failure {
                 Text(failure)
                     .font(Theme.sans(11))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 38)
@@ -188,16 +193,16 @@ struct OnboardingView: View {
                     Text(last ? "Connect Apple Health" : "Continue")
                         .opacity(connecting ? 0 : 1)
                     if connecting {
-                        ProgressView().tint(Theme.warm)
+                        ProgressView().tint(Theme.surface)
                     }
                 }
                 .font(Theme.sans(15, medium: true))
-                .foregroundStyle(Theme.warm)
+                .foregroundStyle(Theme.surface)
                 // Was a fixed 313 points — one phone's width and nobody
                 // else's.
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Theme.ink)
+                .background(Theme.text)
                 .clipShape(Capsule())
             }
             .buttonStyle(.press)
@@ -211,7 +216,7 @@ struct OnboardingView: View {
                 finish()
             }
             .font(Theme.sans(12))
-            .foregroundStyle(Theme.dust)
+            .foregroundStyle(Theme.tertiaryText)
             .buttonStyle(.press)
             .allowsHitTesting(last)
             .padding(.top, 22)

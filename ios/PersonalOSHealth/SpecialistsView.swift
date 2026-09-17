@@ -25,13 +25,13 @@ struct SpecialistsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Ask a person")
                     .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 6)
                     .flowIn(0)
 
                 Text("Practitioners who read what you have recorded and write back in their own words. Every one of them has been checked before appearing here.")
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 12)
@@ -40,7 +40,7 @@ struct SpecialistsView: View {
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 20)
                 }
 
@@ -78,7 +78,7 @@ struct SpecialistsView: View {
                              ? "Nobody is here right now. Turn off \u{201C}Here now\u{201D} to see everyone."
                              : "Nobody here matches that.")
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                             .frame(maxWidth: .infinity)
                             .padding(.top, 40)
                     }
@@ -91,7 +91,7 @@ struct SpecialistsView: View {
             .padding(.horizontal, 22)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .refreshable { await load() }
         // Deliberately not `.task`. That binds the request's lifetime to this
         // view, and SwiftUI tears the view down and rebuilds it as the drawer
@@ -138,12 +138,12 @@ struct SpecialistsView: View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .light))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .environment(\.symbolVariants, .none)
 
             TextField("Search by name, specialism or place", text: $query)
                 .font(Theme.sans(14))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
@@ -154,14 +154,14 @@ struct SpecialistsView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                 }
                 .buttonStyle(.press)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
-        .background(Theme.warm, in: Capsule())
+        .background(Theme.surface, in: Capsule())
     }
 
     private var filterRow: some View {
@@ -175,19 +175,19 @@ struct SpecialistsView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Circle()
-                            .fill(hereOnly ? Theme.warm : Theme.sage)
+                            .fill(hereOnly ? Theme.surface : Theme.positive)
                             .frame(width: 6, height: 6)
                         Text("Here now")
                     }
                     .font(Theme.sans(11, medium: hereOnly))
-                    .foregroundStyle(hereOnly ? Theme.warm : Theme.mid)
+                    .foregroundStyle(hereOnly ? Theme.surface : Theme.secondaryText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background {
                         if hereOnly {
-                            Capsule().fill(Theme.ink)
+                            Capsule().fill(Theme.text)
                         } else {
-                            Capsule().stroke(Theme.hairline, lineWidth: 1)
+                            Capsule().stroke(Theme.separator, lineWidth: 1)
                         }
                     }
                 }
@@ -201,14 +201,14 @@ struct SpecialistsView: View {
                     } label: {
                         Text(s)
                             .font(Theme.sans(11, medium: on))
-                            .foregroundStyle(on ? Theme.warm : Theme.mid)
+                            .foregroundStyle(on ? Theme.surface : Theme.secondaryText)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
                             .background {
                                 if on {
-                                    Capsule().fill(Theme.ink)
+                                    Capsule().fill(Theme.text)
                                 } else {
-                                    Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                    Capsule().stroke(Theme.separator, lineWidth: 1)
                                 }
                             }
                     }
@@ -225,15 +225,15 @@ struct SpecialistsView: View {
         switch one.presence {
         case .here:
             HStack(spacing: 4) {
-                Circle().fill(Theme.sage).frame(width: 6, height: 6)
+                Circle().fill(Theme.positive).frame(width: 6, height: 6)
                 Text("Here now")
                     .font(Theme.sans(11, medium: true))
-                    .foregroundStyle(Theme.sage)
+                    .foregroundStyle(Theme.positive)
             }
         case .recently(let when):
             Text("· \(when)")
                 .font(Theme.sans(11))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
         case .away:
             EmptyView()
         }
@@ -243,11 +243,11 @@ struct SpecialistsView: View {
     @ViewBuilder
     private func portrait(_ one: SpecialistsClient.Specialist, size: CGFloat) -> some View {
         ZStack {
-            Circle().fill(Theme.amber.opacity(0.16))
+            Circle().fill(Theme.accent.opacity(0.16))
 
             Text(initials(one.name))
                 .font(Theme.serif(size * 0.38))
-                .foregroundStyle(Theme.amber)
+                .foregroundStyle(Theme.accent)
 
             if let link = one.photo_url, let url = URL(string: link) {
                 AsyncImage(url: url) { image in
@@ -278,16 +278,16 @@ struct SpecialistsView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(one.name)
                         .font(Theme.serif(23))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(one.credentials)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 6) {
                         Text(one.place)
                             .font(Theme.sans(11))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                         presence(one)
                     }
                 }
@@ -300,10 +300,10 @@ struct SpecialistsView: View {
                     ForEach(one.specialties, id: \.self) { s in
                         Text(s)
                             .font(Theme.sans(11, medium: true))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Theme.amber.opacity(0.18), in: Capsule())
+                            .background(Theme.accent.opacity(0.18), in: Capsule())
                     }
                 }
                 .padding(.top, 14)
@@ -312,7 +312,7 @@ struct SpecialistsView: View {
             if !one.bio.isEmpty {
                 Text(one.bio)
                     .font(Theme.serifBody(15))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -322,41 +322,41 @@ struct SpecialistsView: View {
             HStack(spacing: 10) {
                 Text(one.free ? "Free" : one.price)
                     .font(Theme.sans(12, medium: true))
-                    .foregroundStyle(one.free ? Theme.sage : Theme.dust)
+                    .foregroundStyle(one.free ? Theme.positive : Theme.tertiaryText)
 
                 // What you can actually do with them, said on the card so
                 // nobody taps through to find out there is no call.
                 Label("Chat", systemImage: "bubble.left")
                     .labelStyle(.iconOnly)
                     .font(.system(size: 13, weight: .light))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                 if one.offers_video {
                     Label("Video", systemImage: "video")
                         .labelStyle(.iconOnly)
                         .font(.system(size: 13, weight: .light))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                 }
 
                 Spacer()
                 Text("View  \u{2192}")
                     .font(Theme.sans(12, medium: true))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
             }
             .padding(.top, 18)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.warm, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var empty: some View {
         VStack(spacing: 8) {
             Text("Nobody listed yet")
                 .font(Theme.serif(24))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Text("No practitioner has been approved for the directory so far.")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -460,11 +460,11 @@ struct SpecialistApplicationSheet: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(existing == nil ? "Apply to be listed" : "Your listing")
                     .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
 
                 Text("What you write here is what someone reads before deciding to ask you. Applications are checked before anyone appears.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
@@ -472,7 +472,7 @@ struct SpecialistApplicationSheet: View {
                 PhotosPicker(selection: $picked, matching: .images) {
                     HStack(spacing: 14) {
                         ZStack {
-                            Circle().fill(Theme.amber.opacity(0.16))
+                            Circle().fill(Theme.accent.opacity(0.16))
                             if let photoData, let image = UIImage(data: photoData) {
                                 Image(uiImage: image).resizable().scaledToFill()
                             } else if let link = existing?.photo_url, let url = URL(string: link) {
@@ -480,7 +480,7 @@ struct SpecialistApplicationSheet: View {
                             } else {
                                 Image(systemName: "camera")
                                     .font(.system(size: 17, weight: .light))
-                                    .foregroundStyle(Theme.amber)
+                                    .foregroundStyle(Theme.accent)
                                     .environment(\.symbolVariants, .none)
                             }
                         }
@@ -490,10 +490,10 @@ struct SpecialistApplicationSheet: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(uploading ? "Sending your photograph" : "Your photograph")
                                 .font(Theme.sans(13, medium: true))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text("A face makes a card worth reading. Optional.")
                                 .font(Theme.sans(11))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
                     }
@@ -523,10 +523,10 @@ struct SpecialistApplicationSheet: View {
                                         .font(.system(size: 8, weight: .semibold))
                                 }
                                 .font(Theme.sans(11, medium: true))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(Theme.amber.opacity(0.18), in: Capsule())
+                                .background(Theme.accent.opacity(0.18), in: Capsule())
                             }
                             .buttonStyle(.press)
                         }
@@ -543,10 +543,10 @@ struct SpecialistApplicationSheet: View {
                             } label: {
                                 Text(s)
                                     .font(Theme.sans(11))
-                                    .foregroundStyle(Theme.mid)
+                                    .foregroundStyle(Theme.secondaryText)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
-                                    .background(Capsule().stroke(Theme.hairline, lineWidth: 1))
+                                    .background(Capsule().stroke(Theme.separator, lineWidth: 1))
                             }
                             .buttonStyle(.press)
                         }
@@ -558,11 +558,11 @@ struct SpecialistApplicationSheet: View {
                 HStack(spacing: 10) {
                     TextField("Or type your own", text: $draftSpecialty)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .onSubmit { add(draftSpecialty) }
                     Button("Add") { add(draftSpecialty) }
                         .font(Theme.sans(12, medium: true))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .buttonStyle(.press)
                         .disabled(draftSpecialty.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -572,7 +572,7 @@ struct SpecialistApplicationSheet: View {
                     .padding(.top, 30)
                 TextField("A few lines about how you work", text: $bio, axis: .vertical)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(3...8)
                     .padding(.top, 8)
 
@@ -583,43 +583,43 @@ struct SpecialistApplicationSheet: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(currencyCode)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                     TextField("0", text: $price)
                         .font(Theme.serif(30))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .keyboardType(.decimalPad)
                 }
                 .padding(.top, 6)
                 Text("Per conversation. Leave it at zero to work for free.")
                     .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .padding(.top, 4)
 
                 Toggle(isOn: $offersVideo) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Take video calls")
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                         Text("Plenty of practitioners answer in writing only.")
                             .font(Theme.sans(11))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
-                .tint(Theme.sage)
+                .tint(Theme.positive)
                 .padding(.top, 26)
 
                 Toggle(isOn: $active) {
                     Text("Taking questions")
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                 }
-                .tint(Theme.sage)
+                .tint(Theme.positive)
                 .padding(.top, 18)
 
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 16)
                 }
 
@@ -628,13 +628,13 @@ struct SpecialistApplicationSheet: View {
                 } label: {
                     ZStack {
                         Text(existing == nil ? "Send application" : "Save").opacity(saving ? 0 : 1)
-                        if saving { ProgressView().tint(Theme.warm) }
+                        if saving { ProgressView().tint(Theme.surface) }
                     }
                     .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
+                    .foregroundStyle(Theme.surface)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(ready ? Theme.ink : Theme.dust, in: Capsule())
+                    .background(ready ? Theme.text : Theme.tertiaryText, in: Capsule())
                 }
                 .buttonStyle(.press)
                 .disabled(!ready || saving)
@@ -645,7 +645,7 @@ struct SpecialistApplicationSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .onAppear(perform: prefill)
     }
 
@@ -654,7 +654,7 @@ struct SpecialistApplicationSheet: View {
             Kicker(text: label)
             TextField(hint, text: text)
                 .font(Theme.sans(15))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
         }
         .padding(.top, 30)
     }

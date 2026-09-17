@@ -53,7 +53,7 @@ struct ConnectionsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Account", color: Theme.amber, size: 11)
+                Kicker(text: "Account", color: Theme.accent, size: 11)
                     .padding(.top, 8)
                     .flowIn(0)
 
@@ -66,17 +66,17 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(displayName)
                                 .font(Theme.serif(26))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             if let email = clerk.user?.emailAddresses.first?.emailAddress {
                                 Text(email)
                                     .font(Theme.sans(11.5))
-                                    .foregroundStyle(Theme.dust)
+                                    .foregroundStyle(Theme.tertiaryText)
                             }
                         }
                         Spacer()
                         Text("›")
                             .font(Theme.serif(24))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
                 .buttonStyle(.pressRow)
@@ -98,13 +98,13 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Sources")
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text(connectionsSubtitle)
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
-                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -121,13 +121,13 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(planTitle)
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text(planSubtitle)
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
-                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -144,13 +144,13 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("What you're aiming at")
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text("Steps, sleep and the rest. The briefing closes with whatever the day hasn't met.")
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
-                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -171,13 +171,13 @@ struct ConnectionsView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("Your consultations")
                                     .font(Theme.serif(19))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                                 Text("People who have booked you, oldest unanswered first.")
                                     .font(Theme.sans(10.5))
-                                    .foregroundStyle(Theme.dust)
+                                    .foregroundStyle(Theme.tertiaryText)
                             }
                             Spacer()
-                            Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                            Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                         }
                         .padding(.vertical, 15)
                         .contentShape(Rectangle())
@@ -194,14 +194,14 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(application == nil ? "Apply to be listed" : "Your listing")
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text(applicationNote)
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(application?.approved == true ? Theme.sage : Theme.dust)
+                                .foregroundStyle(application?.approved == true ? Theme.positive : Theme.tertiaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
-                        Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("\u{203A}").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -220,13 +220,13 @@ struct ConnectionsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Model and keys")
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text(intelligenceSubtitle)
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
-                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -250,7 +250,7 @@ struct ConnectionsView: View {
                     // way everything else on the screen does.
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 14)
                         .transition(.opacity.combined(with: .offset(y: -6)))
@@ -282,7 +282,7 @@ struct ConnectionsView: View {
 
                 Text(buildStamp)
                     .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .padding(.top, 18)
                     .padding(.bottom, 32)
             }
@@ -293,7 +293,7 @@ struct ConnectionsView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await loadConnections() }
         .task { await loadApplication() }
         .sheet(isPresented: $applying) {
@@ -363,10 +363,10 @@ struct ConnectionsView: View {
         } label: {
             Text(label)
                 .font(Theme.sans(13, medium: true))
-                .foregroundStyle(Theme.warm)
+                .foregroundStyle(Theme.surface)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(Theme.ink)
+                .background(Theme.text)
                 .clipShape(Capsule())
                 .contentTransition(.opacity)
                 .animation(Theme.Motion.flow, value: isBusy)
@@ -438,8 +438,8 @@ struct Avatar: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(Theme.linen)
-            Circle().stroke(Theme.hairline, lineWidth: 1)
+            Circle().fill(Theme.background)
+            Circle().stroke(Theme.separator, lineWidth: 1)
 
             if let user, user.hasImage, let url = URL(string: user.imageUrl) {
                 AsyncImage(url: url) { phase in
@@ -460,6 +460,6 @@ struct Avatar: View {
     private var placeholder: some View {
         Text("❧")
             .font(Theme.serif(size * 0.38))
-            .foregroundStyle(Theme.amber)
+            .foregroundStyle(Theme.accent)
     }
 }

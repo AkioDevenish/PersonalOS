@@ -39,12 +39,12 @@ struct MetricTile: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(snapshot.flatMap { spec.display($0) } ?? "·")
                     .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .contentTransition(.numericText())
                 if !spec.unit.isEmpty {
                     Text(spec.unit)
                         .font(Theme.sans(10))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                 }
             }
         }
@@ -61,7 +61,7 @@ struct MetricTile: View {
     private var glyph: some View {
         let base = Image(systemName: spec.symbol)
             .font(.system(size: 12, weight: .light))
-            .foregroundStyle(Theme.amber)
+            .foregroundStyle(Theme.accent)
             .scaleEffect(appeared ? 1 : 0.6)
             .animation(Theme.Motion.pop.delay(delay), value: appeared)
 

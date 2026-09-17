@@ -51,9 +51,9 @@ struct LoadingView: View {
         VStack {
             Text("❧")
                 .font(Theme.serif(28))
-                .foregroundStyle(Theme.amber)
+                .foregroundStyle(Theme.accent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.linen)
+        .background(Theme.background)
     }
 }

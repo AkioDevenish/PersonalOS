@@ -37,7 +37,7 @@ struct BusinessView: View {
                                 Kicker(text: stage, size: 8.5)
                                 Text("\(summary[stage] ?? 0)")
                                     .font(Theme.serif(26))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                             }
                         }
                     }
@@ -53,17 +53,17 @@ struct BusinessView: View {
                             HStack {
                                 Text(c.name)
                                     .font(Theme.serif(19))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                                 Spacer()
                                 Text(c.status.uppercased())
                                     .font(Theme.sans(9))
                                     .tracking(1.4)
-                                    .foregroundStyle(Theme.amber)
+                                    .foregroundStyle(Theme.accent)
                             }
                             if let sub = [c.company, c.email].compactMap({ $0 }).first {
                                 Text(sub)
                                     .font(Theme.sans(10.5))
-                                    .foregroundStyle(Theme.dust)
+                                    .foregroundStyle(Theme.tertiaryText)
                             }
                         }
                         .padding(.vertical, 14)
@@ -119,18 +119,18 @@ struct CreativeView: View {
                                 if !p.published {
                                     Text("draft")
                                         .font(Theme.sans(9))
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                 }
                                 Spacer()
                                 if let t = p.topic, !t.isEmpty {
                                     Text(t)
                                         .font(Theme.sans(10))
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                 }
                             }
                             Text(p.content)
                                 .font(Theme.serifBody(16))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .lineSpacing(4)
                                 .lineLimit(4)
                         }
@@ -147,7 +147,7 @@ struct CreativeView: View {
         Plate {
             VStack(alignment: .leading, spacing: 5) {
                 Kicker(text: label, size: 8.5)
-                Text("\(n)").font(Theme.serif(26)).foregroundStyle(Theme.ink)
+                Text("\(n)").font(Theme.serif(26)).foregroundStyle(Theme.text)
             }
         }
     }
@@ -185,24 +185,24 @@ struct DataView: View {
                             HStack {
                                 Text(p.name)
                                     .font(Theme.serif(19))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                                 Spacer()
                                 Text(p.status)
                                     .font(Theme.sans(10))
                                     .foregroundStyle(p.status.lowercased() == "completed"
-                                                     ? Theme.sage : Theme.amber)
+                                                     ? Theme.positive : Theme.accent)
                             }
                             if let d = p.description, !d.isEmpty {
                                 Text(d)
                                     .font(Theme.sans(11))
-                                    .foregroundStyle(Theme.dust)
+                                    .foregroundStyle(Theme.tertiaryText)
                                     .lineSpacing(3)
                                     .lineLimit(3)
                             }
                             if let url = p.deployed_url ?? p.github_url,
                                !url.isEmpty, let link = URL(string: url) {
                                 Link(destination: link) {
-                                    Kicker(text: "Open", color: Theme.amber, size: 9)
+                                    Kicker(text: "Open", color: Theme.accent, size: 9)
                                 }
                                 .padding(.top, 2)
                             }
@@ -240,25 +240,25 @@ private struct PillarScaffold<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: kicker, color: Theme.amber, size: 11)
+                Kicker(text: kicker, color: Theme.accent, size: 11)
                     .padding(.top, 8)
 
                 Text(title)
                     .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(2)
                     .padding(.top, 8)
 
                 Text(blurb)
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
 
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 18)
                 }
@@ -268,12 +268,12 @@ private struct PillarScaffold<Content: View>: View {
                 if loading {
                     Text("Reading…")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 24)
                 } else if isEmpty && status.isEmpty {
                     Text(emptyNote)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 24)
                 }
 
@@ -281,6 +281,6 @@ private struct PillarScaffold<Content: View>: View {
             }
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
     }
 }

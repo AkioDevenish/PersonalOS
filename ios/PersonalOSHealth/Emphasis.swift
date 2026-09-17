@@ -57,7 +57,7 @@ enum Emphasis {
         strong: Font,
         baseColor: Color,
         strongColor: Color,
-        figureColor: Color = Theme.amber
+        figureColor: Color = Theme.accent
     ) -> AttributedString {
         var result = AttributedString()
         var cursor = text.startIndex
@@ -185,8 +185,8 @@ extension Text {
     init(emphasising sentence: String,
          base: Font = Theme.serifBody(17),
          strong: Font = Theme.serif(19),
-         baseColor: Color = Theme.mid,
-         strongColor: Color = Theme.ink) {
+         baseColor: Color = Theme.secondaryText,
+         strongColor: Color = Theme.text) {
         self.init(Emphasis.render(
             sentence, base: base, strong: strong, baseColor: baseColor, strongColor: strongColor
         ))

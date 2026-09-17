@@ -40,10 +40,10 @@ struct FinanceView: View {
                 } label: {
                     Text("Record an entry")
                         .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.ink)
+                        .background(Theme.text)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.press)
@@ -53,7 +53,7 @@ struct FinanceView: View {
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 18)
                 }
 
@@ -88,7 +88,7 @@ struct FinanceView: View {
             .padding(.horizontal, 26)
             .padding(.top, 10)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .refreshable { await load() }
         .task { await load() }
         .sheet(isPresented: $composing) {
@@ -110,15 +110,15 @@ struct FinanceView: View {
 
             Text(Money.text(total?.net ?? 0, currency, showingSign: true))
                 .font(Theme.serif(46))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .padding(.top, 8)
                 .contentTransition(.numericText())
 
             // Two figures rather than one signed number, because "in" and
             // "out" are the two things anyone actually wants to compare.
             HStack(spacing: 18) {
-                figure("In", Money.text(total?.incoming ?? 0, currency), Theme.sage)
-                figure("Out", Money.text(total?.outgoing ?? 0, currency), Theme.amber)
+                figure("In", Money.text(total?.incoming ?? 0, currency), Theme.positive)
+                figure("Out", Money.text(total?.outgoing ?? 0, currency), Theme.accent)
             }
             .padding(.top, 18)
         }
@@ -129,7 +129,7 @@ struct FinanceView: View {
             Kicker(text: label, color: tint, size: 9)
             Text(value)
                 .font(Theme.sans(14, medium: true))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 
@@ -144,15 +144,15 @@ struct FinanceView: View {
                     HStack {
                         Text(row.category)
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                         Spacer()
                         Text(Money.text(row.minor, row.currency))
                             .font(Theme.sans(12, medium: true))
-                            .foregroundStyle(Theme.mid)
+                            .foregroundStyle(Theme.secondaryText)
                     }
                     GeometryReader { geo in
                         Capsule()
-                            .fill(Theme.amber.opacity(0.55))
+                            .fill(Theme.accent.opacity(0.55))
                             .frame(width: max(2, geo.size.width * bar(row.minor, widest)))
                     }
                     .frame(height: 3)
@@ -182,10 +182,10 @@ struct FinanceView: View {
         VStack(spacing: 8) {
             Text("Nothing written yet")
                 .font(Theme.serif(24))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Text("Record what you spend and what you earn, and the reading builds itself.")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -225,7 +225,7 @@ private struct FinanceRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.category)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                 HStack(spacing: 6) {
                     Text(entry.when.formatted(.dateTime.day().month(.abbreviated)))
                     if !entry.note.isEmpty {
@@ -234,7 +234,7 @@ private struct FinanceRow: View {
                     }
                 }
                 .font(Theme.sans(11))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
             }
 
             Spacer(minLength: 8)
@@ -243,7 +243,7 @@ private struct FinanceRow: View {
             // the exception and gets the colour.
             Text((entry.spent ? "" : "+") + Money.text(entry.minor, entry.currency))
                 .font(Theme.sans(13, medium: true))
-                .foregroundStyle(entry.spent ? Theme.ink : Theme.sage)
+                .foregroundStyle(entry.spent ? Theme.text : Theme.positive)
         }
         .padding(.vertical, 13)
         .opacity(removing ? 0.4 : 1)
@@ -308,10 +308,10 @@ struct FinanceEntrySheet: View {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(currency)
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                     TextField("0", text: $amount)
                         .font(Theme.serif(42))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .keyboardType(.decimalPad)
                         .focused($amountFocused)
                 }
@@ -321,7 +321,7 @@ struct FinanceEntrySheet: View {
                     .padding(.top, 34)
                 TextField("Groceries, rent, a haircut", text: $category)
                     .font(Theme.sans(15))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
 
                 // Tapping beats typing for the handful of categories most
@@ -335,14 +335,14 @@ struct FinanceEntrySheet: View {
                             } label: {
                                 Text(s)
                                     .font(Theme.sans(11))
-                                    .foregroundStyle(category == s ? Theme.warm : Theme.mid)
+                                    .foregroundStyle(category == s ? Theme.surface : Theme.secondaryText)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
                                     .background {
                                         if category == s {
-                                            Capsule().fill(Theme.ink)
+                                            Capsule().fill(Theme.text)
                                         } else {
-                                            Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                            Capsule().stroke(Theme.separator, lineWidth: 1)
                                         }
                                     }
                             }
@@ -357,18 +357,18 @@ struct FinanceEntrySheet: View {
                     .padding(.top, 34)
                 TextField("Optional", text: $note)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
 
                 DatePicker("", selection: $date, displayedComponents: .date)
                     .labelsHidden()
-                    .tint(Theme.amber)
+                    .tint(Theme.accent)
                     .padding(.top, 30)
 
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 18)
                 }
 
@@ -377,13 +377,13 @@ struct FinanceEntrySheet: View {
                 } label: {
                     ZStack {
                         Text("Write it down").opacity(saving ? 0 : 1)
-                        if saving { ProgressView().tint(Theme.warm) }
+                        if saving { ProgressView().tint(Theme.surface) }
                     }
                     .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
+                    .foregroundStyle(Theme.surface)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(ready ? Theme.ink : Theme.dust)
+                    .background(ready ? Theme.text : Theme.tertiaryText)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.press)
@@ -395,7 +395,7 @@ struct FinanceEntrySheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .onAppear { amountFocused = true }
     }
 

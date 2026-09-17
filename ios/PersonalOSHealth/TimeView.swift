@@ -32,10 +32,10 @@ struct TimeView: View {
                 } label: {
                     Text("Log some time")
                         .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.ink)
+                        .background(Theme.text)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.press)
@@ -45,7 +45,7 @@ struct TimeView: View {
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 18)
                 }
 
@@ -80,7 +80,7 @@ struct TimeView: View {
             .padding(.horizontal, 26)
             .padding(.top, 10)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .refreshable { await load() }
         .task { await load() }
         .sheet(isPresented: $composing) {
@@ -103,17 +103,17 @@ struct TimeView: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(Duration.hours(ledger.totalMinutes))
                     .font(Theme.serif(46))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .contentTransition(.numericText())
                 Text(ledger.totalMinutes == 60 ? "hour" : "hours")
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
             .padding(.top, 8)
 
             Text("Across \(ledger.blocks.count) \(ledger.blocks.count == 1 ? "block" : "blocks").")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 12)
         }
     }
@@ -126,15 +126,15 @@ struct TimeView: View {
                     HStack {
                         Text(row.category)
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                         Spacer()
                         Text(Duration.text(row.minutes))
                             .font(Theme.sans(12, medium: true))
-                            .foregroundStyle(Theme.mid)
+                            .foregroundStyle(Theme.secondaryText)
                     }
                     GeometryReader { geo in
                         Capsule()
-                            .fill(Theme.sage.opacity(0.6))
+                            .fill(Theme.positive.opacity(0.6))
                             .frame(width: max(2, geo.size.width * bar(row.minutes, widest)))
                     }
                     .frame(height: 3)
@@ -164,10 +164,10 @@ struct TimeView: View {
         VStack(spacing: 8) {
             Text("No time logged yet")
                 .font(Theme.serif(24))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Text("Write down where the hours went, and the week starts explaining itself.")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -207,7 +207,7 @@ private struct TimeRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(block.activity)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                 HStack(spacing: 6) {
                     Text(block.began.formatted(.dateTime.day().month(.abbreviated)))
                     Text("·")
@@ -218,14 +218,14 @@ private struct TimeRow: View {
                     }
                 }
                 .font(Theme.sans(11))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
             }
 
             Spacer(minLength: 8)
 
             Text(Duration.text(block.minutes))
                 .font(Theme.sans(13, medium: true))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
         }
         .padding(.vertical, 13)
         .opacity(removing ? 0.4 : 1)
@@ -273,7 +273,7 @@ struct TimeBlockSheet: View {
                 Kicker(text: "How long")
                 Text(Duration.text(minutes))
                     .font(Theme.serif(42))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .contentTransition(.numericText())
                     .padding(.top, 6)
 
@@ -286,14 +286,14 @@ struct TimeBlockSheet: View {
                             } label: {
                                 Text(Duration.text(m))
                                     .font(Theme.sans(11))
-                                    .foregroundStyle(minutes == m ? Theme.warm : Theme.mid)
+                                    .foregroundStyle(minutes == m ? Theme.surface : Theme.secondaryText)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
                                     .background {
                                         if minutes == m {
-                                            Capsule().fill(Theme.ink)
+                                            Capsule().fill(Theme.text)
                                         } else {
-                                            Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                            Capsule().stroke(Theme.separator, lineWidth: 1)
                                         }
                                     }
                             }
@@ -308,7 +308,7 @@ struct TimeBlockSheet: View {
                     .padding(.top, 34)
                 TextField("Writing the brief", text: $activity)
                     .font(Theme.sans(15))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .focused($activityFocused)
                     .padding(.top, 8)
 
@@ -323,14 +323,14 @@ struct TimeBlockSheet: View {
                             } label: {
                                 Text(s)
                                     .font(Theme.sans(11))
-                                    .foregroundStyle(category == s ? Theme.warm : Theme.mid)
+                                    .foregroundStyle(category == s ? Theme.surface : Theme.secondaryText)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
                                     .background {
                                         if category == s {
-                                            Capsule().fill(Theme.ink)
+                                            Capsule().fill(Theme.text)
                                         } else {
-                                            Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                            Capsule().stroke(Theme.separator, lineWidth: 1)
                                         }
                                     }
                             }
@@ -343,18 +343,18 @@ struct TimeBlockSheet: View {
 
                 TextField("Or type your own", text: $category)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 14)
 
                 DatePicker("", selection: $start)
                     .labelsHidden()
-                    .tint(Theme.amber)
+                    .tint(Theme.accent)
                     .padding(.top, 30)
 
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 18)
                 }
 
@@ -363,13 +363,13 @@ struct TimeBlockSheet: View {
                 } label: {
                     ZStack {
                         Text("Write it down").opacity(saving ? 0 : 1)
-                        if saving { ProgressView().tint(Theme.warm) }
+                        if saving { ProgressView().tint(Theme.surface) }
                     }
                     .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
+                    .foregroundStyle(Theme.surface)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(ready ? Theme.ink : Theme.dust)
+                    .background(ready ? Theme.text : Theme.tertiaryText)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.press)
@@ -381,7 +381,7 @@ struct TimeBlockSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .onAppear { activityFocused = true }
     }
 

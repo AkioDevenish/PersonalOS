@@ -18,16 +18,16 @@ struct SignInView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Theme.hairline, lineWidth: 1)
+                    .stroke(Theme.separator, lineWidth: 1)
                     .frame(width: 72, height: 72)
                 Text("❧")
                     .font(Theme.serif(26))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
             }
 
             Text("Personal OS")
                 .font(Theme.serif(42))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .padding(.top, 28)
 
             Kicker(text: "Time well spent")
@@ -41,14 +41,14 @@ struct SignInView: View {
             } label: {
                 Text("Begin your ledger")
                     .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
+                    .foregroundStyle(Theme.surface)
                     // Was a fixed 313 points, which is one phone's width and
                     // nobody else's: narrow and off-centre on a Pro Max, tight
                     // on an SE, and liable to clip the label at larger text
                     // sizes.
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Theme.ink)
+                    .background(Theme.text)
                     .clipShape(Capsule())
             }
             .buttonStyle(.press)
@@ -57,13 +57,13 @@ struct SignInView: View {
 
             Text("Your ledger stays yours.")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .padding(.top, 24)
 
             Spacer()
         }
         .frame(maxWidth: .infinity)
-        .background(Theme.linen)
+        .background(Theme.background)
         // Clerk's prebuilt flow — email code, password, and any social
         // providers enabled in the dashboard, without hand-rolling forms.
         .sheet(isPresented: $showAuth) { AuthView() }
@@ -148,7 +148,7 @@ struct RootView: View {
     var body: some View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.linen)
+            .background(Theme.background)
             // Laid over the pages rather than beneath them, so content scrolls
             // under the glass the way it does under the system's own bar.
             .overlay(alignment: .bottom) {
@@ -171,7 +171,7 @@ struct RootView: View {
             Tab(value: AppTab.health) { stack(for: .health) }
             Tab(value: AppTab.settings) { stack(for: .settings) }
         }
-        .tint(Theme.amber)
+        .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to
         // how far down the last page you had read, not to this one.
         .onChange(of: tab) { _, _ in bar.set(compact: false) }
@@ -212,7 +212,7 @@ struct RootView: View {
                     // the system bar back on top of ours.
                     .hidesSystemTabBar()
                 }
-                .toolbarBackground(Theme.linen, for: .navigationBar)
+                .toolbarBackground(Theme.background, for: .navigationBar)
         }
     }
 

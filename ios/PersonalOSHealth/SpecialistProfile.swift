@@ -25,33 +25,33 @@ struct SpecialistProfileView: View {
 
                 Text(specialist.name)
                     .font(Theme.serif(38))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
                     .flowIn(0)
 
                 Text(specialist.credentials)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .padding(.top, 6)
                     .flowIn(1)
 
                 HStack(spacing: 7) {
                     Text(specialist.place)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
 
                     switch specialist.presence {
                     case .here:
                         HStack(spacing: 4) {
-                            Circle().fill(Theme.sage).frame(width: 6, height: 6)
+                            Circle().fill(Theme.positive).frame(width: 6, height: 6)
                             Text("Here now")
                                 .font(Theme.sans(11, medium: true))
-                                .foregroundStyle(Theme.sage)
+                                .foregroundStyle(Theme.positive)
                         }
                     case .recently(let when):
                         Text("\u{00B7} last here \(when)")
                             .font(Theme.sans(11))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     case .away:
                         EmptyView()
                     }
@@ -64,10 +64,10 @@ struct SpecialistProfileView: View {
                         ForEach(specialist.specialties, id: \.self) { s in
                             Text(s)
                                 .font(Theme.sans(11, medium: true))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .padding(.horizontal, 11)
                                 .padding(.vertical, 7)
-                                .background(Theme.amber.opacity(0.18), in: Capsule())
+                                .background(Theme.accent.opacity(0.18), in: Capsule())
                         }
                     }
                     .padding(.top, 22)
@@ -77,7 +77,7 @@ struct SpecialistProfileView: View {
                 if !specialist.bio.isEmpty {
                     Text(specialist.bio)
                         .font(Theme.serifBody(17))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(6)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 24)
@@ -90,7 +90,7 @@ struct SpecialistProfileView: View {
 
                 Text(costLine)
                     .font(Theme.sans(13))
-                    .foregroundStyle(specialist.free ? Theme.sage : Theme.mid)
+                    .foregroundStyle(specialist.free ? Theme.positive : Theme.secondaryText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
@@ -99,7 +99,7 @@ struct SpecialistProfileView: View {
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 20)
@@ -123,7 +123,7 @@ struct SpecialistProfileView: View {
             .padding(.top, 8)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
         // A paid conversation is confirmed before the credits move. A free one
         // has nothing to confirm, so it simply opens.
@@ -159,7 +159,7 @@ struct SpecialistProfileView: View {
     /// simply sits there until the photograph covers it.
     private var portrait: some View {
         ZStack {
-            Circle().fill(Theme.amber.opacity(0.16))
+            Circle().fill(Theme.accent.opacity(0.16))
 
             Text(
                 specialist.name
@@ -169,7 +169,7 @@ struct SpecialistProfileView: View {
                     .joined()
             )
             .font(Theme.serif(30))
-            .foregroundStyle(Theme.amber)
+            .foregroundStyle(Theme.accent)
 
             if let link = specialist.photo_url, let url = URL(string: link) {
                 AsyncImage(url: url) { image in
@@ -208,7 +208,7 @@ struct SpecialistProfileView: View {
         } label: {
             HStack(spacing: 9) {
                 if opening == kind {
-                    ProgressView().tint(Theme.warm)
+                    ProgressView().tint(Theme.surface)
                 } else {
                     Image(systemName: symbol)
                         .font(.system(size: 14, weight: .light))
@@ -217,10 +217,10 @@ struct SpecialistProfileView: View {
                 }
             }
             .font(Theme.sans(15, medium: true))
-            .foregroundStyle(Theme.warm)
+            .foregroundStyle(Theme.surface)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(kind == .text ? Theme.ink : Theme.mid, in: Capsule())
+            .background(kind == .text ? Theme.text : Theme.secondaryText, in: Capsule())
         }
         .buttonStyle(.press)
         .disabled(opening != nil)
@@ -295,7 +295,7 @@ struct ChatView: View {
                      ? "Say what you would like to ask. \(peer) will see your ledger only if you choose to share it."
                      : "Nothing from their ledger is here unless they chose to send it.")
                                 .font(Theme.sans(12))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                                 .lineSpacing(4)
                                 .padding(.top, 30)
                         }
@@ -303,7 +303,7 @@ struct ChatView: View {
                             Text(dayLabel(day))
                                 .font(Theme.sans(10, medium: true))
                                 .tracking(1.6)
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                                 .textCase(.uppercase)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 8)
@@ -326,7 +326,7 @@ struct ChatView: View {
 
             composer
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .task {
             await refresh()
             poller = Task {
@@ -351,16 +351,16 @@ struct ChatView: View {
         HStack {
             Button("Close") { dismiss() }
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .buttonStyle(.press)
             Spacer()
             VStack(spacing: 1) {
                 Text(peer)
                     .font(Theme.serif(19))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                 Text(thread.status == "answered" ? "Replied" : "Waiting for a reply")
                     .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
             Spacer()
             // Balances the Close button so the name sits centred.
@@ -369,7 +369,7 @@ struct ChatView: View {
         .padding(.horizontal, 20)
         .padding(.top, 18)
         .padding(.bottom, 14)
-        .background(Theme.linen)
+        .background(Theme.background)
     }
 
     private func bubble(_ message: SessionClient.Message) -> some View {
@@ -379,18 +379,18 @@ struct ChatView: View {
             VStack(alignment: message.theirs ? .leading : .trailing, spacing: 4) {
                 Text(message.body)
                     .font(Theme.sans(14))
-                    .foregroundStyle(message.theirs ? Theme.ink : Theme.warm)
+                    .foregroundStyle(message.theirs ? Theme.text : Theme.surface)
                     .lineSpacing(4)
                     .padding(.horizontal, 15)
                     .padding(.vertical, 11)
                     .background(
-                        message.theirs ? Theme.warm : Theme.ink,
+                        message.theirs ? Theme.surface : Theme.text,
                         in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                     )
 
                 Text(message.at.formatted(date: .omitted, time: .shortened))
                     .font(Theme.sans(9.5))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .padding(.horizontal, 4)
             }
 
@@ -411,7 +411,7 @@ struct ChatView: View {
             if let failure {
                 Text(failure)
                     .font(Theme.sans(11))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
             }
@@ -426,7 +426,7 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "heart.text.square")
                         .font(.system(size: 17, weight: .light))
-                            .foregroundStyle(Theme.amber)
+                            .foregroundStyle(Theme.accent)
                             .environment(\.symbolVariants, .none)
                     }
                     .buttonStyle(.press)
@@ -434,7 +434,7 @@ struct ChatView: View {
 
                 TextField("Write a message", text: $draft, axis: .vertical)
                     .font(Theme.sans(14))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(1...5)
 
                 Button {
@@ -442,9 +442,9 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(width: 34, height: 34)
-                        .background(ready ? Theme.ink : Theme.dust, in: Circle())
+                        .background(ready ? Theme.text : Theme.tertiaryText, in: Circle())
                 }
                 .buttonStyle(.press)
                 .disabled(!ready || sending)
@@ -452,7 +452,7 @@ struct ChatView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
     }
 
     private var ready: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -557,7 +557,7 @@ struct VideoCallView: View {
                 // Half height, so the call is still visible behind the words
                 // being typed about it.
                 .presentationDetents([.medium, .large])
-                .presentationBackground(Theme.linen)
+                .presentationBackground(Theme.background)
                 .onDisappear { readUpTo = messageCount }
         }
     }
@@ -620,7 +620,7 @@ struct VideoCallView: View {
                 if !engine.relayAvailable, engine.state != .live {
                     Text("No relay server is configured, so this will only connect if a direct route exists.")
                         .font(Theme.sans(10.5))
-                        .foregroundStyle(Theme.amber.opacity(0.9))
+                        .foregroundStyle(Theme.accent.opacity(0.9))
                         .multilineTextAlignment(.center)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -648,7 +648,7 @@ struct VideoCallView: View {
                         .foregroundStyle(.black)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Theme.amber, in: Capsule())
+                        .background(Theme.accent, in: Capsule())
                         .offset(x: 5, y: -3)
                 }
             }
@@ -788,18 +788,18 @@ struct PaymentView: View {
             Kicker(text: "To pay")
             Text(session.price)
                 .font(Theme.serif(52))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .padding(.top, 8)
             Text("to \(specialist.name)")
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 6)
 
             Text(waiting
                  ? "Finish in the page that opened. This screen will move on by itself once the payment clears."
                  : "You will be taken to a secure page to pay. Your conversation opens as soon as it clears.")
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(5)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -809,7 +809,7 @@ struct PaymentView: View {
             if let failure {
                 Text(failure)
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .lineSpacing(4)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -825,13 +825,13 @@ struct PaymentView: View {
                 ZStack {
                     Text(waiting ? "Waiting for the payment" : "Pay \(session.price)")
                         .opacity(starting ? 0 : 1)
-                    if starting { ProgressView().tint(Theme.warm) }
+                    if starting { ProgressView().tint(Theme.surface) }
                 }
                 .font(Theme.sans(15, medium: true))
-                .foregroundStyle(Theme.warm)
+                .foregroundStyle(Theme.surface)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(waiting ? Theme.dust : Theme.ink, in: Capsule())
+                .background(waiting ? Theme.tertiaryText : Theme.text, in: Capsule())
             }
             .buttonStyle(.press)
             .disabled(starting || waiting)
@@ -839,13 +839,13 @@ struct PaymentView: View {
 
             Button("Not now") { dismiss() }
                 .font(Theme.sans(13))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .buttonStyle(.press)
                 .padding(.top, 18)
                 .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.linen)
+        .background(Theme.background)
     }
 
     private func pay() async {
@@ -905,11 +905,11 @@ struct ShareReadingsSheet: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Share your readings")
                     .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
 
                 Text("This is exactly what \(peerName) will see, word for word. Nothing else from your ledger goes with it.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
@@ -921,24 +921,24 @@ struct ShareReadingsSheet: View {
                 } else if reading.isEmpty {
                     Text("Nothing has been recorded today, so there is nothing to share.")
                         .font(Theme.sans(13))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 30)
                 } else {
                     Text(reading)
                         .font(Theme.serifBody(16))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .lineSpacing(6)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.warm, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .padding(.top, 24)
                 }
 
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .padding(.top, 16)
                 }
 
@@ -947,13 +947,13 @@ struct ShareReadingsSheet: View {
                 } label: {
                     ZStack {
                         Text("Send these readings").opacity(sending ? 0 : 1)
-                        if sending { ProgressView().tint(Theme.warm) }
+                        if sending { ProgressView().tint(Theme.surface) }
                     }
                     .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.warm)
+                    .foregroundStyle(Theme.surface)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(reading.isEmpty ? Theme.dust : Theme.ink, in: Capsule())
+                    .background(reading.isEmpty ? Theme.tertiaryText : Theme.text, in: Capsule())
                 }
                 .buttonStyle(.press)
                 .disabled(reading.isEmpty || sending)
@@ -963,7 +963,7 @@ struct ShareReadingsSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await load() }
     }
 

@@ -1,20 +1,48 @@
 import SwiftUI
 
-/// The ledger design language, from the Figma file "Personal OS — iOS App".
+/// The design language.
 ///
-/// One vocabulary for every screen: linen ground, ink for anything that
-/// speaks, tracked Jost caps for labels, amber only as punctuation. Values
-/// mirror the web tokens so the brand is one thing everywhere.
+/// Colours follow the phone. Every token below resolves differently in light
+/// and dark appearance, so the app turns dark when the system does without a
+/// single screen having to ask which it is. The neutrals are Apple's own
+/// semantic colours rather than hand-picked greys, because those are the ones
+/// tuned for contrast in both appearances and for Increase Contrast too.
+///
+/// The names describe a job rather than a colour. They used to be linen, warm,
+/// ink and amber, which were accurate while the app was beige and would have
+/// been wrong in every file the moment it stopped being.
 enum Theme {
     // MARK: Colors
-    static let linen = Color(red: 0.949, green: 0.929, blue: 0.890)   // #F2EDE3
-    static let warm  = Color(red: 0.976, green: 0.965, blue: 0.941)   // #F9F6F0
-    static let ink   = Color(red: 0.157, green: 0.125, blue: 0.059)   // #28200F
-    static let mid   = Color(red: 0.431, green: 0.365, blue: 0.271)   // #6E5D45
-    static let dust  = Color(red: 0.659, green: 0.584, blue: 0.494)   // #A8957E
-    static let amber = Color(red: 0.722, green: 0.518, blue: 0.353)   // #B8845A
-    static let sage  = Color(red: 0.490, green: 0.576, blue: 0.478)   // #7D937A
-    static let hairline = Color(red: 0.157, green: 0.125, blue: 0.059).opacity(0.16)
+
+    /// The page. White in light, black in dark.
+    static let background = Color(uiColor: .systemBackground)
+    /// A card or field sitting on the page, one step off it.
+    static let surface = Color(uiColor: .secondarySystemBackground)
+    /// Anything that speaks: titles, figures, primary text.
+    static let text = Color(uiColor: .label)
+    static let secondaryText = Color(uiColor: .secondaryLabel)
+    /// Notes and captions. Between secondary and tertiary label, because the
+    /// system's tertiary is too faint to carry a sentence someone should read.
+    static let tertiaryText = adaptive(light: 0x3C3C43, dark: 0xEBEBF5, alpha: 0.5)
+    /// The one colour, used as punctuation: links, the selected tab, today.
+    /// A muted teal, lifted in dark so it keeps its contrast on black.
+    static let accent = adaptive(light: 0x3F7682, dark: 0x79B4C0)
+    /// Something met or connected.
+    static let positive = adaptive(light: 0x4E7F52, dark: 0x8CC48F)
+    static let separator = Color(uiColor: .separator)
+
+    private static func adaptive(light: UInt32, dark: UInt32, alpha: CGFloat = 1) -> Color {
+        func make(_ hex: UInt32) -> UIColor {
+            UIColor(
+                red: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255,
+                alpha: alpha
+            )
+        }
+        let lightColor = make(light), darkColor = make(dark)
+        return Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? darkColor : lightColor })
+    }
 
     // MARK: Fonts
     //
@@ -60,7 +88,7 @@ func indefiniteArticle(for word: String) -> String {
 /// Tracked uppercase label — the design's only sans voice.
 struct Kicker: View {
     let text: String
-    var color: Color = Theme.dust
+    var color: Color = Theme.tertiaryText
     var size: CGFloat = 10
 
     var body: some View {
@@ -84,7 +112,7 @@ struct Kicker: View {
 /// as a line and costs no ink.
 struct Rule: View {
     var body: some View {
-        Rectangle().fill(Theme.hairline).frame(height: 1)
+        Rectangle().fill(Theme.separator).frame(height: 1)
     }
 }
 
@@ -108,7 +136,7 @@ struct Ornament: View {
     var body: some View {
         Text("❧")
             .font(Theme.serif(15))
-            .foregroundStyle(Theme.dust)
+            .foregroundStyle(Theme.tertiaryText)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 }
@@ -123,7 +151,7 @@ struct Ornament: View {
 /// with air around it is already a block.
 ///
 /// Changed here rather than at each call site so every screen moves together.
-/// `Theme.warm` survives for type on ink, where it is a foreground colour.
+/// `Theme.surface` survives for type on ink, where it is a foreground colour.
 struct Plate<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {

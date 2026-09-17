@@ -42,14 +42,14 @@ struct AppTabBar: View {
                     Image(systemName: tab.symbol)
                         .font(.system(size: state.compact ? 15 : 20, weight: .regular))
                         .environment(\.symbolVariants, .none)
-                        .foregroundStyle(tab == selected ? Theme.amber : Theme.ink.opacity(0.7))
+                        .foregroundStyle(tab == selected ? Theme.accent : Theme.text.opacity(0.7))
                         .frame(
                             width: state.compact ? 40 : 58,
                             height: state.compact ? 32 : 44
                         )
                         .background {
                             if tab == selected {
-                                Capsule().fill(Theme.amber.opacity(0.14))
+                                Capsule().fill(Theme.accent.opacity(0.14))
                             }
                         }
                         .contentShape(Capsule())

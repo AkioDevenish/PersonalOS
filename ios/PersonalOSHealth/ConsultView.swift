@@ -43,13 +43,13 @@ struct ConsultView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Consult", color: Theme.amber, size: 11)
+                Kicker(text: "Consult", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 Text("Ask a nutritionist.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
                     .flowIn(1)
 
@@ -57,7 +57,7 @@ struct ConsultView: View {
                      ? "No nutritionist has taken this on yet. You can write your question and it will be waiting for the first one who does."
                      : "A person reads these, not a model. Answers come back here.")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
@@ -79,23 +79,23 @@ struct ConsultView: View {
                                     HStack(spacing: 10) {
                                         Text(pro.name)
                                             .font(Theme.serif(20))
-                                            .foregroundStyle(chosen?.id == pro.id ? Theme.amber : Theme.ink)
+                                            .foregroundStyle(chosen?.id == pro.id ? Theme.accent : Theme.text)
                                         Spacer()
                                         Text(pro.price)
                                             .font(Theme.sans(9.5))
                                             .tracking(1.2)
-                                            .foregroundStyle(Theme.dust)
+                                            .foregroundStyle(Theme.tertiaryText)
                                         if chosen?.id == pro.id { SelectionMark(size: 12) }
                                     }
                                     Text([pro.credentials, pro.place]
                                             .filter { !$0.isEmpty }
                                             .joined(separator: " · "))
                                         .font(Theme.sans(10.5))
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                     if !pro.bio.isEmpty {
                                         Text(pro.bio)
                                             .font(Theme.serifBody(15.5))
-                                            .foregroundStyle(Theme.mid)
+                                            .foregroundStyle(Theme.secondaryText)
                                             .lineSpacing(4)
                                             .multilineTextAlignment(.leading)
                                             .padding(.top, 2)
@@ -115,14 +115,14 @@ struct ConsultView: View {
 
                 TextEditor(text: $question)
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 120)
                     .overlay(alignment: .topLeading) {
                         if question.isEmpty {
                             Text("What would you like to ask?")
                                 .font(Theme.serifBody(17))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                                 .allowsHitTesting(false)
                                 .padding(.top, 8)
                         }
@@ -138,15 +138,15 @@ struct ConsultView: View {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: shareReadings ? "checkmark.circle" : "circle")
                                 .font(.system(size: 14, weight: .light))
-                                .foregroundStyle(shareReadings ? Theme.amber : Theme.dust)
+                                .foregroundStyle(shareReadings ? Theme.accent : Theme.tertiaryText)
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Send today's readings with it")
                                     .font(Theme.sans(12))
-                                    .foregroundStyle(Theme.mid)
+                                    .foregroundStyle(Theme.secondaryText)
                                 if shareReadings {
                                     Text(readings)
                                         .font(Theme.sans(10.5))
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                         .lineSpacing(3)
                                         .transition(.opacity)
                                 }
@@ -166,10 +166,10 @@ struct ConsultView: View {
                 } label: {
                     Text(sendLabel)
                         .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(canSend ? Theme.ink : Theme.dust)
+                        .background(canSend ? Theme.text : Theme.tertiaryText)
                         .clipShape(Capsule())
                         .contentTransition(.opacity)
                         .animation(Theme.Motion.flow, value: sending)
@@ -182,7 +182,7 @@ struct ConsultView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 14)
                 }
@@ -201,18 +201,18 @@ struct ConsultView: View {
                                     HStack(spacing: 10) {
                                         Text(c.topic)
                                             .font(Theme.serif(19))
-                                            .foregroundStyle(Theme.ink)
+                                            .foregroundStyle(Theme.text)
                                         Spacer()
                                         Kicker(
                                             text: c.waiting ? "Waiting" : "Answered",
-                                            color: c.waiting ? Theme.dust : Theme.sage,
+                                            color: c.waiting ? Theme.tertiaryText : Theme.positive,
                                             size: 9
                                         )
                                     }
                                     if !c.last_message.isEmpty {
                                         Text(c.last_message)
                                             .font(Theme.sans(11))
-                                            .foregroundStyle(Theme.dust)
+                                            .foregroundStyle(Theme.tertiaryText)
                                             .lineLimit(2)
                                             .multilineTextAlignment(.leading)
                                     }
@@ -232,7 +232,7 @@ struct ConsultView: View {
             .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $open) { summary in
@@ -309,7 +309,7 @@ struct ConsultThreadView: View {
                                     Kicker(text: "Readings you sent", size: 9)
                                     Text(thread.shared)
                                         .font(Theme.sans(10.5))
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                         .lineSpacing(3)
                                 }
                             }
@@ -320,12 +320,12 @@ struct ConsultThreadView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Kicker(
                                     text: m.fromProfessional ? "Nutritionist" : "You",
-                                    color: m.fromProfessional ? Theme.amber : Theme.dust,
+                                    color: m.fromProfessional ? Theme.accent : Theme.tertiaryText,
                                     size: 9
                                 )
                                 Text(m.body)
                                     .font(Theme.serifBody(17))
-                                    .foregroundStyle(m.fromProfessional ? Theme.ink : Theme.mid)
+                                    .foregroundStyle(m.fromProfessional ? Theme.text : Theme.secondaryText)
                                     .lineSpacing(6)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -335,19 +335,19 @@ struct ConsultThreadView: View {
                         if thread.messages.allSatisfy({ !$0.fromProfessional }) {
                             Text("No answer yet. You'll see it here when it comes.")
                                 .font(Theme.sans(11.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                                 .padding(.top, 6)
                         }
 
                         HStack(spacing: 12) {
                             TextField("Add to your question", text: $reply, axis: .vertical)
                                 .font(Theme.serifBody(17))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .lineLimit(1...5)
                             Button {
                                 Task { await send() }
                             } label: {
-                                Kicker(text: sending ? "…" : "Send", color: Theme.amber, size: 10)
+                                Kicker(text: sending ? "…" : "Send", color: Theme.accent, size: 10)
                             }
                             .buttonStyle(.press)
                             .disabled(sending || reply.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -357,7 +357,7 @@ struct ConsultThreadView: View {
                         if !failed.isEmpty {
                             Text(failed)
                                 .font(Theme.sans(11.5))
-                                .foregroundStyle(Theme.mid)
+                                .foregroundStyle(Theme.secondaryText)
                                 .lineSpacing(3)
                                 .padding(.bottom, 14)
                         }
@@ -369,7 +369,7 @@ struct ConsultThreadView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .background(Theme.linen)
+            .background(Theme.background)
             .navigationTitle(summary.topic)
             .navigationBarTitleDisplayMode(.inline)
             .task { await load() }

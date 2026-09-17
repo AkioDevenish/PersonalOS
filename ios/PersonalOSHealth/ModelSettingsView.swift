@@ -15,18 +15,18 @@ struct ModelSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Intelligence", color: Theme.amber, size: 11)
+                Kicker(text: "Intelligence", color: Theme.accent, size: 11)
                     .padding(.top, 12)
 
                 Text("Which mind reads\nyour data.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(2)
                     .padding(.top, 8)
 
                 Text("Bring your own key. It's encrypted before it's stored, never shown back to you, and only ever used for your own reports.")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
 
@@ -36,10 +36,10 @@ struct ModelSettingsView: View {
                             Kicker(text: "Currently using", size: 9)
                             Text(label(for: current.provider))
                                 .font(Theme.serif(24))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text(current.model)
                                 .font(Theme.sans(11.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                     }
                     .padding(.top, 20)
@@ -48,7 +48,7 @@ struct ModelSettingsView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 16)
                 }
@@ -58,7 +58,7 @@ struct ModelSettingsView: View {
                 if loading {
                     Text("Reading your settings…")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 20)
                 } else {
                     VStack(spacing: 0) {
@@ -85,7 +85,7 @@ struct ModelSettingsView: View {
             .animation(Theme.Motion.bouncy, value: settings?.selection?.model)
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationTitle("Models")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -98,16 +98,16 @@ struct ModelSettingsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(p.title)
                     .font(Theme.serif(19))
-                    .foregroundStyle(isCurrent ? Theme.amber : Theme.ink)
+                    .foregroundStyle(isCurrent ? Theme.accent : Theme.text)
                 Text(detailLine(p, stored: stored))
                     .font(Theme.sans(10.5))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
             Spacer()
             if isCurrent {
                 SelectionMark()
             }
-            Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+            Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
         }
         .padding(.vertical, 15)
         .contentShape(Rectangle())
@@ -172,7 +172,7 @@ private struct ProviderDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(provider.title)
                     .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 12)
 
                 if provider.needsKey {
@@ -194,7 +194,7 @@ private struct ProviderDetailView: View {
                     if let stored {
                         Text("A key ending \(stored.last4) is already stored. Typing a new one replaces it.")
                             .font(Theme.sans(11))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                             .lineSpacing(3)
                             .padding(.top, 10)
                     }
@@ -204,10 +204,10 @@ private struct ProviderDetailView: View {
                     } label: {
                         Text(isBusy ? "Checking with \(provider.label)…" : "Save and verify")
                             .font(Theme.sans(13, medium: true))
-                            .foregroundStyle(Theme.warm)
+                            .foregroundStyle(Theme.surface)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 15)
-                            .background(entry.isEmpty ? Theme.dust : Theme.ink)
+                            .background(entry.isEmpty ? Theme.tertiaryText : Theme.text)
                             .clipShape(Capsule())
                             .contentTransition(.opacity)
                             .animation(Theme.Motion.flow, value: isBusy)
@@ -222,13 +222,13 @@ private struct ProviderDetailView: View {
 
                     Text("The key is checked against \(provider.label) before it's saved, so a typo is caught here rather than halfway through a report.")
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
                         .padding(.top, 12)
 
                     if let console = provider.consoleURL, let url = URL(string: console) {
                         Link(destination: url) {
-                            Kicker(text: "Get a key from \(provider.label)", color: Theme.amber, size: 10)
+                            Kicker(text: "Get a key from \(provider.label)", color: Theme.accent, size: 10)
                         }
                         .padding(.top, 14)
                     }
@@ -237,7 +237,7 @@ private struct ProviderDetailView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 16)
                 }
@@ -254,7 +254,7 @@ private struct ProviderDetailView: View {
                             HStack {
                                 Text(m)
                                     .font(Theme.serif(18))
-                                    .foregroundStyle(isCurrent(m) ? Theme.amber : Theme.ink)
+                                    .foregroundStyle(isCurrent(m) ? Theme.accent : Theme.text)
                                 Spacer()
                                 if isCurrent(m) {
                                     SelectionMark()
@@ -275,7 +275,7 @@ private struct ProviderDetailView: View {
                          ? unavailableNote
                          : "Add a key above to use these.")
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
                         .padding(.top, 12)
                 }
@@ -283,7 +283,7 @@ private struct ProviderDetailView: View {
                 if provider.id == ModelChoice.deviceProvider && hasKey {
                     Text("Your readings never leave this iPhone. It's a smaller model than the hosted ones, so a hosted model will give a deeper read when you want one.")
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
                         .padding(.top, 12)
                 }
@@ -303,7 +303,7 @@ private struct ProviderDetailView: View {
             .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
     }
 

@@ -15,7 +15,7 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            Theme.linen.ignoresSafeArea()
+            Theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
@@ -25,7 +25,7 @@ struct SplashView: View {
 
                 Text("Personal OS")
                     .font(Theme.serif(40))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
 
                 Kicker(text: "Time well spent")
                     .tracking(3)
@@ -34,7 +34,7 @@ struct SplashView: View {
 
                 Spacer()
 
-                Kicker(text: "By ADEVSTUDIO", color: Theme.dust, size: 9)
+                Kicker(text: "By ADEVSTUDIO", color: Theme.tertiaryText, size: 9)
                     .tracking(3.5)
                     .opacity(appeared ? 1 : 0)
                     .padding(.bottom, 44)
@@ -72,7 +72,7 @@ private struct GlyphRow: View {
             ForEach(Array(glyphs.enumerated()), id: \.offset) { i, name in
                 Image(systemName: name)
                     .font(.system(size: 17, weight: .light))
-                    .foregroundStyle(lit == i ? Theme.amber : Theme.dust)
+                    .foregroundStyle(lit == i ? Theme.accent : Theme.tertiaryText)
                     .opacity(settled ? 1 : 0)
                     .offset(y: settled ? 0 : 9)
                     .scaleEffect(lit == i ? 1.18 : (settled ? 1 : 0.8))

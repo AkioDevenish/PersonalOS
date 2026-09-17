@@ -86,7 +86,7 @@ struct CountryPicker: View {
                     if matches.isEmpty {
                         Text("No country by that name.")
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                             .padding(.top, 24)
                     }
 
@@ -94,7 +94,7 @@ struct CountryPicker: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .background(Theme.linen)
+            .background(Theme.background)
             .navigationTitle("Where you eat")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: "Country")
@@ -112,7 +112,7 @@ struct CountryPicker: View {
             HStack {
                 Text(name)
                     .font(Theme.serif(18))
-                    .foregroundStyle(marked ? Theme.amber : Theme.ink)
+                    .foregroundStyle(marked ? Theme.accent : Theme.text)
                 Spacer()
                 if marked { SelectionMark() }
             }

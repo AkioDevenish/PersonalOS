@@ -31,18 +31,18 @@ struct ConnectionsListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Connections", color: Theme.amber, size: 11)
+                Kicker(text: "Connections", color: Theme.accent, size: 11)
                     .padding(.top, 12)
 
                 Text("Where your\nreadings come from.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(2)
                     .padding(.top, 8)
 
                 Text("Connect a watch or ring and its measurements join the same ledger as your phone's.")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
 
@@ -51,10 +51,10 @@ struct ConnectionsListView: View {
                         Kicker(text: "Connected", size: 9)
                         Text("\(connectedCount)")
                             .font(Theme.serif(30))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                         Text(connectedCount == 1 ? "source · this iPhone" : "sources")
                             .font(Theme.sans(10.5))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
                 .padding(.top, 20)
@@ -62,7 +62,7 @@ struct ConnectionsListView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 16)
                 }
@@ -76,20 +76,20 @@ struct ConnectionsListView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Apple Health")
                                 .font(Theme.serif(19))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text("This iPhone · \(appleHealthLine)")
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                         Spacer()
-                        Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.sage)
+                        Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.positive)
                     }
                     .padding(.vertical, 15)
 
                     if loading && wearables.isEmpty {
                         Text("Reading…")
                             .font(Theme.sans(12))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                             .padding(.vertical, 18)
                     }
 
@@ -106,7 +106,7 @@ struct ConnectionsListView: View {
 
                 Text("When two sources report the same thing, we pick one and show you which. Never both added together.")
                     .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .lineSpacing(3)
                     .padding(.top, 16)
 
@@ -116,7 +116,7 @@ struct ConnectionsListView: View {
             .animation(Theme.Motion.flow, value: wearables.map(\.id))
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationTitle("Connections")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -127,16 +127,16 @@ struct ConnectionsListView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(c.label)
                     .font(Theme.serif(19))
-                    .foregroundStyle(c.canConnect ? Theme.ink : Theme.mid)
+                    .foregroundStyle(c.canConnect ? Theme.text : Theme.secondaryText)
                 Text(subtitle(c))
                     .font(Theme.sans(10.5))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
             Spacer()
             if c.isConnected {
-                Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.sage)
+                Text("❧").font(Theme.serif(13)).foregroundStyle(Theme.positive)
             }
-            Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+            Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
         }
         .padding(.vertical, 15)
         .contentShape(Rectangle())
@@ -180,12 +180,12 @@ private struct SourceDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(connection.label)
                     .font(Theme.serif(30))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 12)
 
                 Text(blurb)
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
 
@@ -195,10 +195,10 @@ private struct SourceDetailView: View {
                     } label: {
                         Text(buttonLabel)
                             .font(Theme.sans(13, medium: true))
-                            .foregroundStyle(Theme.warm)
+                            .foregroundStyle(Theme.surface)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 15)
-                            .background(Theme.ink)
+                            .background(Theme.text)
                             .clipShape(Capsule())
                             .contentTransition(.opacity)
                             .animation(Theme.Motion.flow, value: isBusy)
@@ -210,7 +210,7 @@ private struct SourceDetailView: View {
                     if !connection.isConnected {
                         Text("Opens \(connection.label)'s own sign-in page. Personal OS never sees your password.")
                             .font(Theme.sans(11))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                             .lineSpacing(3)
                             .padding(.top, 12)
                     }
@@ -222,7 +222,7 @@ private struct SourceDetailView: View {
                             Kicker(text: "Last error", size: 9)
                             Text(err)
                                 .font(Theme.sans(12))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .lineSpacing(3)
                         }
                     }
@@ -232,7 +232,7 @@ private struct SourceDetailView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 18)
                 }
@@ -241,10 +241,10 @@ private struct SourceDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(brings, id: \.self) { line in
                         HStack(alignment: .top, spacing: 9) {
-                            Text("·").font(Theme.serif(15)).foregroundStyle(Theme.dust)
+                            Text("·").font(Theme.serif(15)).foregroundStyle(Theme.tertiaryText)
                             Text(line)
                                 .font(Theme.serifBody(16))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                         }
                     }
                 }
@@ -255,7 +255,7 @@ private struct SourceDetailView: View {
             .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
     }
 

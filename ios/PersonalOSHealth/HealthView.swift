@@ -46,7 +46,7 @@ struct HealthView: View {
 
                 // MARK: Today, and how it compares
 
-                Kicker(text: dateKicker, color: Theme.amber, size: 11)
+                Kicker(text: dateKicker, color: Theme.accent, size: 11)
                     .padding(.top, 8)
                     .flowIn(0)
 
@@ -59,7 +59,7 @@ struct HealthView: View {
                 if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
                     Text(mood.lowercased() + ".")
                         .font(Theme.serifItalic(19))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 16)
                         .flowIn(2)
                 }
@@ -71,7 +71,7 @@ struct HealthView: View {
                     Text("READ THE FULL BRIEFING  \u{2192}")
                         .font(Theme.sans(10, medium: true))
                         .tracking(1.8)
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
@@ -111,13 +111,13 @@ struct HealthView: View {
                 if loadFailed {
                     Text("Health access was refused, so there is nothing to read. Open Settings, then Privacy and Security, then Health, and allow Personal OS.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 26)
                 } else if snapshot != nil && shownGroups.isEmpty {
                     Text("Nothing recorded yet today.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 26)
                 }
 
@@ -126,7 +126,7 @@ struct HealthView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await load() }
         .refreshable { await load() }
     }
@@ -155,12 +155,12 @@ struct HealthView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Text(shown)
                         .font(Theme.serif(62))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .contentTransition(.numericText())
                     if !spec.unit.isEmpty {
                         Text(spec.unit)
                             .font(Theme.sans(13))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
                 .padding(.top, 4)
@@ -173,12 +173,12 @@ struct HealthView: View {
 
                     Text(usually(spec, baseline))
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 5)
                 } else if historyLoading {
                     Text("Working out your usual \(weekdayName)")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 10)
                 } else {
                     // Said plainly rather than left blank: the comparison is
@@ -186,7 +186,7 @@ struct HealthView: View {
                     // unremarkable.
                     Text("Not enough \(weekdayName)s recorded yet to say what is usual")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 10)
                 }
             }
@@ -195,7 +195,7 @@ struct HealthView: View {
             // on the page that knows why.
             Text(briefing.headline)
                 .font(Theme.serif(34))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -210,9 +210,9 @@ struct HealthView: View {
 
     private func tint(_ standing: Baseline.Standing) -> Color {
         switch standing {
-        case .better:   return Theme.sage
-        case .worse:    return Theme.amber
-        case .ordinary: return Theme.mid
+        case .better:   return Theme.positive
+        case .worse:    return Theme.accent
+        case .ordinary: return Theme.secondaryText
         }
     }
 
@@ -230,7 +230,7 @@ struct HealthView: View {
 
             Text(standing(curve))
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .padding(.top, 10)
 
             Chart {
@@ -240,7 +240,7 @@ struct HealthView: View {
                         y: .value("Steps", value),
                         series: .value("Series", "usual")
                     )
-                    .foregroundStyle(Theme.dust.opacity(0.65))
+                    .foregroundStyle(Theme.tertiaryText.opacity(0.65))
                     .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
                     .interpolationMethod(.monotone)
                 }
@@ -253,7 +253,7 @@ struct HealthView: View {
                     )
                     .foregroundStyle(
                         .linearGradient(
-                            colors: [Theme.amber.opacity(0.22), Theme.amber.opacity(0.01)],
+                            colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0.01)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -265,7 +265,7 @@ struct HealthView: View {
                         y: .value("Steps", value),
                         series: .value("Series", "today")
                     )
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .lineStyle(StrokeStyle(lineWidth: 2.4, lineCap: .round))
                     .interpolationMethod(.monotone)
                 }
@@ -276,7 +276,7 @@ struct HealthView: View {
                         x: .value("Hour", curve.today.count - 1),
                         y: .value("Steps", last)
                     )
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .symbolSize(60)
                 }
             }
@@ -286,17 +286,17 @@ struct HealthView: View {
                     AxisValueLabel {
                         Text(clockLabel(value.as(Int.self) ?? 0))
                             .font(Theme.sans(9))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
-                    AxisGridLine().foregroundStyle(Theme.hairline)
+                    AxisGridLine().foregroundStyle(Theme.separator)
                     AxisValueLabel {
                         Text(MetricSpec.grouped(value.as(Double.self) ?? 0))
                             .font(Theme.sans(9))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
             }
@@ -347,12 +347,12 @@ struct HealthView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(snapshot.flatMap { spec.display($0) } ?? "\u{00B7}")
                             .font(Theme.serif(30))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                             .contentTransition(.numericText())
                         if !spec.unit.isEmpty {
                             Text(spec.unit)
                                 .font(Theme.sans(9.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                     }
                 }

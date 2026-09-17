@@ -51,13 +51,13 @@ struct NutritionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Nutrition", color: Theme.amber, size: 11)
+                Kicker(text: "Nutrition", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 Text("What to eat next.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
                     .flowIn(1)
 
@@ -65,7 +65,7 @@ struct NutritionView: View {
                      ? "Read from your recent glucose, sleep and activity, not a generic meal plan."
                      : "Read from your recent glucose, sleep and activity, and cooked with what you can actually buy in \(Cuisine.name(for: country)).")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
@@ -82,15 +82,15 @@ struct NutritionView: View {
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Image(systemName: s.symbol)
                                         .font(.system(size: 11, weight: .light))
-                                        .foregroundStyle(Theme.amber)
+                                        .foregroundStyle(Theme.accent)
                                         .frame(width: 14, alignment: .leading)
                                     Text(s.label)
                                         .font(Theme.sans(11))
-                                        .foregroundStyle(Theme.mid)
+                                        .foregroundStyle(Theme.secondaryText)
                                     Spacer()
                                     Text(s.value)
                                         .font(Theme.serif(17))
-                                        .foregroundStyle(Theme.ink)
+                                        .foregroundStyle(Theme.text)
                                 }
                             }
                         }
@@ -107,9 +107,9 @@ struct NutritionView: View {
                         Spacer()
                         Text(Cuisine.name(for: country))
                             .font(Theme.serif(19))
-                            .foregroundStyle(country.isEmpty ? Theme.dust : Theme.ink)
+                            .foregroundStyle(country.isEmpty ? Theme.tertiaryText : Theme.text)
                             .contentTransition(.opacity)
-                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                        Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
                     }
                     .padding(.vertical, 15)
                     .contentShape(Rectangle())
@@ -133,10 +133,10 @@ struct NutritionView: View {
                 } label: {
                     Text(isBusy ? "Thinking…" : "Suggest \(context)")
                         .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(Theme.ink)
+                        .background(Theme.text)
                         .clipShape(Capsule())
                         // The label changes under you while it works; the
                         // words should cross-fade rather than jump.
@@ -150,7 +150,7 @@ struct NutritionView: View {
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 14)
                 }
@@ -177,7 +177,7 @@ struct NutritionView: View {
                             : "Nothing named yet. Add the first dish and it goes into your suggestions straight away.")
                          : "Named by people who eat in \(Cuisine.name(for: country)). Once \(book.threshold) people name a dish it goes into everyone's suggestions here — yours count for you immediately.")
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
                         .padding(.top, 10)
 
@@ -189,12 +189,12 @@ struct NutritionView: View {
                                 HStack(spacing: 10) {
                                     Text(d.dish)
                                         .font(Theme.serif(18))
-                                        .foregroundStyle(d.mine ? Theme.amber : Theme.ink)
+                                        .foregroundStyle(d.mine ? Theme.accent : Theme.text)
                                     Spacer()
                                     Text(voteLine(d))
                                         .font(Theme.sans(9.5))
                                         .tracking(1.2)
-                                        .foregroundStyle(Theme.dust)
+                                        .foregroundStyle(Theme.tertiaryText)
                                     if d.mine { SelectionMark(size: 12) }
                                 }
                                 .padding(.vertical, 12)
@@ -208,7 +208,7 @@ struct NutritionView: View {
                     HStack(spacing: 12) {
                         TextField("Name a dish", text: $newDish)
                             .font(Theme.serif(18))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .submitLabel(.done)
@@ -217,7 +217,7 @@ struct NutritionView: View {
                         Button {
                             Task { await add() }
                         } label: {
-                            Kicker(text: "Add", color: Theme.amber, size: 10)
+                            Kicker(text: "Add", color: Theme.accent, size: 10)
                         }
                         .buttonStyle(.press)
                         .disabled(newDish.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -235,12 +235,12 @@ struct NutritionView: View {
                             ForEach(r.meals, id: \.self) { m in
                                 Text("· \(MealReading.clean(m))")
                                     .font(Theme.serifBody(16))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                             }
                             if let i = r.insight, !i.isEmpty {
                                 Text(i)
                                     .font(Theme.sans(11.5))
-                                    .foregroundStyle(Theme.dust)
+                                    .foregroundStyle(Theme.tertiaryText)
                                     .lineSpacing(3)
                             }
                         }
@@ -259,7 +259,7 @@ struct NutritionView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         // Pinned rather than scrolled away with the content: the whole point
         // of it is being reachable from anywhere on a long page, and a button
         // you have to scroll back up to find is a link.
@@ -270,12 +270,12 @@ struct NutritionView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Theme.ink)
+                        .fill(Theme.text)
                         .frame(width: 56, height: 56)
-                        .shadow(color: Theme.ink.opacity(0.18), radius: 12, y: 4)
+                        .shadow(color: Theme.text.opacity(0.18), radius: 12, y: 4)
                     Image(systemName: "bubble.left")
                         .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                 }
             }
             .buttonStyle(.press)
@@ -420,19 +420,19 @@ struct ExpertsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Consult", color: Theme.amber, size: 11)
+                Kicker(text: "Consult", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 Text("Read by a specialist.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
                     .flowIn(1)
 
                 Text("The same telemetry, examined through a different lens. Patterns only, never a diagnosis.")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
@@ -448,7 +448,7 @@ struct ExpertsView: View {
                             HStack {
                                 Text(e.label)
                                     .font(Theme.serif(19))
-                                    .foregroundStyle(expert == e.key ? Theme.amber : Theme.ink)
+                                    .foregroundStyle(expert == e.key ? Theme.accent : Theme.text)
                                 Spacer()
                                 if expert == e.key {
                                     SelectionMark()
@@ -484,10 +484,10 @@ struct ExpertsView: View {
                          ? "Consulting…"
                          : "Ask the \(expertLabel.lowercased()) for \(indefiniteArticle(for: period)) \(period) reading")
                         .font(Theme.sans(13, medium: true))
-                        .foregroundStyle(Theme.warm)
+                        .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(Theme.ink)
+                        .background(Theme.text)
                         .clipShape(Capsule())
                         // The label restates the two choices above it, so it
                         // rewrites itself on every tap up there — a cross-fade
@@ -501,14 +501,14 @@ struct ExpertsView: View {
 
                 Text(requestSummary)
                     .font(Theme.sans(11))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .lineSpacing(3)
                     .padding(.top, 10)
 
                 if !status.isEmpty {
                     Text(status)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 14)
                 }
@@ -527,7 +527,7 @@ struct ExpertsView: View {
                                 TypedRun(
                                     text: MealReading.clean(localReport),
                                     font: Theme.serifBody(16.5),
-                                    color: Theme.ink
+                                    color: Theme.text
                                 )
                             ], duration: 3.2)
                         }
@@ -541,7 +541,7 @@ struct ExpertsView: View {
                             if let c = r.created_at { Kicker(text: c.prefix(16).description, size: 9) }
                             Text(MealReading.clean(r.report_text ?? ""))
                                 .font(Theme.serifBody(16.5))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                                 .lineSpacing(6)
                         }
                     }
@@ -551,7 +551,7 @@ struct ExpertsView: View {
                 if reports.isEmpty && localReport.isEmpty && !isBusy && status.isEmpty {
                     Text("No readings yet for this specialist.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 20)
                 }
 
@@ -565,7 +565,7 @@ struct ExpertsView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await load() }
     }
 

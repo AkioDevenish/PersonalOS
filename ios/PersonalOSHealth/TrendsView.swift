@@ -39,13 +39,13 @@ struct TrendsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "History", color: Theme.amber, size: 11)
+                Kicker(text: "History", color: Theme.accent, size: 11)
                     .padding(.top, 8)
                     .flowIn(0)
 
                 Text(comparing ? "Does one follow\nthe other?" : "The ledger's past.")
                     .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(2)
                     .padding(.top, 8)
                     .flowIn(0)
@@ -67,7 +67,7 @@ struct TrendsView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $picking) { slot in
@@ -95,13 +95,13 @@ struct TrendsView: View {
 
     private var pickers: some View {
         VStack(spacing: 0) {
-            pickerRow(label: "Reading", metric: primary.label, colour: Theme.ink) {
+            pickerRow(label: "Reading", metric: primary.label, colour: Theme.text) {
                 picking = .primary
             }
             pickerRow(
                 label: "Compare with",
                 metric: against?.label ?? "Nothing",
-                colour: comparing ? Theme.amber : Theme.hairline
+                colour: comparing ? Theme.accent : Theme.separator
             ) {
                 picking = .against
             }
@@ -121,9 +121,9 @@ struct TrendsView: View {
                 Spacer()
                 Text(metric)
                     .font(Theme.serif(19))
-                    .foregroundStyle(metric == "Nothing" ? Theme.dust : Theme.ink)
+                    .foregroundStyle(metric == "Nothing" ? Theme.tertiaryText : Theme.text)
                     .contentTransition(.opacity)
-                Text("›").font(Theme.serif(18)).foregroundStyle(Theme.dust)
+                Text("›").font(Theme.serif(18)).foregroundStyle(Theme.tertiaryText)
             }
             .padding(.vertical, 15)
             .contentShape(Rectangle())
@@ -175,19 +175,19 @@ struct TrendsView: View {
                         x: .value("Day", p.date, unit: .day),
                         y: .value(primary.label, p.value)
                     )
-                    .foregroundStyle(Theme.amber.opacity(0.75))
+                    .foregroundStyle(Theme.accent.opacity(0.75))
                 } else {
                     LineMark(
                         x: .value("Day", p.date, unit: .day),
                         y: .value(primary.label, p.value)
                     )
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .interpolationMethod(.catmullRom)
                     PointMark(
                         x: .value("Day", p.date, unit: .day),
                         y: .value(primary.label, p.value)
                     )
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .symbolSize(18)
                 }
             }
@@ -195,7 +195,7 @@ struct TrendsView: View {
             if let avg = average(series.map(\.value)) {
                 RuleMark(y: .value("Average", avg))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
         }
         .chartYAxis { ledgerYAxis }
@@ -224,7 +224,7 @@ struct TrendsView: View {
                     y: .value("First", na[i]),
                     series: .value("Series", "a")
                 )
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .interpolationMethod(.catmullRom)
 
                 LineMark(
@@ -232,7 +232,7 @@ struct TrendsView: View {
                     y: .value("Second", nb[i]),
                     series: .value("Series", "b")
                 )
-                .foregroundStyle(Theme.amber)
+                .foregroundStyle(Theme.accent)
                 .interpolationMethod(.catmullRom)
             }
         }
@@ -247,8 +247,8 @@ struct TrendsView: View {
 
     private var ledgerYAxis: some AxisContent {
         AxisMarks(position: .leading) { _ in
-            AxisGridLine().foregroundStyle(Theme.hairline)
-            AxisValueLabel().font(Theme.sans(9)).foregroundStyle(Theme.dust)
+            AxisGridLine().foregroundStyle(Theme.separator)
+            AxisValueLabel().font(Theme.sans(9)).foregroundStyle(Theme.tertiaryText)
         }
     }
 
@@ -256,14 +256,14 @@ struct TrendsView: View {
         AxisMarks(values: .stride(by: .day, count: days > 14 ? 7 : 2)) { _ in
             AxisValueLabel(format: .dateTime.day().month(.abbreviated))
                 .font(Theme.sans(9))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
         }
     }
 
     private func placeholder(_ text: String) -> some View {
         Text(text)
             .font(Theme.sans(12))
-            .foregroundStyle(Theme.dust)
+            .foregroundStyle(Theme.tertiaryText)
             .frame(maxWidth: .infinity)
             .frame(height: 220)
     }
@@ -279,15 +279,15 @@ struct TrendsView: View {
                         Kicker(text: "Pearson's r", size: 9)
                         Text(String(format: "%.2f", r))
                             .font(Theme.serif(34))
-                            .foregroundStyle(Theme.ink)
+                            .foregroundStyle(Theme.text)
                             .contentTransition(.numericText())
                         Text(interpretation(r))
                             .font(Theme.serifBody(16))
-                            .foregroundStyle(Theme.mid)
+                            .foregroundStyle(Theme.secondaryText)
                             .lineSpacing(5)
                         Text("Over \(pairs.count) days with both readings. Association, not cause.")
                             .font(Theme.sans(10.5))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
             }
@@ -307,12 +307,12 @@ struct TrendsView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(value.map { format($0) } ?? "·")
                         .font(Theme.serif(28))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .contentTransition(.numericText())
                     if !primary.unit.isEmpty {
                         Text(primary.unit)
                             .font(Theme.sans(10))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
             }
@@ -419,7 +419,7 @@ struct MetricPicker: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .background(Theme.linen)
+            .background(Theme.background)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -435,10 +435,10 @@ struct MetricPicker: View {
             HStack {
                 Text(label)
                     .font(Theme.serif(18))
-                    .foregroundStyle(marked ? Theme.amber : Theme.ink)
+                    .foregroundStyle(marked ? Theme.accent : Theme.text)
                 Spacer()
                 if !unit.isEmpty {
-                    Text(unit).font(Theme.sans(10)).foregroundStyle(Theme.dust)
+                    Text(unit).font(Theme.sans(10)).foregroundStyle(Theme.tertiaryText)
                 }
                 if marked { SelectionMark() }
             }

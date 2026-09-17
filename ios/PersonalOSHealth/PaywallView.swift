@@ -18,19 +18,19 @@ struct PaywallView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Personal OS", color: Theme.amber, size: 11)
+                Kicker(text: "Personal OS", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 Text(store.entitlement.isSubscribed ? "You're subscribed." : "Go further.")
                     .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
                     .flowIn(1)
 
                 Text(blurb)
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
@@ -41,10 +41,10 @@ struct PaywallView: View {
                             Kicker(text: "Balance", size: 9)
                             Text("\(store.entitlement.credits)")
                                 .font(Theme.serif(30))
-                                .foregroundStyle(Theme.ink)
+                                .foregroundStyle(Theme.text)
                             Text("hosted readings left")
                                 .font(Theme.sans(10.5))
-                                .foregroundStyle(Theme.dust)
+                                .foregroundStyle(Theme.tertiaryText)
                         }
                     }
                     .padding(.top, 20)
@@ -73,7 +73,7 @@ struct PaywallView: View {
                     costs nothing.
                     """)
                         .font(Theme.serifBody(16))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(5)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 12)
@@ -91,7 +91,7 @@ struct PaywallView: View {
                     SectionRule(text: "Or buy readings").padding(.top, 30)
                     Text("No subscription. Credits don't expire, and a subscription never spends them.")
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
                         .padding(.top, 10)
 
@@ -106,7 +106,7 @@ struct PaywallView: View {
                 if let err = store.lastError {
                     Text(err)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)
                         .padding(.top, 18)
                 }
@@ -121,7 +121,7 @@ struct PaywallView: View {
 
                 Text("Payment is charged to your Apple Account. Subscriptions renew unless cancelled at least 24 hours before the period ends; manage them in Settings.")
                     .font(Theme.sans(9.5))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .lineSpacing(3)
                     .padding(.top, 20)
                     .padding(.bottom, 40)
@@ -134,7 +134,7 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationTitle("Plans")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -156,10 +156,10 @@ struct PaywallView: View {
 
     private func freeLine(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 9) {
-            Text("❧").font(Theme.serif(12)).foregroundStyle(Theme.sage)
+            Text("❧").font(Theme.serif(12)).foregroundStyle(Theme.positive)
             Text(text)
                 .font(Theme.serifBody(16))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
         }
     }
 
@@ -181,17 +181,17 @@ struct PaywallView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(product.displayName)
                         .font(Theme.serif(19))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                     if !note.isEmpty {
                         Text(note)
                             .font(Theme.sans(10.5))
-                            .foregroundStyle(Theme.dust)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
                 Spacer()
                 Text(product.displayPrice)
                     .font(Theme.serif(19))
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
             }
             .padding(.vertical, 15)
             .contentShape(Rectangle())

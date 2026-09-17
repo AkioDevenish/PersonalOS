@@ -25,20 +25,20 @@ struct PractitionerView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Your consultations")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 6)
                     .flowIn(0)
 
                 Text(summary)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .padding(.top, 10)
                     .flowIn(1)
 
                 if let failure {
                     Text(failure)
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.amber)
+                        .foregroundStyle(Theme.accent)
                         .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 22)
@@ -76,7 +76,7 @@ struct PractitionerView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .refreshable { await load() }
         .onAppear {
             guard queue.isEmpty else { return }
@@ -107,18 +107,18 @@ struct PractitionerView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(one.topic)
                         .font(Theme.serif(20))
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(Theme.text)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 8)
                     Text(one.asked.formatted(.dateTime.day().month(.abbreviated)))
                         .font(Theme.sans(11))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                 }
 
                 if !one.last_message.isEmpty {
                     Text(one.last_message)
                         .font(Theme.sans(12.5))
-                        .foregroundStyle(Theme.mid)
+                        .foregroundStyle(Theme.secondaryText)
                         .lineLimit(2)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -128,10 +128,10 @@ struct PractitionerView: View {
                 HStack(spacing: 8) {
                     if one.unpaid {
                         // Worth knowing before spending an hour on it.
-                        tag("Unpaid", Theme.amber)
+                        tag("Unpaid", Theme.accent)
                     }
                     if one.isCall {
-                        tag("Video", Theme.sage)
+                        tag("Video", Theme.positive)
                     }
                     Spacer()
                     if one.isCall && !one.unpaid {
@@ -141,10 +141,10 @@ struct PractitionerView: View {
                         } label: {
                             Text("Join call")
                                 .font(Theme.sans(11, medium: true))
-                                .foregroundStyle(Theme.warm)
+                                .foregroundStyle(Theme.surface)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 7)
-                                .background(Theme.ink, in: Capsule())
+                                .background(Theme.text, in: Capsule())
                         }
                         .buttonStyle(.press)
                     }
@@ -177,10 +177,10 @@ struct PractitionerView: View {
         VStack(spacing: 8) {
             Text("Nothing yet")
                 .font(Theme.serif(24))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Text("Consultations people book with you appear here.")
                 .font(Theme.sans(12))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

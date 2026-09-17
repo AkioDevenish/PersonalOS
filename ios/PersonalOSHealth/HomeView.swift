@@ -1,340 +1,455 @@
 import SwiftUI
 
-/// The landing page, and the one screen that summarises rather than reads.
+/// The landing page, laid out as a catalogue rather than a page of writing.
 ///
-/// Every other tab is a page of writing. This one is a dashboard, and it is
-/// laid out like one: a greeting, one wide card carrying the day's read, then
-/// tiles you can take in at a glance and tap into.
+/// A large title, a search field, then sections that each carry a heading, an
+/// optional way through, and one row of cards you can swipe along. Rows run to
+/// the edge of the screen and let the next card show, which is the cue that
+/// there is more to the side without having to say so.
 ///
-/// That means shapes with fills, which the rest of the app deliberately gave
-/// up — `Plate` in Theme.swift records why, and it was right about a page of
-/// prose. A summary is the exception: without something to hold them, the
-/// figures on bare linen read as a list of unrelated numbers rather than
-/// things you can check on. The fills are the same warm the type sits on, and
-/// nothing is outlined, so the tiles lift off the ground rather than being
-/// drawn onto it.
-///
-/// The money and hours tiles sat beside the health one until Finance and Time
-/// were pulled from the bar. They are not deleted, only unbuilt: the tiles
-/// went with the tabs because a tile whose whole job is to switch to a tab
-/// has nowhere to send you once that tab is gone, and the two write buttons
-/// under them went for the same reason — an entry you can record and never
-/// read back is worse than no button at all.
+/// Nothing here is a second copy of another screen. Explore is the way into
+/// the five places that are not tabs; Today is the briefing and the goals; and
+/// Your readings is what Apple Health has for today, each card a way into the
+/// Health tab where the full picture lives.
 struct HomeView: View {
-    /// Sends you to the tab that owns a tile. The bar's selection lives in
-    /// RootView, so the tile asks rather than reaches.
+    /// Sends you to another tab. The bar's selection lives in RootView, so
+    /// the page asks rather than reaches.
     var go: (AppTab) -> Void
 
     @EnvironmentObject private var health: HealthKitManager
     @State private var snapshot: HealthSnapshot?
-
     @State private var healthLoading = true
+    @State private var query = ""
 
-    /// Worked out when the reading changes, not while the page is drawn.
-    ///
-    /// Both of these used to be the first two lines of `body`. That is fine
-    /// when a body runs because something changed, and not fine when it runs
-    /// because a finger is moving: dragging the drawer redraws the whole page
-    /// every frame, and every frame was recomposing the briefing's prose and
-    /// re-deriving every goal. Neither depends on anything but the snapshot,
-    /// so both are worked out once when that arrives.
+    /// Worked out when the reading arrives rather than while the page draws:
+    /// neither depends on anything but the snapshot.
     @State private var briefing = Briefing.compose(from: nil)
     @State private var goals: [Goals.Progress] = []
 
-    private var dateKicker: String { Formatters.dayAndDate.string(from: Date()) }
+    private let margin: CGFloat = 20
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                    .padding(.bottom, 4)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Home")
+                    .font(Theme.serif(38))
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, margin)
+                    .padding(.top, 12)
                     .flowIn(0)
 
-                read(briefing)
-                    .flowIn(1)
+                searchField
+                    .padding(.horizontal, margin)
+                    .padding(.top, 14)
+                    .flowIn(0)
 
-                healthTile
-                    .flowIn(2)
+                if searching {
+                    results
+                        .padding(.top, 18)
+                } else {
+                    section("Explore")
+                        .flowIn(1)
+                    exploreRow
+                        .flowIn(1)
 
-                if !goals.isEmpty {
-                    goalsTile(goals).flowIn(3)
+                    section("Today", link: ("Briefing", { }), route: .briefing)
+                        .flowIn(2)
+                    todayRow
+                        .flowIn(2)
+
+                    section("Your readings", link: ("View All", { go(.health) }))
+                        .flowIn(3)
+                    readingsRow
+                        .flowIn(3)
                 }
-
-                elsewhere
-                    .padding(.top, 4)
-                    .flowIn(4)
-
-                Ornament()
-                    .padding(.top, 34)
-                    .padding(.bottom, 26)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 10)
+            .padding(.bottom, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .scrollDismissesKeyboard(.immediately)
+        .background(Theme.background)
         .refreshable { await load() }
         .task { await load() }
     }
 
-    // MARK: The page
+    // MARK: Search
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Kicker(text: dateKicker, color: Theme.amber, size: 11)
-            Text("Your ledger.")
-                .font(Theme.serif(34))
-                .foregroundStyle(Theme.ink)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 6)
+    private var searching: Bool {
+        !query.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    /// The day's read, and the only tile with prose in it.
-    private func read(_ briefing: Briefing) -> some View {
-        NavigationLink(value: Route.briefing) {
-            Tile {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(briefing.headline)
-                        .font(Theme.serif(26))
-                        .foregroundStyle(Theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-
-                    if let opening = briefing.paragraphs.first {
-                        Text(opening)
-                            .font(Theme.serifBody(16))
-                            .foregroundStyle(Theme.mid)
-                            .lineSpacing(5)
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
-                    }
-
-                    Text("READ THE FULL BRIEFING  →")
-                        .font(Theme.sans(9.5, medium: true))
-                        .tracking(1.8)
-                        .foregroundStyle(Theme.amber)
-                        .padding(.top, 2)
+    private var searchField: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(Theme.tertiaryText)
+            TextField("Search readings, experts or pages", text: $query)
+                .font(Theme.sans(15))
+                .foregroundStyle(Theme.text)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+            if searching {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Theme.tertiaryText)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
-        .buttonStyle(.pressRow)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Theme.surface, in: Capsule())
     }
 
-    private var healthTile: some View {
-        Button {
-            Haptics.select()
-            go(.health)
-        } label: {
-            Tile {
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Kicker(text: "Health", size: 9)
-                        figure(healthFigure, loading: healthLoading)
-                        // A tile still reading has not learned there is
-                        // nothing; saying so before the answer arrives is a
-                        // guess dressed as a fact.
-                        Text(healthLoading ? "Reading" : healthNote)
-                            .font(Theme.sans(12))
-                            .foregroundStyle(Theme.mid)
-                    }
-                    Spacer(minLength: 0)
-                    glyph("heart", Theme.amber)
-                }
-            }
+    /// Search finds the places you can go and the measurements you can read.
+    /// Practitioners are searched on their own screen, where the directory is,
+    /// rather than fetched here on every keystroke.
+    @ViewBuilder
+    private var results: some View {
+        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let places = Self.places.filter {
+            $0.title.lowercased().contains(needle) || $0.note.lowercased().contains(needle)
         }
-        .buttonStyle(.pressRow)
-    }
+        let metrics = Metrics.all.filter {
+            $0.label.lowercased().contains(needle) || ($0.phrase?.lowercased().contains(needle) ?? false)
+        }
 
-    /// Everything that isn't today.
-    ///
-    /// These five were behind a drawer, which hid three of the app's verbs
-    /// behind a gesture nobody had been told about — a risk LedgerDrawer's own
-    /// comment named when it was built. On the page they are simply there.
-    ///
-    /// Paired across two columns, with an odd one left full width rather than
-    /// floated beside a gap. Nothing here carries a figure: a card that had to
-    /// read a ledger to draw itself would make opening the app wait on five
-    /// answers, and the cycle would put a permission prompt on the home
-    /// screen, which is exactly where it should not be.
-    private var elsewhere: some View {
-        VStack(spacing: 14) {
-            ForEach(Array(Self.places.chunked(into: 2).enumerated()), id: \.offset) { _, pair in
-                HStack(alignment: .top, spacing: 14) {
-                    ForEach(pair, id: \.route) { place in
-                        placeCard(place)
-                    }
-                    // A single card on the last row takes the full width; an
-                    // invisible partner would leave it half-wide beside a hole.
+        VStack(alignment: .leading, spacing: 0) {
+            if places.isEmpty && metrics.isEmpty {
+                Text("Nothing called “\(query)”.")
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.horizontal, margin)
+                    .padding(.top, 12)
+            }
+            ForEach(places, id: \.route) { place in
+                NavigationLink(value: place.route) {
+                    resultRow(symbol: place.symbol, title: place.title, note: place.note)
                 }
+                .buttonStyle(.pressRow)
+            }
+            ForEach(metrics, id: \.id) { spec in
+                Button {
+                    go(.health)
+                } label: {
+                    resultRow(
+                        symbol: spec.symbol,
+                        title: spec.label,
+                        note: snapshot.flatMap { spec.display($0) }.map { "\($0) \(spec.unit) today" }
+                            ?? "Nothing recorded today"
+                    )
+                }
+                .buttonStyle(.pressRow)
             }
         }
     }
+
+    private func resultRow(symbol: String, title: String, note: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 17))
+                .environment(\.symbolVariants, .none)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Theme.sans(16, medium: true)).foregroundStyle(Theme.text)
+                Text(note).font(Theme.sans(13)).foregroundStyle(Theme.secondaryText)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.tertiaryText)
+        }
+        .padding(.horizontal, margin)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: Sections
+
+    /// A heading, and a way through when there is somewhere to go.
+    @ViewBuilder
+    private func section(
+        _ title: String,
+        link: (String, () -> Void)? = nil,
+        route: Route? = nil
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(Theme.serif(24))
+                .foregroundStyle(Theme.text)
+            Spacer()
+            if let link {
+                if let route {
+                    NavigationLink(value: route) { linkLabel(link.0) }
+                        .buttonStyle(.plain)
+                } else {
+                    Button(action: link.1) { linkLabel(link.0) }
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, margin)
+        .padding(.top, 30)
+        .padding(.bottom, 12)
+    }
+
+    private func linkLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.sans(15))
+            .foregroundStyle(Theme.accent)
+    }
+
+    /// One row of cards that runs to the screen's edges, starting on the margin.
+    private func row<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: 12) { content() }
+        }
+        .scrollIndicators(.hidden)
+        .contentMargins(.horizontal, margin, for: .scrollContent)
+    }
+
+    // MARK: Explore
 
     private struct Place {
         let route: Route
         let title: String
         let note: String
         let symbol: String
+        /// Saturated mid-tones, dark enough for white type and light enough to
+        /// hold their own on a black page, so one set serves both appearances.
+        let colour: Color
     }
 
     private static let places: [Place] = [
-        .init(route: .history, title: "Records", note: "Any measurement, over time", symbol: "chart.xyaxis.line"),
-        .init(route: .nutrition, title: "Nutrition", note: "What to eat next", symbol: "leaf"),
-        .init(route: .specialists, title: "Specialists", note: "Read on this phone", symbol: "sparkles"),
-        .init(route: .professionals, title: "Practitioners", note: "Real people you can ask", symbol: "person.2"),
-        .init(route: .cycle, title: "Cycle", note: "Kept on this phone only", symbol: "circle.dotted"),
+        .init(route: .history, title: "Records", note: "Any measurement, over time",
+              symbol: "chart.xyaxis.line", colour: Color(red: 0.31, green: 0.43, blue: 0.56)),
+        .init(route: .nutrition, title: "Nutrition", note: "What to eat next",
+              symbol: "leaf", colour: Color(red: 0.36, green: 0.50, blue: 0.33)),
+        .init(route: .specialists, title: "Specialists", note: "Read on this phone",
+              symbol: "sparkles", colour: Color(red: 0.62, green: 0.20, blue: 0.18)),
+        .init(route: .professionals, title: "Practitioners", note: "Real people you can ask",
+              symbol: "person.2", colour: Color(red: 0.25, green: 0.46, blue: 0.51)),
+        .init(route: .cycle, title: "Cycle", note: "Kept on this phone only",
+              symbol: "circle.dotted", colour: Color(red: 0.62, green: 0.34, blue: 0.45)),
     ]
 
-    private func placeCard(_ place: Place) -> some View {
-        NavigationLink(value: place.route) {
-            Tile {
-                VStack(alignment: .leading, spacing: 10) {
-                    glyph(place.symbol, Theme.amber, size: 16)
-                    VStack(alignment: .leading, spacing: 3) {
+    private var exploreRow: some View {
+        row {
+            ForEach(Self.places, id: \.route) { place in
+                NavigationLink(value: place.route) {
+                    ZStack(alignment: .topLeading) {
+                        place.colour
+                        Image(systemName: place.symbol)
+                            .font(.system(size: 46, weight: .light))
+                            .environment(\.symbolVariants, .none)
+                            .foregroundStyle(.white.opacity(0.92))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 18)
                         Text(place.title)
-                            .font(Theme.serif(20))
-                            .foregroundStyle(Theme.ink)
-                        Text(place.note)
-                            .font(Theme.sans(10.5))
-                            .foregroundStyle(Theme.dust)
-                            .lineLimit(2)
+                            .font(Theme.sans(13, medium: true))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                    }
+                    .frame(width: 118, height: 162)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.pressRow)
+                .accessibilityLabel("\(place.title). \(place.note)")
+            }
+        }
+    }
+
+    // MARK: Today
+
+    private var todayRow: some View {
+        row {
+            NavigationLink(value: Route.briefing) {
+                todayCard {
+                    dateBlock
+                } title: {
+                    healthLoading ? "Reading today…" : briefing.headline.replacingOccurrences(of: "\n", with: " ")
+                } note: {
+                    "Today's briefing"
+                }
+            }
+            .buttonStyle(.pressRow)
+
+            NavigationLink(value: Route.goals) {
+                todayCard {
+                    goalsBlock
+                } title: {
+                    goals.isEmpty ? "Set a goal" : "\(goals.filter(\.met).count) of \(goals.count) kept"
+                } note: {
+                    goals.isEmpty ? "Steps, sleep and the rest" : "Goals"
+                }
+            }
+            .buttonStyle(.pressRow)
+        }
+    }
+
+    private func todayCard<Leading: View>(
+        @ViewBuilder leading: () -> Leading,
+        title: () -> String,
+        note: () -> String
+    ) -> some View {
+        HStack(spacing: 14) {
+            leading()
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title())
+                    .font(Theme.sans(16, medium: true))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(note())
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 42, height: 42)
+                .background(Theme.accent.opacity(0.12), in: Circle())
+        }
+        .padding(12)
+        .containerRelativeFrame(.horizontal) { width, _ in width - margin * 2 - 28 }
+        .background(Theme.background, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Theme.separator, lineWidth: 1)
+        }
+    }
+
+    /// A calendar leaf for today: the month in a dark band, the day under it.
+    private var dateBlock: some View {
+        let now = Date()
+        return VStack(spacing: 0) {
+            Text(now.formatted(.dateTime.month(.abbreviated)).uppercased())
+                .font(Theme.sans(10, medium: true))
+                .tracking(1.2)
+                .foregroundStyle(Theme.background)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .background(Theme.text)
+            Text(now.formatted(.dateTime.day()))
+                .font(Theme.serif(26))
+                .foregroundStyle(Theme.text)
+                .padding(.top, 4)
+            Text(now.formatted(.dateTime.weekday(.abbreviated)).uppercased())
+                .font(Theme.sans(9))
+                .foregroundStyle(Theme.secondaryText)
+                .padding(.bottom, 6)
+        }
+        .frame(width: 64)
+        .overlay {
+            RoundedRectangle(cornerRadius: 4).stroke(Theme.separator, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Goals as marks, one per goal, filled where the day met it.
+    private var goalsBlock: some View {
+        VStack(spacing: 5) {
+            Image(systemName: "target")
+                .font(.system(size: 20, weight: .light))
+                .foregroundStyle(Theme.accent)
+            HStack(spacing: 3) {
+                ForEach(goals.prefix(6)) { g in
+                    Capsule()
+                        .fill(g.met ? Theme.positive : Theme.separator)
+                        .frame(width: 6, height: 4)
+                }
+            }
+        }
+        .frame(width: 64, height: 76)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 4))
+    }
+
+    // MARK: Your readings
+
+    /// What Apple Health has for today, in the catalogue's order.
+    private var readings: [MetricSpec] {
+        guard let snapshot else { return [] }
+        return Metrics.all.filter { $0.display(snapshot) != nil }
+    }
+
+    private var readingsRow: some View {
+        row {
+            if healthLoading {
+                ForEach(0..<3, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Theme.surface)
+                        .frame(width: 150, height: 176)
+                }
+            } else if readings.isEmpty {
+                Button { go(.health) } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Nothing recorded yet today")
+                            .font(Theme.sans(15, medium: true))
+                            .foregroundStyle(Theme.text)
+                        Text("Readings from Apple Health appear here as the day goes on.")
+                            .font(Theme.sans(13))
+                            .foregroundStyle(Theme.secondaryText)
                             .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(16)
+                    .containerRelativeFrame(.horizontal) { width, _ in width - margin * 2 }
+                    .frame(height: 120, alignment: .topLeading)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                // Fills the row's height so a pair whose notes wrap to
-                // different depths still reads as two cards of one size
-                // rather than one card and a short one.
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
-        }
-        .buttonStyle(.pressRow)
-    }
-
-    /// Goals as a row of marks rather than a number.
-    ///
-    /// "3 of 5" makes you do the arithmetic to find out whether that is a good
-    /// day. Five marks, lit or not, is the same fact already answered.
-    private func goalsTile(_ goals: [Goals.Progress]) -> some View {
-        NavigationLink(value: Route.goals) {
-            Tile {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Kicker(text: "Goals", size: 9)
-                        Spacer(minLength: 0)
-                        Text("\(goals.filter(\.met).count) of \(goals.count) kept")
-                            .font(Theme.sans(11, medium: true))
-                            .foregroundStyle(Theme.mid)
-                    }
-                    HStack(spacing: 6) {
-                        ForEach(goals) { g in
-                            Capsule()
-                                .fill(mark(for: g.state))
-                                .frame(height: 5)
-                        }
-                    }
-                }
-            }
-        }
-        .buttonStyle(.pressRow)
-    }
-
-    private func mark(for state: Goals.Progress.State) -> Color {
-        switch state {
-        case .met: return Theme.sage
-        // A ceiling nothing was measured against is not a failure, and colouring
-        // it like one tells people they broke a limit they never tested.
-        case .unmeasured: return Theme.hairline
-        case .missed: return Theme.amber.opacity(0.45)
-        }
-    }
-
-    // MARK: Small parts
-
-    private func figure(_ text: String?, loading: Bool, size: CGFloat = 32) -> some View {
-        Group {
-            if loading {
-                Text("·")
-                    .font(Theme.serif(size))
-                    .foregroundStyle(Theme.dust)
-            } else if let text {
-                Text(text)
-                    .font(Theme.serif(size))
-                    .foregroundStyle(Theme.ink)
-                    .contentTransition(.numericText())
+                .buttonStyle(.pressRow)
             } else {
-                // Nothing to report shows nothing. A row announcing "None" in
-                // serif is a page shouting that it knows nothing, and the line
-                // underneath already says so once, quietly.
-                Color.clear.frame(height: 1)
+                ForEach(readings, id: \.id) { spec in
+                    Button { go(.health) } label: {
+                        readingCard(spec)
+                    }
+                    .buttonStyle(.pressRow)
+                }
             }
         }
     }
 
-    private func glyph(_ name: String, _ tint: Color, size: CGFloat = 19) -> some View {
-        Image(systemName: name)
-            .font(.system(size: size, weight: .light))
-            .foregroundStyle(tint)
-            .environment(\.symbolVariants, .none)
+    private func readingCard(_ spec: MetricSpec) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Image(systemName: spec.symbol)
+                .font(.system(size: 20, weight: .light))
+                .environment(\.symbolVariants, .none)
+                .foregroundStyle(Theme.accent)
+            Spacer()
+            Text(snapshot.flatMap { spec.display($0) } ?? "–")
+                .font(Theme.serif(34))
+                .foregroundStyle(Theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .contentTransition(.numericText())
+            if !spec.unit.isEmpty {
+                Text(spec.unit)
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            Text(spec.label)
+                .font(Theme.sans(13, medium: true))
+                .foregroundStyle(Theme.text)
+                .lineLimit(1)
+                .padding(.top, 8)
+        }
+        .padding(14)
+        .frame(width: 150, height: 176, alignment: .topLeading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
-    // MARK: What each tile says
-
-    private var headline: MetricSpec? {
-        guard let snapshot else { return nil }
-        return ["steps", "sleep", "resting_hr"]
-            .compactMap { Metrics.by(id: $0) }
-            .first { $0.display(snapshot) != nil }
-    }
-
-    private var healthFigure: String? {
-        guard let snapshot, let spec = headline else { return nil }
-        return spec.display(snapshot)
-    }
-
-    private var healthNote: String {
-        guard let spec = headline else { return "Nothing recorded yet today" }
-        return (spec.phrase ?? spec.label).lowercased() + " today"
-    }
-
-    // MARK: Behaviour
+    // MARK: Loading
 
     private func load() async {
         snapshot = try? await health.fetchTodaySnapshot()
         briefing = Briefing.compose(from: snapshot)
         goals = Goals.progress(on: snapshot)
         healthLoading = false
-    }
-}
-
-/// The dashboard's one shape.
-///
-/// Warm on linen, generously rounded, no border. The lift is a couple of
-/// percent of brightness, which is enough to say "this is one thing" without
-/// drawing a box around it — a stroke here would put a grid of frames on a
-/// page whose whole argument is that it is written rather than filled in.
-private struct Tile<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        content
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.warm, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-    }
-}
-
-extension Array {
-    /// Fixed-size runs, for laying a list out in columns.
-    ///
-    /// The last run is short rather than padded, which is what lets a lone
-    /// card take the full width instead of sitting half-wide beside nothing.
-    func chunked(into size: Int) -> [[Element]] {
-        guard size > 0 else { return [self] }
-        return stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
     }
 }

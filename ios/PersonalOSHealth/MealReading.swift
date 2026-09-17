@@ -135,7 +135,7 @@ enum MealReading {
                 runs.append(TypedRun(
                     text: meal.name,
                     font: Theme.serif(24),
-                    color: Theme.ink,
+                    color: Theme.text,
                     lineSpacing: 2,
                     topPadding: i == 0 ? 0 : 26
                 ))
@@ -144,7 +144,7 @@ enum MealReading {
                 runs.append(TypedRun(
                     text: meal.why,
                     font: Theme.serifBody(17),
-                    color: Theme.mid,
+                    color: Theme.secondaryText,
                     lineSpacing: 6,
                     topPadding: 6
                 ))
@@ -156,7 +156,7 @@ enum MealReading {
                 runs.append(TypedRun(
                     text: figures,
                     font: Theme.sans(10),
-                    color: Theme.dust,
+                    color: Theme.tertiaryText,
                     tracking: 1.4,
                     lineSpacing: 3,
                     topPadding: 10,
@@ -167,7 +167,7 @@ enum MealReading {
                 runs.append(TypedRun(
                     text: meal.prep,
                     font: Theme.serifBody(15.5),
-                    color: Theme.mid,
+                    color: Theme.secondaryText,
                     lineSpacing: 5,
                     topPadding: 8
                 ))
@@ -178,7 +178,7 @@ enum MealReading {
             runs.append(TypedRun(
                 text: parsed.prose,
                 font: Theme.serifBody(17),
-                color: Theme.ink,
+                color: Theme.text,
                 lineSpacing: 6,
                 topPadding: runs.isEmpty ? 0 : 24
             ))
@@ -188,7 +188,7 @@ enum MealReading {
             runs.append(TypedRun(
                 text: parsed.insight,
                 font: Theme.serifItalic(17),
-                color: Theme.ink,
+                color: Theme.text,
                 lineSpacing: 6,
                 topPadding: 26
             ))

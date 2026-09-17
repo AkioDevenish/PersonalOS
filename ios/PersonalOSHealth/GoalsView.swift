@@ -8,19 +8,19 @@ struct GoalsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Goals", color: Theme.amber, size: 11)
+                Kicker(text: "Goals", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 Text("What you're aiming at.")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .padding(.top, 8)
                     .flowIn(1)
 
                 Text("Set as many or as few as you like. The morning briefing closes with whichever ones the day hasn't met yet, so an empty list here means it stops telling you what to do.")
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
                     .padding(.top, 10)
                     .flowIn(2)
@@ -44,8 +44,8 @@ struct GoalsView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
-        .toolbarBackground(Theme.linen, for: .navigationBar)
+        .background(Theme.background)
+        .toolbarBackground(Theme.background, for: .navigationBar)
         .onAppear(perform: read)
     }
 
@@ -61,20 +61,20 @@ struct GoalsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(spec.label)
                     .font(Theme.serif(19))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                 // "At least" or "at most" is the whole meaning of the number
                 // beside it, and it is not something a person should have to
                 // infer from which metric it is.
                 Text(spec.goal == .atMost ? "at most" : "at least")
                     .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
 
             Spacer()
 
             TextField(placeholder(spec), text: binding(for: spec))
                 .font(Theme.serif(22))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .multilineTextAlignment(.trailing)
                 .keyboardType(.decimalPad)
                 .focused($editing, equals: spec.id)
@@ -93,7 +93,7 @@ struct GoalsView: View {
             if !spec.unit.isEmpty {
                 Text(spec.unit)
                     .font(Theme.sans(10))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
                     .frame(width: 34, alignment: .leading)
             } else {
                 Color.clear.frame(width: 34, height: 1)

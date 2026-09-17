@@ -176,16 +176,16 @@ struct PillPicker<Value: Hashable>: View {
                     Text(label(value).uppercased())
                         .font(Theme.sans(size, medium: selected))
                         .tracking(tracking)
-                        .foregroundStyle(selected ? Theme.warm : Theme.mid)
+                        .foregroundStyle(selected ? Theme.surface : Theme.secondaryText)
                         .padding(.horizontal, padding)
                         .padding(.vertical, 8)
                         .background {
                             if selected {
                                 Capsule()
-                                    .fill(Theme.ink)
+                                    .fill(Theme.text)
                                     .matchedGeometryEffect(id: "pill", in: pill)
                             } else {
-                                Capsule().stroke(Theme.hairline, lineWidth: 1)
+                                Capsule().stroke(Theme.separator, lineWidth: 1)
                             }
                         }
                         .contentShape(Capsule())
@@ -235,7 +235,7 @@ struct Composing: View {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0),
-                                .init(color: Theme.amber.opacity(0.45), location: 0.5),
+                                .init(color: Theme.accent.opacity(0.45), location: 0.5),
                                 .init(color: .clear, location: 1),
                             ],
                             startPoint: .leading,
@@ -263,7 +263,7 @@ struct Composing: View {
         VStack(alignment: .leading, spacing: gap) {
             ForEach(0..<lines, id: \.self) { i in
                 Capsule()
-                    .fill(Theme.ink.opacity(0.09))
+                    .fill(Theme.text.opacity(0.09))
                     .frame(width: max(width * widths[i % widths.count], 1), height: barHeight)
             }
         }
@@ -283,7 +283,7 @@ struct Composing: View {
 struct TypedRun {
     let text: String
     var font: Font = Theme.serifBody(17)
-    var color: Color = Theme.ink
+    var color: Color = Theme.text
     var tracking: CGFloat = 0
     var lineSpacing: CGFloat = 6
     var topPadding: CGFloat = 0
@@ -401,7 +401,7 @@ struct TypedText: View {
         let t = date.timeIntervalSinceReferenceDate
         let shift = CGFloat(sin(t * 0.9)) * 0.45
         return LinearGradient(
-            colors: [Theme.amber, Theme.sage, Theme.mid, Theme.amber],
+            colors: [Theme.accent, Theme.positive, Theme.secondaryText, Theme.accent],
             startPoint: UnitPoint(x: shift - 0.3, y: 0),
             endPoint: UnitPoint(x: shift + 1.3, y: 1)
         )
@@ -418,7 +418,7 @@ struct SelectionMark: View {
     var body: some View {
         Text("❧")
             .font(Theme.serif(size))
-            .foregroundStyle(Theme.amber)
+            .foregroundStyle(Theme.accent)
             .transition(.scale(scale: 0.4).combined(with: .opacity))
     }
 }

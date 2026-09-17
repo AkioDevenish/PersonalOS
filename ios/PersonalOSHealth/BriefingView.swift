@@ -62,7 +62,7 @@ struct BriefingView: View {
                 // than handed over whole. The stagger is the same 50ms step
                 // the metric grid uses; the paragraphs continue the count so
                 // the whole page reads as one movement down.
-                Kicker(text: kicker, color: Theme.amber)
+                Kicker(text: kicker, color: Theme.accent)
                     .padding(.top, 12)
                     .flowIn(0)
 
@@ -73,7 +73,7 @@ struct BriefingView: View {
 
                 Text(b.headline)
                     .font(Theme.serif(34))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(2)
                     .padding(.top, 18)
                     .flowIn(2)
@@ -81,7 +81,7 @@ struct BriefingView: View {
                 if let mood {
                     Text(mood.lowercased() + ".")
                         .font(Theme.serifItalic(19))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 10)
                         .flowIn(2)
@@ -92,8 +92,8 @@ struct BriefingView: View {
                         emphasising: p,
                         base: Theme.serifBody(18),
                         strong: Theme.serif(20),
-                        baseColor: Theme.mid,
-                        strongColor: Theme.ink
+                        baseColor: Theme.secondaryText,
+                        strongColor: Theme.text
                     )
                     .lineSpacing(7)
                     .padding(.top, 16)
@@ -111,7 +111,7 @@ struct BriefingView: View {
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
                                 Text("·")
                                     .font(Theme.serif(17))
-                                    .foregroundStyle(Theme.amber)
+                                    .foregroundStyle(Theme.accent)
                                 Text(
                                     emphasising: line,
                                     base: Theme.serifBody(16.5),
@@ -129,7 +129,7 @@ struct BriefingView: View {
                 if breakdown.isEmpty && !loading {
                     Text("Nothing measurable recorded in this window.")
                         .font(Theme.sans(12))
-                        .foregroundStyle(Theme.dust)
+                        .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 26)
                 }
 
@@ -146,7 +146,7 @@ struct BriefingView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 14) {
                         Text(["I", "II", "III", "IV"][min(i, 3)])
                             .font(Theme.serif(17))
-                            .foregroundStyle(Theme.amber)
+                            .foregroundStyle(Theme.accent)
                             .frame(width: 22, alignment: .leading)
                         Text(emphasising: s)
                             .lineSpacing(5)
@@ -163,8 +163,8 @@ struct BriefingView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
-        .toolbarBackground(Theme.linen, for: .navigationBar)
+        .background(Theme.background)
+        .toolbarBackground(Theme.background, for: .navigationBar)
         .task { await load() }
         .refreshable { await load() }
     }

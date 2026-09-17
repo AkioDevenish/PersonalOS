@@ -13,7 +13,7 @@ struct CycleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "The cycle", color: Theme.amber, size: 11)
+                Kicker(text: "The cycle", color: Theme.accent, size: 11)
                     .padding(.top, 8)
                     .flowIn(0)
 
@@ -34,7 +34,7 @@ struct CycleView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.linen)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
         .task { await store.load() }
         .sheet(isPresented: $logging) {
@@ -56,7 +56,7 @@ struct CycleView: View {
         if let day = reading.day {
             Text("Day \(day)")
                 .font(Theme.serif(46))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .contentTransition(.numericText())
                 .padding(.top, 14)
                 .flowIn(1)
@@ -66,13 +66,13 @@ struct CycleView: View {
                     .font(Theme.sans(11, medium: true))
                     .tracking(1.8)
                     .textCase(.uppercase)
-                    .foregroundStyle(Theme.amber)
+                    .foregroundStyle(Theme.accent)
                     .padding(.top, 6)
                     .flowIn(1)
 
                 Text(phase.note)
                     .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)
@@ -87,7 +87,7 @@ struct CycleView: View {
 
             Text(expectation(reading))
                 .font(Theme.sans(12.5))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 26)
@@ -95,13 +95,13 @@ struct CycleView: View {
         } else {
             Text("Nothing written yet.")
                 .font(Theme.serif(34))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
                 .padding(.top, 14)
                 .flowIn(1)
 
             Text("Record the first day of a period and this page starts counting. After two cycles it can say when to expect the next one; before that it would only be repeating the one month it has seen.")
                 .font(Theme.serifBody(17))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(6)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 14)
@@ -148,11 +148,11 @@ struct CycleView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(period.start.formatted(.dateTime.day().month(.wide)))
                 .font(Theme.serif(18))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Spacer(minLength: 8)
             Text("\(period.days) \(period.days == 1 ? "day" : "days")")
                 .font(Theme.sans(11))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
         }
         .padding(.vertical, 13)
         .overlay(alignment: .bottom) { Rule() }
@@ -165,10 +165,10 @@ struct CycleView: View {
         } label: {
             Text(store.reading.bleedingToday == nil ? "Write today down" : "Change today")
                 .font(Theme.sans(15, medium: true))
-                .foregroundStyle(Theme.warm)
+                .foregroundStyle(Theme.surface)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Theme.ink, in: Capsule())
+                .background(Theme.text, in: Capsule())
         }
         .buttonStyle(.press)
     }
@@ -177,10 +177,10 @@ struct CycleView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Health access is needed.")
                 .font(Theme.serif(30))
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(Theme.text)
             Text("This page reads and writes only one thing, your period, and it asks separately from the rest of the app so that permission is its own decision. Open Settings, then Health, then Data Access, to change it.")
                 .font(Theme.serifBody(17))
-                .foregroundStyle(Theme.mid)
+                .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(6)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -194,7 +194,7 @@ struct CycleView: View {
             Kicker(text: "Where this lives", size: 9)
             Text("On this phone, in Apple Health, and nowhere else. Cycle records are never sent to Personal OS's servers and are never included in the readings you can hand to a practitioner — not by policy, but because the sync and the sharing sheet are both built from a daily snapshot this data is deliberately kept out of.")
                 .font(Theme.sans(11.5))
-                .foregroundStyle(Theme.dust)
+                .foregroundStyle(Theme.tertiaryText)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -229,7 +229,7 @@ private struct CycleRing: View {
                 line.addLine(to: point(centre, inner, angle))
                 context.stroke(
                     line,
-                    with: .color(isToday ? Theme.amber : Theme.ink.opacity(isBleeding ? 0.42 : 0.16)),
+                    with: .color(isToday ? Theme.accent : Theme.text.opacity(isBleeding ? 0.42 : 0.16)),
                     lineWidth: isToday ? 2.4 : 1
                 )
             }
@@ -239,7 +239,7 @@ private struct CycleRing: View {
                     x: centre.x - radius, y: centre.y - radius,
                     width: radius * 2, height: radius * 2
                 )),
-                with: .color(Theme.ink.opacity(0.08)),
+                with: .color(Theme.text.opacity(0.08)),
                 lineWidth: 1
             )
         }
@@ -247,7 +247,7 @@ private struct CycleRing: View {
             if let phase = reading.phase {
                 Text(phase.title.lowercased())
                     .font(Theme.serifItalic(17))
-                    .foregroundStyle(Theme.dust)
+                    .foregroundStyle(Theme.tertiaryText)
             }
         }
         .accessibilityLabel(
@@ -275,11 +275,11 @@ private struct CycleLogSheet: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Today")
                     .font(Theme.serif(32))
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(Theme.text)
 
                 Text("Recorded in Apple Health, where the watch can use it and where you can delete it without asking us.")
                     .font(Theme.sans(12))
-                    .foregroundStyle(Theme.mid)
+                    .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 10)
@@ -298,10 +298,10 @@ private struct CycleLogSheet: View {
                             HStack {
                                 Text(flow == .unspecified ? "Bleeding, unspecified" : flow.label)
                                     .font(Theme.serif(20))
-                                    .foregroundStyle(Theme.ink)
+                                    .foregroundStyle(Theme.text)
                                 Spacer()
                                 if today == flow {
-                                    Text("❧").font(Theme.serif(14)).foregroundStyle(Theme.amber)
+                                    Text("❧").font(Theme.serif(14)).foregroundStyle(Theme.accent)
                                 }
                             }
                             .padding(.vertical, 16)
@@ -335,7 +335,7 @@ private struct CycleLogSheet: View {
             .padding(.top, 28)
             .padding(.bottom, 40)
         }
-        .background(Theme.linen)
+        .background(Theme.background)
         .presentationDetents([.medium])
     }
 }
