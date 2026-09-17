@@ -52,14 +52,14 @@ struct PersonalOSHealthApp: App {
     }
 }
 
-/// Held while Clerk restores the session — the brand mark, not a spinner.
+/// Held while Clerk restores the session.
+///
+/// Deliberately empty. It shows for a fraction of a second on a good
+/// connection, and anything put here is a flash of something rather than a
+/// thing anybody reads.
 struct LoadingView: View {
     var body: some View {
-        VStack {
-            Text("❧")
-                .font(Theme.serif(28))
-                .foregroundStyle(Theme.accent)
-        }
+        VStack {}
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
     }

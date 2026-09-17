@@ -83,10 +83,6 @@ struct SpecialistsView: View {
                             .padding(.top, 40)
                     }
                 }
-
-                Ornament()
-                    .padding(.top, 40)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 22)
         }

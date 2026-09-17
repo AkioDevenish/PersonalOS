@@ -59,10 +59,6 @@ struct GoalsView: View {
                     .padding(.top, chosen.isEmpty ? 30 : 34)
                     .flowIn(3)
                 }
-
-                Ornament()
-                    .padding(.top, 44)
-                    .padding(.bottom, 26)
             }
             .padding(.horizontal, 24)
         }

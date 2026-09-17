@@ -26,10 +26,6 @@ struct CycleView: View {
                 } else {
                     body(for: store.reading)
                 }
-
-                Ornament()
-                    .padding(.top, 44)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 24)
         }
@@ -301,7 +297,9 @@ private struct CycleLogSheet: View {
                                     .foregroundStyle(Theme.text)
                                 Spacer()
                                 if today == flow {
-                                    Text("❧").font(Theme.serif(14)).foregroundStyle(Theme.accent)
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Theme.accent)
                                 }
                             }
                             .padding(.vertical, 16)

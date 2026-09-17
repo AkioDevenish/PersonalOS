@@ -68,10 +68,6 @@ struct PractitionerView: View {
                         }
                     }
                 }
-
-                Ornament()
-                    .padding(.top, 44)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 24)
         }

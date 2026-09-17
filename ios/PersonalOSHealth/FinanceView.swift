@@ -80,10 +80,6 @@ struct FinanceView: View {
                         .padding(.bottom, 6)
                     entries
                 }
-
-                Ornament()
-                    .padding(.top, 46)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 26)
             .padding(.top, 10)

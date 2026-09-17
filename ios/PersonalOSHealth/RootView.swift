@@ -16,15 +16,6 @@ struct SignInView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .stroke(Theme.separator, lineWidth: 1)
-                    .frame(width: 72, height: 72)
-                Text("❧")
-                    .font(Theme.serif(26))
-                    .foregroundStyle(Theme.accent)
-            }
-
             Text("Personal OS")
                 .font(Theme.serif(42))
                 .foregroundStyle(Theme.text)

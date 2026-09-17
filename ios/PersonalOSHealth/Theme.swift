@@ -134,16 +134,6 @@ struct SectionRule: View {
     }
 }
 
-/// The closing ornament, now just the mark.
-struct Ornament: View {
-    var body: some View {
-        Text("❧")
-            .font(Theme.serif(15))
-            .foregroundStyle(Theme.tertiaryText)
-            .frame(maxWidth: .infinity, alignment: .center)
-    }
-}
-
 /// A block of content on the ground.
 ///
 /// This was a warm-white card with a border. On linen that read as paper

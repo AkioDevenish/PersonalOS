@@ -408,7 +408,7 @@ struct TypedText: View {
     }
 }
 
-/// The ❧ that marks the chosen row in a ruled list.
+/// Marks the chosen row in a ruled list.
 ///
 /// Scales in from nothing on the bouncy spring rather than appearing, so the
 /// eye follows the choice down the list instead of hunting for it.
@@ -416,8 +416,8 @@ struct SelectionMark: View {
     var size: CGFloat = 13
 
     var body: some View {
-        Text("❧")
-            .font(Theme.serif(size))
+        Image(systemName: "checkmark")
+            .font(.system(size: size, weight: .medium))
             .foregroundStyle(Theme.accent)
             .transition(.scale(scale: 0.4).combined(with: .opacity))
     }

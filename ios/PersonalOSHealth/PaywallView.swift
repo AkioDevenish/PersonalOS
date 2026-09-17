@@ -127,10 +127,10 @@ struct PaywallView: View {
     /// One line of what the subscription includes.
     private func point(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 9) {
-            Text("\u{2767}")
-                .font(Theme.serif(12))
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.accent)
-                .padding(.top, 3)
+                .padding(.top, 4)
             Text(text)
                 .font(Theme.sans(14.5))
                 .foregroundStyle(Theme.text)
@@ -140,7 +140,9 @@ struct PaywallView: View {
 
     private func freeLine(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 9) {
-            Text("❧").font(Theme.serif(12)).foregroundStyle(Theme.positive)
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.positive)
             Text(text)
                 .font(Theme.serifBody(16))
                 .foregroundStyle(Theme.text)

@@ -114,10 +114,6 @@ struct SpecialistProfileView: View {
                         .padding(.top, 12)
                         .flowIn(6)
                 }
-
-                Ornament()
-                    .padding(.top, 44)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)

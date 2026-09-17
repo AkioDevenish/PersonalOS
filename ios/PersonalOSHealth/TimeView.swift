@@ -72,10 +72,6 @@ struct TimeView: View {
                         .padding(.bottom, 6)
                     blocks
                 }
-
-                Ornament()
-                    .padding(.top, 46)
-                    .padding(.bottom, 30)
             }
             .padding(.horizontal, 26)
             .padding(.top, 10)

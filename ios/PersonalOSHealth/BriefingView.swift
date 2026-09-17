@@ -133,10 +133,6 @@ struct BriefingView: View {
                         .padding(.top, 26)
                 }
 
-                Ornament()
-                    .padding(.vertical, 26)
-                    .flowIn(4 + b.paragraphs.count + breakdown.count)
-
                 Kicker(text: b.suggestions.count == 1 && b.suggestions[0].hasPrefix("No goals")
                        ? "Goals"
                        : period.spend)
