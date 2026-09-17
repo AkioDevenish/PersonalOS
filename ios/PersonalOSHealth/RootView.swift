@@ -130,6 +130,10 @@ enum Route: Hashable {
     case practitioner(SpecialistsClient.Specialist)
     /// The other side of the desk, for somebody who is listed.
     case practice
+    /// One article, carried whole like a practitioner: the card already has it.
+    case article(Article)
+    /// Every article, or one category's.
+    case articles(String?)
 }
 
 struct RootView: View {
@@ -205,6 +209,8 @@ struct RootView: View {
                     case .paywall:      PaywallView()
                     case .goals:        GoalsView()
                     case .cycle:        CycleView()
+                    case .article(let one): ArticleView(article: one)
+                    case .articles(let category): ArticleListView(category: category)
                     }
                     }
                     // Set on every pushed page too. Visibility belongs to the

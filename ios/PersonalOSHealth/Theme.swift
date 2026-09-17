@@ -18,6 +18,9 @@ enum Theme {
     static let background = Color(uiColor: .systemBackground)
     /// A card or field sitting on the page, one step off it.
     static let surface = Color(uiColor: .secondarySystemBackground)
+    /// A card sitting on a surface: white on light grey, and in dark a step
+    /// lighter again, the way content cards read on a banded section.
+    static let raised = Color(uiColor: .tertiarySystemBackground)
     /// Anything that speaks: titles, figures, primary text.
     static let text = Color(uiColor: .label)
     static let secondaryText = Color(uiColor: .secondaryLabel)
