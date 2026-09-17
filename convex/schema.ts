@@ -453,6 +453,26 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_transactionId", ["transactionId"]),
 
+  /**
+   * Devices to push to, one row per install.
+   *
+   * Keyed by the Clerk subject rather than tokenIdentifier, because the things
+   * that trigger a push — a practitioner replying, an article being verified —
+   * hold the other party's subject and nothing else.
+   *
+   * A token is not secret, but it is a handle to somebody's lock screen, so
+   * these are never returned to a client; only the internal push action reads
+   * them.
+   */
+  push_devices: defineTable({
+    userId: v.string(),
+    token: v.string(),
+    platform: v.string(),
+    updated_at: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_token", ["token"]),
+
   call_signals: defineTable({
     consultId: v.id("consults"),
     /** Who sent it, so a phone never answers its own message. */

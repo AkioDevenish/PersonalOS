@@ -94,7 +94,14 @@ struct ProfileView: View {
             }
         }
         .confirmationDialog("Log out of Personal OS?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
-            Button("Log out", role: .destructive) { Task { try? await clerk.auth.signOut() } }
+            Button("Log out", role: .destructive) {
+                Task {
+                    // Hand the device back before the session goes, or the
+                    // token stays pointed at an account nobody is signed in to.
+                    await Push.handBack()
+                    try? await clerk.auth.signOut()
+                }
+            }
         }
     }
 

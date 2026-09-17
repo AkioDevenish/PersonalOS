@@ -1,5 +1,6 @@
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
+import { internal } from "../_generated/api"
 
 /**
  * Asking a human.
@@ -668,6 +669,22 @@ export const send = mutation({
       // own does not mean anybody has read the first one.
       status: mine ? consult.status : "answered",
     })
+
+    // Tell the other side, on their lock screen, because the whole point of a
+    // written consultation is that neither person has to sit in the app.
+    //
+    // Deliberately says nothing about the message. A health question and its
+    // answer are the most private things in this app, and a notification is
+    // read by whoever is holding the phone.
+    const other = mine ? consult.nutritionistId : consult.userId
+    if (other) {
+      await ctx.scheduler.runAfter(0, internal.push.send, {
+        userId: other,
+        title: "Personal OS",
+        body: mine ? "Someone has sent you a question." : "Your practitioner has replied.",
+        route: "specialists",
+      })
+    }
 
     return { ok: true }
   },

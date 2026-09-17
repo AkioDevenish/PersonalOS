@@ -16,6 +16,7 @@ import type * as articles from "../articles.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as business from "../business.js";
 import type * as datascience from "../datascience.js";
+import type * as devices from "../devices.js";
 import type * as finance from "../finance.js";
 import type * as health_connections from "../health/connections.js";
 import type * as health_consult from "../health/consult.js";
@@ -27,6 +28,7 @@ import type * as health_samples from "../health/samples.js";
 import type * as health_signal from "../health/signal.js";
 import type * as health_tokens from "../health/tokens.js";
 import type * as marketing from "../marketing.js";
+import type * as push from "../push.js";
 import type * as time from "../time.js";
 import type * as wellbeing from "../wellbeing.js";
 
@@ -45,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "billing/entitlements": typeof billing_entitlements;
   business: typeof business;
   datascience: typeof datascience;
+  devices: typeof devices;
   finance: typeof finance;
   "health/connections": typeof health_connections;
   "health/consult": typeof health_consult;
@@ -56,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   "health/signal": typeof health_signal;
   "health/tokens": typeof health_tokens;
   marketing: typeof marketing;
+  push: typeof push;
   time: typeof time;
   wellbeing: typeof wellbeing;
 }>;

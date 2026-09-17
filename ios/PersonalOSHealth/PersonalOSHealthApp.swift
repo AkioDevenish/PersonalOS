@@ -5,6 +5,8 @@ import ClerkKit
 struct PersonalOSHealthApp: App {
     @StateObject private var health = HealthKitManager()
     @State private var clerk = Clerk.configure(publishableKey: Auth.publishableKey)
+    /// Only for the device token Apple hands back; nothing else uses it.
+    @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     /// Owned at app level, not by the paywall: transactions arrive whenever
     /// Apple feels like it — a renewal, an Ask-to-Buy approval days later, a
     /// purchase made on another device — and the listener has to be running to
@@ -34,6 +36,7 @@ struct PersonalOSHealthApp: App {
             .environment(store)
             .environment(clerk)
             .onAppear { notifier.start() }
+            .task { await Push.registerIfAllowed() }
             // A listed practitioner is present whenever their app is. The
             // call is a no-op for everybody else, which is nearly everybody,
             // so it costs one request rather than a check to find out.

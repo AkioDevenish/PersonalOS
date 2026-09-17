@@ -325,6 +325,11 @@ export const review = mutation({
       // was a draft, and found nothing to do. Schedule it again; a duplicate
       // is harmless.
       if (stillPaid) await ctx.scheduler.runAt(row.live_until!, internal.articles.expire, { id: args.id })
+      await ctx.scheduler.runAfter(0, internal.push.send, {
+        userId: row.authorId,
+        title: "Your article was verified",
+        body: stillPaid ? "It is back on Home." : "Pay to put it on Home for 30 days.",
+      })
       return { status: stillPaid ? "published" : "approved" }
     }
 
@@ -335,6 +340,11 @@ export const review = mutation({
       reviewed_by: identity.subject,
       review_note: note,
       updated_at: now,
+    })
+    await ctx.scheduler.runAfter(0, internal.push.send, {
+      userId: row.authorId,
+      title: "Your article needs a change",
+      body: "The reviewer left a note on it.",
     })
     return { status: "changes_requested" }
   },

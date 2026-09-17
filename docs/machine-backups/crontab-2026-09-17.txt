@@ -1,0 +1,14 @@
+# Sync Mac Activity (Every hour)
+0 * * * * /usr/bin/python3 "/Users/akio/personal_os/Well Being/health/activity_sync.py" >> "/Users/akio/personal_os/Well Being/logs/activity.log" 2>&1
+
+# AI Hourly Snapshot (Every hour at minute 20)
+20 * * * * /usr/bin/python3 "/Users/akio/personal_os/Well Being/health/health_analysis.py" hourly >> "/Users/akio/personal_os/Well Being/logs/hourly_report.log" 2>&1
+
+# AI Daily Report (Midnight daily)
+0 0 * * * /usr/bin/python3 "/Users/akio/personal_os/Well Being/health/health_analysis.py" daily >> "/Users/akio/personal_os/Well Being/logs/daily_report.log" 2>&1
+
+# AI Weekly Report (9 AM every Sunday)
+0 9 * * 0 /usr/bin/python3 "/Users/akio/personal_os/Well Being/health/health_analysis.py" weekly >> "/Users/akio/personal_os/Well Being/logs/weekly_report.log" 2>&1
+
+# AI Monthly Report (Midnight on 1st of each month)
+0 0 1 * * /usr/bin/python3 "/Users/akio/personal_os/Well Being/health/health_analysis.py" monthly >> "/Users/akio/personal_os/Well Being/logs/monthly_report.log" 2>&1

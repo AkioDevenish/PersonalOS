@@ -338,6 +338,11 @@ struct ChatView: View {
             }
         }
         .onDisappear { poller?.cancel() }
+        // Asked here, the first time somebody opens a conversation, because
+        // this is the screen whose whole point is a reply arriving later.
+        .task {
+            if await Notifier.shared.permitted() { Push.register() }
+        }
         .sheet(isPresented: $sharing) {
             ShareReadingsSheet(peerName: peer) { text in
                 try await client.send(id: sessionId, body: text)

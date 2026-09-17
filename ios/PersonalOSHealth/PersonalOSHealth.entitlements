@@ -5,6 +5,18 @@
 	<key>com.apple.developer.healthkit</key>
 	<true/>
 	<!--
+	  Push notifications need this, with the value "development" or
+	  "production":
+
+	    aps-environment
+
+	  Left out for the same reason as the two below: a free personal team's
+	  profile cannot carry it, and signing fails if it is here. Registration
+	  in Push.swift fails harmlessly until then. Enable Push Notifications on
+	  the app id in the developer portal once enrolled, add the key here, and
+	  set APNS_KEY_ID, APNS_TEAM_ID and APNS_P8 on the Convex deployment.
+	-->
+	<!--
 	  Running a downloaded 4B model needs these two:
 
 	    com.apple.developer.kernel.increased-memory-limit
