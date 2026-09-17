@@ -90,14 +90,14 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center) {
                 Text("Home")
-                    .font(Theme.serif(38))
+                    .font(Theme.serif(28))
                     .foregroundStyle(Theme.text)
                 Spacer()
                 Button {
                     Haptics.select()
                     go(.settings)
                 } label: {
-                    Avatar(user: clerk.user, size: 38)
+                    Avatar(user: clerk.user, size: 32)
                 }
                 .buttonStyle(.press)
                 .accessibilityLabel("Profile")
