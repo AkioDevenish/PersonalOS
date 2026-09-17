@@ -143,40 +143,38 @@ struct RootView: View {
     /// keeps your place in each, so a glance at Finance doesn't cost you the
     /// specialist you were three screens into.
     @State private var paths: [AppTab: [Route]] = [:]
+    @State private var bar = TabBarState()
+
     var body: some View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // The floating bar sits in the home indicator's band, so the
-            // TabView has to reach the true bottom of the screen to place it.
-            // Children still get correct insets: the TabView passes them down
-            // itself.
-            .ignoresSafeArea()
             .background(Theme.linen)
+            // Laid over the pages rather than beneath them, so content scrolls
+            // under the glass the way it does under the system's own bar.
+            .overlay(alignment: .bottom) {
+                AppTabBar(selected: tab) { selection.wrappedValue = $0 }
+            }
+            .environment(bar)
     }
 
-    /// The bar itself, the system's rather than ours.
+    /// The pages, in a TabView whose own bar is hidden.
     ///
-    /// The hand-rolled version was an HStack of buttons with a hairline over
-    /// it, pinned to the bottom. It could not be anything else. This one
-    /// floats over the content on Liquid Glass, shrinks out of the way as you
-    /// read down a long page, and becomes a sidebar on iPad — none of which is
-    /// available to a stack of buttons, however carefully drawn.
-    ///
-    /// The cost is the avatar. A photograph cannot be handed to a tab that
-    /// wants a symbol, so Settings is a drawn figure now and the face lives on
-    /// the Settings screen itself.
+    /// The TabView stays for what it is good at — keeping each tab's stack
+    /// alive while another is showing — and gives up only the bar, which is
+    /// drawn by `AppTabBar` so that it can shrink rather than collapse to one
+    /// icon. The iPad sidebar went with the system bar; this app has not been
+    /// laid out for iPad, and a sidebar over phone-width pages was not a
+    /// feature anybody was using.
     private var page: some View {
         TabView(selection: selection) {
-            Tab(value: AppTab.home) { stack(for: .home) } label: { glyph(.home) }
-            Tab(value: AppTab.health) { stack(for: .health) } label: { glyph(.health) }
-            Tab(value: AppTab.settings) { stack(for: .settings) } label: { glyph(.settings) }
+            Tab(value: AppTab.home) { stack(for: .home) }
+            Tab(value: AppTab.health) { stack(for: .health) }
+            Tab(value: AppTab.settings) { stack(for: .settings) }
         }
-        // iPhone is unaffected; iPad gets a bar it can turn into a sidebar.
-        .tabViewStyle(.sidebarAdaptable)
-        .tabBarMinimizeBehavior(.onScrollDown)
-        // Otherwise the selected tab comes up system blue, which is the
-        // one saturated colour this palette does not contain.
         .tint(Theme.amber)
+        // A new tab starts with the bar at full size: the shrink belonged to
+        // how far down the last page you had read, not to this one.
+        .onChange(of: tab) { _, _ in bar.set(compact: false) }
         // A tapped notification should land on the thing it announced, not on
         // whatever screen the app was last showing.
         .onChange(of: notifier.opened) { _, route in
@@ -189,35 +187,13 @@ struct RootView: View {
         }
     }
 
-
-    /// A tab's mark, with no word under it.
-    ///
-    /// The title is emptied rather than dropped: it still travels as the
-    /// accessibility label, so VoiceOver announces "Finance" where a sighted
-    /// reader gets the banknote alone. An empty `Label` with nothing else said
-    /// would leave a screen reader reading out "tab, two of four".
-    private func glyph(_ t: AppTab) -> some View {
-        Label { Text("") } icon: { Image(systemName: t.symbol) }
-            // The bar substitutes the filled variant of every symbol on its
-            // own. That turned the clock and the figure into two near-identical
-            // dark discs sitting side by side, while the banknote — which has
-            // no real filled form — stayed a line box next to them. Three
-            // different densities in four glyphs.
-            //
-            // Outlines throughout instead: one stroke weight, four distinct
-            // silhouettes, and a register that matches the engravings rather
-            // than shouting over them. Selection is already carried by the
-            // amber and by the capsule the bar draws behind the chosen tab, so
-            // nothing is lost by refusing the fill.
-            .environment(\.symbolVariants, .none)
-            .accessibilityLabel(t.title)
-    }
-
     /// One tab's navigation stack.
     private func stack(for t: AppTab) -> some View {
         NavigationStack(path: binding(for: t)) {
             root(for: t)
+                .hidesSystemTabBar()
                 .navigationDestination(for: Route.self) { route in
+                    Group {
                     switch route {
                     case .briefing:     BriefingView()
                     case .history:      TrendsView()
@@ -230,6 +206,11 @@ struct RootView: View {
                     case .goals:        GoalsView()
                     case .cycle:        CycleView()
                     }
+                    }
+                    // Set on every pushed page too. Visibility belongs to the
+                    // page showing, so a destination without it would bring
+                    // the system bar back on top of ours.
+                    .hidesSystemTabBar()
                 }
                 .toolbarBackground(Theme.linen, for: .navigationBar)
         }
@@ -278,3 +259,11 @@ struct RootView: View {
     }
 }
 
+extension View {
+    /// Hides the system's tab bar and leaves room at the bottom for the app's.
+    func hidesSystemTabBar() -> some View {
+        self
+            .toolbarVisibility(.hidden, for: .tabBar)
+            .safeAreaPadding(.bottom, AppTabBar.clearance)
+    }
+}

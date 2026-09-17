@@ -125,6 +125,7 @@ struct HealthView: View {
             }
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .task { await load() }
         .refreshable { await load() }

@@ -258,6 +258,7 @@ struct NutritionView: View {
             .animation(Theme.Motion.flow, value: signals.count)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         // Pinned rather than scrolled away with the content: the whole point
         // of it is being reachable from anywhere on a long page, and a button
@@ -563,6 +564,7 @@ struct ExpertsView: View {
             .animation(Theme.Motion.flow, value: localReport)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .task { await load() }
     }

@@ -162,6 +162,7 @@ struct BriefingView: View {
             .animation(Theme.Motion.flow, value: period)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .toolbarBackground(Theme.linen, for: .navigationBar)
         .task { await load() }

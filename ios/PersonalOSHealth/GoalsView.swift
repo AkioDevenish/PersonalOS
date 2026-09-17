@@ -43,6 +43,7 @@ struct GoalsView: View {
             }
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .toolbarBackground(Theme.linen, for: .navigationBar)
         .onAppear(perform: read)

@@ -122,6 +122,7 @@ struct SpecialistProfileView: View {
             .padding(.horizontal, 24)
             .padding(.top, 8)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .navigationBarTitleDisplayMode(.inline)
         // A paid conversation is confirmed before the credits move. A free one

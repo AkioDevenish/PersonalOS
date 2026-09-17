@@ -71,6 +71,7 @@ struct HomeView: View {
             .padding(.horizontal, 20)
             .padding(.top, 10)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .refreshable { await load() }
         .task { await load() }

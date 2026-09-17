@@ -33,6 +33,7 @@ struct CycleView: View {
             }
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .navigationBarTitleDisplayMode(.inline)
         .task { await store.load() }

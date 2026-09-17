@@ -66,6 +66,7 @@ struct TrendsView: View {
             .animation(Theme.Motion.flow, value: against?.id)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .task { await load() }
         .refreshable { await load() }

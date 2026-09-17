@@ -90,6 +90,7 @@ struct SpecialistsView: View {
             }
             .padding(.horizontal, 22)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .refreshable { await load() }
         // Deliberately not `.task`. That binds the request's lifetime to this

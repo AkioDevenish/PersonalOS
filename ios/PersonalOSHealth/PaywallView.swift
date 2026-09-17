@@ -133,6 +133,7 @@ struct PaywallView: View {
             .animation(Theme.Motion.flow, value: store.entitlement.credits)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .navigationTitle("Plans")
         .navigationBarTitleDisplayMode(.inline)

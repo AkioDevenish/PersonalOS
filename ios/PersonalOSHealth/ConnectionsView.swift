@@ -292,6 +292,7 @@ struct ConnectionsView: View {
             .animation(Theme.Motion.flow, value: status)
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .task { await loadConnections() }
         .task { await loadApplication() }

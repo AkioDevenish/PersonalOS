@@ -75,6 +75,7 @@ struct PractitionerView: View {
             }
             .padding(.horizontal, 24)
         }
+        .compactsTabBar()
         .background(Theme.linen)
         .refreshable { await load() }
         .onAppear {
@@ -100,6 +101,7 @@ struct PractitionerView: View {
             // A practitioner reads the ledger they were sent; they do not get
             // a button that hands over their own.
             ChatView(peer: "Your client", sessionId: one.id, canShareReadings: false)
+                .hidesSystemTabBar()
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
