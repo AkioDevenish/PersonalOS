@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Where readings come from, and sending them to your account.
+/// Where readings come from, and when they last went up.
 ///
-/// Moved out of Profile, where two sync buttons sat among account settings.
-/// This is about data, so it is one row in Settings that opens onto all of it.
+/// This had two buttons on it. Syncing is not something anybody wants to do,
+/// it is something they want to have happened, so it happens by itself when
+/// the app opens and this screen only reports it. What is left is a backfill,
+/// which is a real request: it reaches back past today.
 struct HealthDataView: View {
     @EnvironmentObject private var health: HealthKitManager
-    @AppStorage("last_sync_at") private var lastSyncAt: Double = 0
+    @ObservedObject private var sync = AutoSync.shared
 
     @State private var status = ""
     @State private var busy = false
@@ -20,50 +22,43 @@ struct HealthDataView: View {
             }
 
             Section {
-                Button { Task { await sync(days: nil) } } label: {
-                    Label(busy ? "Syncing…" : "Sync today", systemImage: "arrow.triangle.2.circlepath")
+                HStack {
+                    Text("Automatic")
+                    Spacer()
+                    Text(sync.running ? "Syncing…" : lastSynced)
+                        .foregroundStyle(Theme.secondaryText)
                 }
-                Button { Task { await sync(days: 30) } } label: {
-                    Label("Send the last 30 days", systemImage: "clock.arrow.circlepath")
+                Button { Task { await backfill() } } label: {
+                    Label(busy ? "Sending…" : "Send the last 30 days", systemImage: "clock.arrow.circlepath")
                 }
+                .disabled(busy || sync.running)
             } header: {
                 Text("Sync")
             } footer: {
-                Text(status.isEmpty ? lastSynced : status)
+                Text(footer)
             }
-            .disabled(busy)
         }
         .navigationTitle("Health data")
     }
 
     private var lastSynced: String {
-        guard lastSyncAt > 0 else { return "Not synced yet." }
-        let when = Date(timeIntervalSince1970: lastSyncAt)
-        return "Last synced \(when.formatted(.relative(presentation: .named)))."
+        guard let at = sync.lastSynced else { return "not yet" }
+        return at.formatted(.relative(presentation: .named))
     }
 
-    private func sync(days: Int?) async {
+    private var footer: String {
+        if !status.isEmpty { return status }
+        if let failure = sync.lastMessage { return failure }
+        return "Today's readings go up on their own when you open the app, at most every half hour. Sending the last 30 days is for a phone you have just signed in to."
+    }
+
+    private func backfill() async {
         busy = true
+        status = "Reading 30 days from Apple Health…"
         defer { busy = false }
         do {
-            try await health.requestAuthorization()
-            if let days {
-                status = "Reading \(days) days from Apple Health…"
-                let snapshots = try await health.fetchHistoricalSnapshots(days: days)
-                status = "Sending \(snapshots.count) days…"
-                let r = try await IngestClient().uploadHistory(snapshots: snapshots)
-                lastSyncAt = Date().timeIntervalSince1970
-                status = "Done: \(r.inserted) new, \(r.updated) updated."
-            } else {
-                let snapshot = try await health.fetchTodaySnapshot()
-                let r = try await IngestClient().upload(snapshot: snapshot)
-                lastSyncAt = Date().timeIntervalSince1970
-                let n = (r.inserted ?? 0) + (r.updated ?? 0)
-                status = "Synced \(n) measurements."
-                if let rejected = r.rejected, let first = rejected.first {
-                    status += " \(rejected.count) rejected: \(first.reason)"
-                }
-            }
+            let result = try await sync.backfill(health)
+            status = "Done: \(result.inserted) new, \(result.updated) updated."
         } catch {
             status = error.localizedDescription
         }

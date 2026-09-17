@@ -43,6 +43,10 @@ struct PersonalOSHealthApp: App {
             .onChange(of: scene) { _, phase in
                 guard phase == .active else { return }
                 Task { await SpecialistsClient().heartbeat() }
+                // Today's readings go up on their own, at most every half
+                // hour, rather than waiting for somebody to press a button
+                // they should never have had to know about.
+                Task { await AutoSync.shared.runIfDue(health) }
             }
         }
     }
