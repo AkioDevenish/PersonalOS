@@ -6,7 +6,7 @@ import SwiftUI
 /// signals and asks Gemma for three suggestions for the moment you pick.
 struct NutritionView: View {
     @EnvironmentObject var health: HealthKitManager
-    @State private var history: [InsightsClient.Recommendation] = []
+    @ObservedObject private var readings = Readings.shared
     @State private var latest = ""
     @State private var status = ""
     @State private var isBusy = false
@@ -29,7 +29,6 @@ struct NutritionView: View {
     @State private var book = CuisineClient.Book.empty
     @State private var newDish = ""
     @State private var seeding = false
-    @State private var consulting = false
 
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
@@ -225,24 +224,16 @@ struct NutritionView: View {
                     .padding(.vertical, 14)
                 }
 
-                if !history.isEmpty {
+                let suggested = readings.of(.meal)
+                if !suggested.isEmpty {
                     SectionRule(text: "Recently suggested").padding(.top, 32)
-                    ForEach(history) { r in
+                    ForEach(suggested) { r in
                         VStack(alignment: .leading, spacing: 6) {
-                            if let c = r.meal_context, !c.isEmpty {
-                                Kicker(text: c, size: 9)
-                            }
-                            ForEach(r.meals, id: \.self) { m in
-                                Text("· \(MealReading.clean(m))")
-                                    .font(Theme.serifBody(16))
-                                    .foregroundStyle(Theme.text)
-                            }
-                            if let i = r.insight, !i.isEmpty {
-                                Text(i)
-                                    .font(Theme.sans(11.5))
-                                    .foregroundStyle(Theme.tertiaryText)
-                                    .lineSpacing(3)
-                            }
+                            Kicker(text: r.at.formatted(date: .abbreviated, time: .shortened), size: 9)
+                            Text(MealReading.clean(r.text))
+                                .font(Theme.serifBody(16))
+                                .foregroundStyle(Theme.text)
+                                .lineSpacing(5)
                         }
                         .padding(.vertical, 14)
                     }
@@ -260,32 +251,7 @@ struct NutritionView: View {
         }
         .compactsTabBar()
         .background(Theme.background)
-        // Pinned rather than scrolled away with the content: the whole point
-        // of it is being reachable from anywhere on a long page, and a button
-        // you have to scroll back up to find is a link.
-        .overlay(alignment: .bottomTrailing) {
-            Button {
-                Haptics.tap()
-                consulting = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Theme.text)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: Theme.text.opacity(0.18), radius: 12, y: 4)
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(Theme.surface)
-                }
-            }
-            .buttonStyle(.press)
-            .accessibilityLabel("Ask a nutritionist")
-            .padding(.trailing, 22)
-            .padding(.bottom, 26)
-        }
-        .sheet(isPresented: $consulting) { ConsultView() }
         .task { await loadSignals() }
-        .task { await loadHistory() }
         .task { await loadBook() }
         .onChange(of: country) { _, _ in
             book = .empty
@@ -295,10 +261,6 @@ struct NutritionView: View {
         .sheet(isPresented: $choosingCountry) {
             CountryPicker(code: $country)
         }
-    }
-
-    private func loadHistory() async {
-        history = (try? await InsightsClient().mealHistory()) ?? []
     }
 
     /// "NAMED BY 4" — and for a starter-list dish nobody has vouched for yet,
@@ -316,13 +278,10 @@ struct NutritionView: View {
 
     /// Writes a starter list for a country nobody has named anything for.
     ///
-    /// Only from the on-device model, which is both the default engine and the
-    /// one that most needs the help — a hosted model asked for Trinidadian food
-    /// already knows. The starter list carries no votes, so the first real
-    /// person to disagree with it outranks it by simply saying so.
+    /// Written by the model on the phone. The starter list carries no votes,
+    /// so the first real person to disagree with it outranks it by saying so.
     private func seedIfEmpty() async {
         guard book.all.isEmpty, !country.isEmpty, !seeding else { return }
-        guard ModelChoice.isOnDevice else { return }
         seeding = true
         defer { seeding = false }
 
@@ -367,28 +326,21 @@ struct NutritionView: View {
         status = ""
         defer { isBusy = false }
         do {
-            // On-device reads HealthKit here and never leaves the phone; every
-            // other engine is reached through the server, which holds the key.
-            if ModelChoice.isOnDevice {
-                let snaps = try await health.fetchHistoricalSnapshots(days: 7)
-                latest = try await OnDeviceInsights.generate(
-                    instructions: InsightPrompts.mealInstructions,
-                    prompt: InsightPrompts.meals(
-                        snapshots: snaps,
-                        context: context,
-                        country: Cuisine.name(for: country),
-                        dishes: book.canon
-                    ),
-                    temperature: 0.8
-                )
-            } else {
-                latest = try await InsightsClient().generateMeals(
+            // Written on this iPhone, from HealthKit, and never leaving it.
+            // There used to be a second path through a web server holding an
+            // API key; it needed a machine of ours awake to answer.
+            let snaps = try await health.fetchHistoricalSnapshots(days: 7)
+            latest = try await OnDeviceInsights.generate(
+                instructions: InsightPrompts.mealInstructions,
+                prompt: InsightPrompts.meals(
+                    snapshots: snaps,
                     context: context,
-                    country: country.isEmpty ? nil : Cuisine.name(for: country),
+                    country: Cuisine.name(for: country),
                     dishes: book.canon
-                )
-                await loadHistory()
-            }
+                ),
+                temperature: 0.8
+            )
+            readings.add(Reading(kind: .meal, text: latest))
         } catch {
             status = error.localizedDescription
         }
@@ -405,7 +357,7 @@ struct ExpertsView: View {
     /// yesterday as the default — the least current thing on the list. Hourly
     /// reads the last thirty hours, which is the day you are actually in.
     @State private var period = "hourly"
-    @State private var reports: [InsightsClient.Report] = []
+    @ObservedObject private var readings = Readings.shared
     @State private var status = ""
     @State private var isBusy = false
     /// On-device reports aren't stored on a server, so they live here for the
@@ -443,7 +395,6 @@ struct ExpertsView: View {
                             guard expert != e.key else { return }
                             Haptics.select()
                             withAnimation(Theme.Motion.bouncy) { expert = e.key }
-                            Task { await load() }
                         } label: {
                             HStack {
                                 Text(e.label)
@@ -470,7 +421,6 @@ struct ExpertsView: View {
                     tracking: 1.2,
                     padding: 12
                 ) { $0 }
-                    .onSelect { Task { await load() } }
                     .padding(.top, 20)
 
                 // The button used to say only "Ask for a new reading", which
@@ -535,11 +485,12 @@ struct ExpertsView: View {
                     .padding(.top, 16)
                 }
 
-                ForEach(isBusy ? [] : reports) { r in
+                let kept = readings.reports(expert: expert, period: period)
+                ForEach(isBusy ? [] : kept) { r in
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
-                            if let c = r.created_at { Kicker(text: c.prefix(16).description, size: 9) }
-                            Text(MealReading.clean(r.report_text ?? ""))
+                            Kicker(text: r.at.formatted(date: .abbreviated, time: .shortened), size: 9)
+                            Text(MealReading.clean(r.text))
                                 .font(Theme.serifBody(16.5))
                                 .foregroundStyle(Theme.text)
                                 .lineSpacing(6)
@@ -548,7 +499,7 @@ struct ExpertsView: View {
                     .padding(.top, 16)
                 }
 
-                if reports.isEmpty && localReport.isEmpty && !isBusy && status.isEmpty {
+                if kept.isEmpty && localReport.isEmpty && !isBusy && status.isEmpty {
                     Text("No readings yet for this specialist.")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.tertiaryText)
@@ -566,18 +517,6 @@ struct ExpertsView: View {
         }
         .compactsTabBar()
         .background(Theme.background)
-        .task { await load() }
-    }
-
-    private func load() async {
-        // Nothing to fetch when reports are written on the phone.
-        guard !ModelChoice.isOnDevice else { status = ""; return }
-        do {
-            reports = try await InsightsClient().reports(period: period, expert: expert)
-            status = ""
-        } catch {
-            status = error.localizedDescription
-        }
     }
 
     private var expertLabel: String {
@@ -598,12 +537,7 @@ struct ExpertsView: View {
     /// Spells out the whole request: who, over what window, on which engine.
     private var requestSummary: String {
         let window = requestWindow
-        let engine = ModelChoice.isOnDevice
-            ? "on this iPhone"
-            // The model name is the useful half — "by claude-sonnet-4-6" tells
-            // you what wrote it, where "by anthropic" tells you who to invoice.
-            : "by \(ModelChoice.model.isEmpty ? ModelChoice.provider : ModelChoice.model)"
-        return "Reads \(window) of your telemetry as \(indefiniteArticle(for: expertLabel)) \(expertLabel.lowercased()), written \(engine)."
+        return "Reads \(window) of your telemetry as \(indefiniteArticle(for: expertLabel)) \(expertLabel.lowercased()), written on this iPhone."
     }
 
     /// How many days of history each period should hand the model.
@@ -625,39 +559,24 @@ struct ExpertsView: View {
         // so the prompt arrives with that minute rather than before it.
         let mayNotify = await notifier.permitted()
 
-        if ModelChoice.isOnDevice {
-            status = "Reading your telemetry on this iPhone…"
-            do {
-                let snaps = try await health.fetchHistoricalSnapshots(days: daysForPeriod)
-                // Refuse before asking rather than let the model fill the gap.
-                guard InsightPrompts.canReport(snapshots: snaps, expert: expert) else {
-                    throw OnDeviceInsights.OnDeviceError.notEnoughData
-                }
-                localReport = try await OnDeviceInsights.generate(
-                    instructions: InsightPrompts.instructions(for: expert),
-                    prompt: InsightPrompts.report(
-                        snapshots: snaps,
-                        expert: expert,
-                        rangeLabel: "the last \(daysForPeriod) days"
-                    )
-                )
-                status = ""
-                announce(localReport, if: mayNotify)
-            } catch {
-                status = error.localizedDescription
-            }
-            return
-        }
-
-        status = "Reading your telemetry. This takes a minute."
+        status = "Reading your telemetry on this iPhone…"
         do {
-            try await InsightsClient().generateReport(period: period, expert: expert)
-            await load()
-            // Newest, not first: the route's order is its own business, and a
-            // notification quoting last week's reading while the screen shows
-            // this one is worse than no notification.
-            let newest = reports.max { ($0.created_at ?? "") < ($1.created_at ?? "") }
-            announce(newest?.report_text ?? "", if: mayNotify)
+            let snaps = try await health.fetchHistoricalSnapshots(days: daysForPeriod)
+            // Refuse before asking rather than let the model fill the gap.
+            guard InsightPrompts.canReport(snapshots: snaps, expert: expert) else {
+                throw OnDeviceInsights.OnDeviceError.notEnoughData
+            }
+            localReport = try await OnDeviceInsights.generate(
+                instructions: InsightPrompts.instructions(for: expert),
+                prompt: InsightPrompts.report(
+                    snapshots: snaps,
+                    expert: expert,
+                    rangeLabel: "the last \(daysForPeriod) days"
+                )
+            )
+            status = ""
+            readings.add(Reading(kind: .report, expert: expert, period: period, text: localReport))
+            announce(localReport, if: mayNotify)
         } catch {
             status = error.localizedDescription
         }

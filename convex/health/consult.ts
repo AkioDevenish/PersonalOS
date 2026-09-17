@@ -1,5 +1,5 @@
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { internalMutation, mutation, query } from "../_generated/server"
 import { internal } from "../_generated/api"
 
 /**
@@ -439,16 +439,21 @@ export const heartbeat = mutation({
  * is a URL the payer could type themselves, and both processors say plainly
  * not to fulfil on it alone.
  */
-export const markPaid = mutation({
+/**
+ * Marks a session paid. Internal, and that is the whole point of it.
+ *
+ * It used to be public, checking only that the session was yours, with a
+ * comment saying it was "only ever called after the processor has been asked".
+ * Nothing enforced that: any signed-in person could call it for their own
+ * unpaid session and read a paid conversation for nothing. The only caller now
+ * is consultPayments.settled, after the processor has confirmed.
+ */
+export const markPaidVerified = internalMutation({
   args: { id: v.id("consults") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-
     const row = await ctx.db.get(args.id)
-    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+    if (!row) throw new Error("No such session")
     if (row.payment_status === "paid") return { already: true }
-
     await ctx.db.patch(args.id, { payment_status: "paid", updated_at: Date.now() })
     return { already: false }
   },

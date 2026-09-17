@@ -1,5 +1,5 @@
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { internalMutation, mutation, query } from "../_generated/server"
 
 /**
  * What a user is entitled to, and what they have left.
@@ -72,68 +72,30 @@ export const mine = query({
  * Same shape as the HMAC on the OAuth state parameter, for the same reason:
  * a value that crosses an untrusted boundary and has to come back unaltered.
  */
-async function assertSignedGrant(payload: string, signature: string) {
-  const secret = process.env.BILLING_GRANT_SECRET
-  if (!secret) throw new Error("Server is missing BILLING_GRANT_SECRET")
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  )
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload))
-  const expected = Array.from(new Uint8Array(mac))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-
-  // Length-independent compare; these are both hex of a fixed size, and a
-  // timing side channel on a receipt grant is not worth leaving open.
-  if (expected.length !== signature.length) throw new Error("Invalid grant signature")
-  let diff = 0
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i)
-  }
-  if (diff !== 0) throw new Error("Invalid grant signature")
-}
-
 /**
- * Applies a purchase that the Next layer has already verified against Apple.
+ * Applies a purchase that billing/receipts.ts has verified against Apple.
  *
- * `verifiedTransactionId` is unique per purchase and doubles as the
- * idempotency key: Apple redelivers transactions routinely — on reinstall, on
- * restore, on every launch until they're finished — and granting credits again
- * each time would be free money.
+ * Internal, so verification is the only way in. It used to be public, with an
+ * HMAC grant proving a web route had checked the receipt first: a signature
+ * scheme that existed only because Convex could not tell that route apart from
+ * the phone. Nothing outside Convex calls this now, so the grant is gone.
+ *
+ * `verifiedTransactionId` doubles as the idempotency key. Apple redelivers
+ * transactions routinely — on reinstall, on restore, on every launch until
+ * they are finished — and granting credits again each time would be free money.
  */
-export const applyPurchase = mutation({
+export const applyVerified = internalMutation({
   args: {
+    userId: v.string(),
     verifiedTransactionId: v.string(),
     kind: v.string(), // "subscription" | "credits"
     productId: v.string(),
     expiresAt: v.optional(v.number()),
     originalTransactionId: v.optional(v.string()),
     creditsGranted: v.optional(v.number()),
-    /** HMAC over the fields above, from the verification route. */
-    grantSignature: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await requireUser(ctx)
-
-    // The signature covers the user too, so a valid grant for one account
-    // cannot be replayed against another.
-    await assertSignedGrant(
-      [
-        userId,
-        args.verifiedTransactionId,
-        args.kind,
-        args.productId,
-        args.expiresAt ?? "",
-        args.creditsGranted ?? "",
-      ].join("|"),
-      args.grantSignature,
-    )
-
+    const userId = args.userId
     const seen = await ctx.db
       .query("ai_credit_ledger")
       .withIndex("by_transaction", (q) => q.eq("transaction_id", args.verifiedTransactionId))
@@ -159,8 +121,8 @@ export const applyPurchase = mutation({
       if (row) await ctx.db.patch(row._id, doc)
       else await ctx.db.insert("entitlements", doc)
 
-      // Recorded with a zero delta so the transaction id is claimed and a
-      // redelivered renewal can't be applied twice.
+      // A zero delta claims the transaction id, so a redelivered renewal
+      // cannot be applied twice.
       await ctx.db.insert("ai_credit_ledger", {
         userId,
         delta: 0,
@@ -173,7 +135,6 @@ export const applyPurchase = mutation({
 
     const granted = Math.max(0, Math.floor(args.creditsGranted ?? 0))
     const credits = (row?.credits ?? 0) + granted
-
     if (row) await ctx.db.patch(row._id, { credits, updated_at: now })
     else {
       await ctx.db.insert("entitlements", {
@@ -183,7 +144,6 @@ export const applyPurchase = mutation({
         updated_at: now,
       })
     }
-
     await ctx.db.insert("ai_credit_ledger", {
       userId,
       delta: granted,
@@ -195,13 +155,6 @@ export const applyPurchase = mutation({
   },
 })
 
-/**
- * Spends one credit for a hosted model call.
- *
- * Safe to expose because it can only ever reduce a balance. Subscribers are
- * not charged — that is what the subscription buys — so this returns without
- * touching anything for them.
- */
 export const spend = mutation({
   args: { reason: v.string(), amount: v.optional(v.number()) },
   handler: async (ctx, args) => {

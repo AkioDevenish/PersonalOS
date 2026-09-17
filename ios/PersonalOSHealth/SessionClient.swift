@@ -62,37 +62,35 @@ struct SessionClient {
 
     /// Raises a checkout and hands back the page to send the payer to.
     ///
+    /// A Convex action now, not a web route: the processor keys live on the
+    /// deployment, and nothing of ours has to be awake for somebody to pay.
+    ///
     /// Throws `PaymentUnavailable` when no processor is connected, which is a
     /// different thing from a payment being refused and reads differently on
     /// screen.
     func startPayment(id: String) async throws -> URL {
         struct Raised: Decodable {
             let url: String?
-            let paid: Bool?
+            let paid: Bool
             let error: String?
         }
-        do {
-            let data = try await transport.send(
-                "/api/well-being/pay", method: "POST", body: ["id": id]
-            )
-            let raised = try JSONDecoder().decode(Raised.self, from: data)
-            if raised.paid == true { throw PaymentUnavailable.alreadySettled }
-            guard let link = raised.url, let url = URL(string: link) else {
-                throw TransportError.badResponse
-            }
-            return url
-        } catch TransportError.http(503, _) {
-            throw PaymentUnavailable.noProcessor
+        let data = try await transport.action("consultPayments:checkout", ["id": id])
+        let raised = try JSONDecoder().decode(Raised.self, from: data)
+        if raised.paid { throw PaymentUnavailable.alreadySettled }
+        if raised.error != nil { throw PaymentUnavailable.noProcessor }
+        guard let link = raised.url, let url = URL(string: link) else {
+            throw TransportError.badResponse
         }
+        return url
     }
 
     /// Asks the server, which asks the processor. The redirect back from a
     /// checkout page is not evidence and is never treated as any.
     func isPaid(id: String) async -> Bool {
         struct Settled: Decodable { let paid: Bool }
-        guard let data = try? await transport.send(
-            "/api/well-being/pay?id=\(id)", method: "GET", body: nil
-        ) else { return false }
+        guard let data = try? await transport.action("consultPayments:settled", ["id": id]) else {
+            return false
+        }
         return (try? JSONDecoder().decode(Settled.self, from: data))?.paid ?? false
     }
 

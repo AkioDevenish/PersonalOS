@@ -14,13 +14,9 @@ struct HealthDataView: View {
     var body: some View {
         List {
             Section {
-                NavigationLink {
-                    ConnectionsListView().hidesSystemTabBar()
-                } label: {
-                    Label("Sources", systemImage: "applewatch")
-                }
+                Label("Apple Health", systemImage: "heart.text.square")
             } footer: {
-                Text("Apple Health, and a watch or ring if you connect one.")
+                Text("The only source. Linking a watch or ring needed a web server to run the sign-in redirect and hold the provider's secret, so it is not here; Apple Health already carries what a watch records.")
             }
 
             Section {

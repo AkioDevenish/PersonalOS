@@ -1,0 +1,85 @@
+"use node"
+
+import { v } from "convex/values"
+import { Environment, SignedDataVerifier } from "@apple/app-store-server-library"
+import { action } from "../_generated/server"
+import { internal } from "../_generated/api"
+
+/**
+ * Turning an App Store purchase into an entitlement, if Apple really signed it.
+ *
+ * Moved here from a web route, so a subscription can be bought with nothing of
+ * ours running but Convex. The check is the same one articlePayments.ts makes:
+ * the transaction's JWS chains to Apple's public roots, so a forged or altered
+ * receipt fails the signature and never reaches the grant.
+ *
+ * Trusting the client instead is the single most common way in-app purchase is
+ * got wrong. "purchased == true" from a device is an assertion by whoever
+ * controls that device, not a fact.
+ *
+ * Environment variables: APPLE_ROOT_CERTS, APPLE_IAP_ENVIRONMENT. See
+ * articlePayments.ts, which documents both and shares them.
+ */
+
+const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
+
+/** What can be bought, and what each one is worth. Never the client's to say. */
+const PRODUCTS: Record<string, { kind: "subscription" | "credits"; credits?: number }> = {
+  "os.personal.sub.monthly": { kind: "subscription" },
+  "os.personal.sub.yearly": { kind: "subscription" },
+  "os.personal.credits.50": { kind: "credits", credits: 50 },
+  "os.personal.credits.200": { kind: "credits", credits: 200 },
+}
+
+function environment(): Environment {
+  switch (process.env.APPLE_IAP_ENVIRONMENT) {
+    case "production": return Environment.PRODUCTION
+    case "xcode": return Environment.XCODE
+    default: return Environment.SANDBOX
+  }
+}
+
+function appleRoots(): Buffer[] {
+  return (process.env.APPLE_ROOT_CERTS ?? "")
+    .split("|")
+    .map((b64) => b64.trim())
+    .filter(Boolean)
+    .map((b64) => Buffer.from(b64, "base64"))
+}
+
+export const verify = action({
+  args: { signedTransaction: v.string() },
+  handler: async (ctx, args): Promise<{ applied: boolean; credits: number }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
+
+    const env = environment()
+    const roots = appleRoots()
+    if (env !== Environment.XCODE && roots.length === 0) {
+      throw new Error("Purchase verification is not configured yet")
+    }
+
+    const verifier = new SignedDataVerifier(roots, true, env, BUNDLE_ID)
+    let tx
+    try {
+      tx = await verifier.verifyAndDecodeTransaction(args.signedTransaction)
+    } catch {
+      throw new Error("That purchase could not be verified with Apple")
+    }
+
+    const product = tx.productId ? PRODUCTS[tx.productId] : undefined
+    if (!product || !tx.productId) throw new Error(`Unrecognised product "${tx.productId}"`)
+    if (!tx.transactionId) throw new Error("That purchase has no transaction id")
+
+    const result = await ctx.runMutation(internal.billing.entitlements.applyVerified, {
+      userId: identity.subject,
+      verifiedTransactionId: tx.transactionId,
+      kind: product.kind,
+      productId: tx.productId,
+      expiresAt: product.kind === "subscription" ? tx.expiresDate : undefined,
+      originalTransactionId: tx.originalTransactionId,
+      creditsGranted: product.credits,
+    })
+    return { applied: result.applied, credits: result.credits }
+  },
+})

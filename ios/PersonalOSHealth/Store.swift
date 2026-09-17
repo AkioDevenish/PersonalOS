@@ -66,7 +66,7 @@ final class Store {
                         if await ArticlePlacement.confirm(update) { await transaction.finish() }
                         continue
                     }
-                    await self.submit(transaction)
+                    await self.submit(update)
                     await transaction.finish()
                 }
             }
@@ -106,15 +106,15 @@ final class Store {
         do {
             switch try await product.purchase() {
             case .success(let verification):
-                guard case .verified(let transaction) = verification else {
+                guard case .verified = verification else {
                     // StoreKit itself couldn't verify the signature. Nothing
                     // to do but refuse; sending it on would only fail again
                     // server-side, more slowly.
                     lastError = "That purchase couldn't be verified."
                     return
                 }
-                await submit(transaction)
-                await transaction.finish()
+                await submit(verification)
+                if case .verified(let transaction) = verification { await transaction.finish() }
 
             case .userCancelled:
                 break
@@ -137,9 +137,7 @@ final class Store {
         isWorking = true
         defer { isWorking = false }
         for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                await submit(transaction)
-            }
+            if case .verified = result { await submit(result) }
         }
         await refresh()
     }
@@ -148,9 +146,9 @@ final class Store {
 
     /// Hands a transaction to the server, which verifies Apple's signature on
     /// it and returns the entitlement that follows.
-    private func submit(_ transaction: Transaction) async {
+    private func submit(_ verification: VerificationResult<Transaction>) async {
         do {
-            _ = try await BillingClient().verify(signedTransaction: transaction.jsonRepresentation)
+            _ = try await BillingClient().verify(signedJWS: verification.jwsRepresentation)
             await refresh()
         } catch {
             lastError = error.localizedDescription
@@ -176,50 +174,21 @@ struct BillingClient {
 
     init(auth: AuthProvider = Auth.provider) { self.auth = auth }
 
-    private struct ErrorBody: Decodable { let error: String? }
-
-    func verify(signedTransaction: Data) async throws -> Bool {
-        // jsonRepresentation is UTF-8 JSON; the server wants the JWS string
-        // that sits inside it under "signedTransaction" when present, and the
-        // raw representation otherwise.
-        let jws = String(data: signedTransaction, encoding: .utf8) ?? ""
-        var r = try await request("/api/billing/verify", method: "POST")
-        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        r.httpBody = try JSONSerialization.data(withJSONObject: ["signedTransaction": jws])
-        _ = try await send(r)
+    /// Hands Apple's signed transaction to Convex, which checks the signature
+    /// against Apple's roots and grants what the product is worth.
+    ///
+    /// `jsonRepresentation` was being sent to a route that wanted the JWS
+    /// inside it; the action wants the JWS, so the JWS is what goes.
+    func verify(signedJWS: String) async throws -> Bool {
+        _ = try await Transport(auth: auth).action(
+            "billing/receipts:verify", ["signedTransaction": signedJWS]
+        )
         return true
     }
 
-    /// Read straight from Convex.
-    ///
-    /// What the plan row says about somebody is a fact in the database, and
-    /// asking a web server to read it back was only ever a detour. Verifying a
-    /// purchase still needs one, because that means checking a signature
-    /// against Apple's roots, which is not a thing to do on the device whose
-    /// purchase is being checked.
     func entitlement() async throws -> Store.Entitlement {
         let data = try await Transport(auth: auth).query("billing/entitlements:mine")
         return try JSONDecoder().decode(Store.Entitlement.self, from: data)
-    }
-
-    private func request(_ path: String, method: String) async throws -> URLRequest {
-        guard let url = URL(string: AppConfig.baseURL + path) else { throw BillingError.badURL }
-        guard let token = await auth.currentToken() else { throw BillingError.notSignedIn }
-        var r = URLRequest(url: url)
-        r.httpMethod = method
-        r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        r.timeoutInterval = 30
-        return r
-    }
-
-    private func send(_ r: URLRequest) async throws -> Data {
-        let (data, response) = try await URLSession.shared.data(for: r)
-        guard let http = response as? HTTPURLResponse else { throw BillingError.badResponse }
-        guard (200...299).contains(http.statusCode) else {
-            let detail = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error
-            throw BillingError.server(detail ?? "Request failed (\(http.statusCode))")
-        }
-        return data
     }
 }
 

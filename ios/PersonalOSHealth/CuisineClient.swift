@@ -31,10 +31,10 @@ struct CuisineClient {
         static let empty = Book(threshold: 3, all: [], canon: [])
     }
 
+    /// Straight to Convex. The route this replaced held no logic of its own:
+    /// it read the query string and called the same three functions.
     func book(country: String) async throws -> Book {
-        let data = try await transport.send(
-            "/api/well-being/cuisine?country=\(country)", method: "GET", body: nil
-        )
+        let data = try await transport.query("health/cuisine:forCountry", ["country": country])
         return try JSONDecoder().decode(Book.self, from: data)
     }
 
@@ -42,9 +42,8 @@ struct CuisineClient {
     @discardableResult
     func suggest(country: String, dish: String) async throws -> Bool {
         struct Result: Decodable { let added: Bool }
-        let data = try await transport.send(
-            "/api/well-being/cuisine", method: "POST",
-            body: ["country": country, "dish": dish]
+        let data = try await transport.mutation(
+            "health/cuisine:suggest", ["country": country, "dish": dish]
         )
         return (try? JSONDecoder().decode(Result.self, from: data))?.added ?? false
     }
@@ -55,9 +54,8 @@ struct CuisineClient {
     /// country isn't handed an empty vocabulary, and a seeded dish nobody
     /// actually eats stays at zero forever, which is the right fate for it.
     func seed(country: String, dishes: [String]) async throws {
-        _ = try await transport.send(
-            "/api/well-being/cuisine", method: "POST",
-            body: ["country": country, "dishes": dishes]
+        _ = try await transport.mutation(
+            "health/cuisine:seed", ["country": country, "dishes": dishes]
         )
     }
 

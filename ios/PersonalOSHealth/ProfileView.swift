@@ -18,7 +18,6 @@ struct ProfileView: View {
     @State private var abilities = ArticlesClient.Abilities(canWrite: false, canReview: false)
     @State private var showAccount = false
     @State private var applying = false
-    @State private var showModels = false
     @State private var confirmingSignOut = false
 
     private let margin: CGFloat = 20
@@ -48,7 +47,6 @@ struct ProfileView: View {
                 row("person.crop.circle", "Personal information") { showAccount = true }
                 row("creditcard", "Plan and payments", route: .paywall)
                 row("heart.text.square", "Health data", route: .healthData)
-                row("sparkles", "AI model and keys") { showModels = true }
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }
@@ -83,7 +81,6 @@ struct ProfileView: View {
         .task { application = try? await SpecialistsClient().desk().application }
         .task { if let a = try? await ArticlesClient().abilities() { abilities = a } }
         .sheet(isPresented: $showAccount) { UserProfileView() }
-        .sheet(isPresented: $showModels) { NavigationStack { ModelSettingsView() } }
         .sheet(isPresented: $applying) {
             SpecialistApplicationSheet(existing: application, defaultCountry: Cuisine.deviceDefault) {
                 application = try? await SpecialistsClient().desk().application
