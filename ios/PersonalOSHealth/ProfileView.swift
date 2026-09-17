@@ -46,7 +46,6 @@ struct ProfileView: View {
 
                 row("person.crop.circle", "Personal information") { showAccount = true }
                 row("creditcard", "Plan and payments", route: .paywall)
-                row("heart.text.square", "Health data", route: .healthData)
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }

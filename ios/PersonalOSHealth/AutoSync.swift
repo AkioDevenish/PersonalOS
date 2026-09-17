@@ -2,18 +2,20 @@ import Foundation
 import Combine
 import HealthKit
 
-/// Sending today's readings to your account, without being asked.
+/// Sending readings to your account, without being asked, ever.
 ///
-/// There were two buttons for this, and a button is the wrong shape for it: a
-/// sync is not a thing anybody wants, it is a thing they want to have
-/// happened. It runs when the app comes to the front now, and the screen only
-/// reports when it last did.
+/// There is no screen for this and no button. A sync is not a thing anybody
+/// wants, it is a thing they want to have happened, and a settings row
+/// offering to do it is the app admitting it might not have.
 ///
-/// Throttled, because coming back to the app four times in a minute is
-/// ordinary and four uploads of the same day is not. Silent, because a sync
-/// nobody asked for should not interrupt them to say it worked; a failure is
-/// left in `lastMessage` for the Health data screen, which is where somebody
-/// looks when they wonder.
+/// Two jobs. Today's figures go up whenever the app comes to the front,
+/// throttled, because returning to it four times in a minute is ordinary and
+/// four uploads of the same day is not. And once per install, in the
+/// background, the last thirty days go up behind them, so a phone just signed
+/// in to arrives with a history rather than a single day.
+///
+/// Silent throughout: a failure is retried on the next launch rather than
+/// announced. Nothing was asked for, so nothing has to be reported.
 @MainActor
 final class AutoSync: ObservableObject {
     static let shared = AutoSync()
@@ -26,6 +28,10 @@ final class AutoSync: ObservableObject {
     @Published private(set) var lastMessage: String?
 
     private var lastAttempt: Date?
+
+    /// Set only after the backfill has actually succeeded, so a failed one is
+    /// tried again next time rather than written off.
+    private static let backfilledKey = "personal_os_backfilled"
 
     private init() {}
 
@@ -41,6 +47,14 @@ final class AutoSync: ObservableObject {
         if let last = lastSynced, Date().timeIntervalSince(last) < Self.interval { return }
         if let attempt = lastAttempt, Date().timeIntervalSince(attempt) < 60 { return }
         await run(health)
+
+        // Then the history, once, after today has gone up. Behind it rather
+        // than before, so the figure somebody is looking at is the first
+        // thing sent and thirty days of reading never delays it.
+        guard !UserDefaults.standard.bool(forKey: Self.backfilledKey) else { return }
+        if (try? await backfill(health)) != nil {
+            UserDefaults.standard.set(true, forKey: Self.backfilledKey)
+        }
     }
 
     /// Today, now. Used by the screen's own button and by `runIfDue`.
@@ -66,6 +80,10 @@ final class AutoSync: ObservableObject {
     }
 
     /// The whole month, for a phone that has just been signed in to.
+    ///
+    /// Re-sending is harmless: ingest upserts on
+    /// (user, provider, metric, recorded_at), so a partial run can simply be
+    /// repeated on the next launch.
     func backfill(_ health: HealthKitManager, days: Int = 30) async throws -> (inserted: Int, updated: Int) {
         running = true
         defer { running = false }

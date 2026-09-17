@@ -135,8 +135,6 @@ enum Route: Hashable {
     case myArticles
     /// A practitioner's consultations, articles and listing.
     case practiceHub
-    /// Sources and sync.
-    case healthData
     /// Articles waiting for a reviewer.
     case reviewArticles
     /// One article, carried whole like a practitioner: the card already has it.
@@ -219,7 +217,6 @@ struct RootView: View {
                     case .cycle:        CycleView()
                     case .profile:      ProfileView()
                     case .practiceHub:  PracticeHubView()
-                    case .healthData:   HealthDataView()
                     case .myArticles:   MyArticlesView()
                     case .reviewArticles: ArticleReviewQueueView()
                     case .article(let one): ArticleView(article: one)
