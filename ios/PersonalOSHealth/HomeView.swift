@@ -81,8 +81,9 @@ struct HomeView: View {
                                 NavigationLink(value: Route.article(article)) {
                                     ContentCard(
                                         title: article.title,
-                                        note: "\(article.minutes) min read",
-                                        symbol: article.symbol, tint: article.tint
+                                        note: article.isLocked ? "Subscribers" : "\(article.minutes) min read",
+                                        symbol: article.isLocked ? "lock" : article.symbol,
+                                        tint: article.tint
                                     )
                                 }
                                 .buttonStyle(.pressRow)
@@ -243,8 +244,9 @@ struct HomeView: View {
                         NavigationLink(value: Route.article(article)) {
                             ContentCard(
                                 title: article.title,
-                                note: "\(article.minutes) min read",
-                                symbol: article.symbol, tint: article.tint, raised: true
+                                note: article.isLocked ? "Subscribers" : "\(article.minutes) min read",
+                                symbol: article.isLocked ? "lock" : article.symbol,
+                                tint: article.tint, raised: true
                             )
                         }
                         .buttonStyle(.pressRow)

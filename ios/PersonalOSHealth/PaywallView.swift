@@ -12,6 +12,10 @@ import StoreKit
 /// Overstating the wall would be both dishonest and a review risk: App Review
 /// looks unkindly on a paywall that hides what the screenshots promised.
 struct PaywallView: View {
+    /// Completes "A subscription lets Personal OS…", when somebody arrived
+    /// here by reaching for something rather than by opening Settings.
+    var reason: String? = nil
+
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
 
@@ -22,7 +26,15 @@ struct PaywallView: View {
                     .padding(.top, 12)
                     .flowIn(0)
 
-                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Read the archive.")
+                if let reason {
+                    Text("A subscription lets Personal OS \(reason).")
+                        .font(Theme.sans(14, medium: true))
+                        .foregroundStyle(Theme.accent)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 10)
+                }
+
+                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Readings and writing.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
@@ -35,9 +47,10 @@ struct PaywallView: View {
                     .padding(.top, 12)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    point("Every article, including ones no longer on Home")
-                    point("New writing stays free while it is on Home")
-                    point("Readings, goals and the cycle are free and always were")
+                    point("Readings written on your phone, by four specialists")
+                    point("What to eat next, from your own measurements")
+                    point("Every article practitioners write, on Home and in the archive")
+                    point("Your ledger, goals and cycle stay free, and always will")
                 }
                 .padding(.top, 24)
 
@@ -106,9 +119,9 @@ struct PaywallView: View {
 
     private var blurb: String {
         if store.entitlement.isSubscribed {
-            return "The whole archive is open to you, and stays open while the subscription runs."
+            return "The readings and the whole library are open to you, and stay open while the subscription runs."
         }
-        return "The app works without paying, and the parts that read your body always will. What a subscription buys is the writing: every article, including the ones whose time on Home has passed."
+        return "Recording your body is free and will stay free: the ledger, the goals, the cycle, and everything Apple Health already knows. What a subscription buys is the two things written for you — the readings a specialist writes on this phone, and everything practitioners publish."
     }
 
     /// One line of what the subscription includes.
@@ -169,5 +182,36 @@ struct PaywallView: View {
         }
         .buttonStyle(.pressRow)
         .disabled(store.isWorking)
+    }
+}
+
+/// Says what a subscription is for, at the moment somebody reaches for it.
+///
+/// A sheet rather than a screen: the thing they were doing is still behind it,
+/// and they came here to do that rather than to read about plans.
+struct SubscriptionNeeded: ViewModifier {
+    @Binding var showing: Bool
+    /// "write you a reading" — completes "A subscription lets Personal OS…".
+    let toDo: String
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $showing) {
+            NavigationStack {
+                PaywallView(reason: toDo)
+                    .navigationTitle("Subscription")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Not now") { showing = false }
+                        }
+                    }
+            }
+        }
+    }
+}
+
+extension View {
+    func subscriptionNeeded(_ showing: Binding<Bool>, toDo: String) -> some View {
+        modifier(SubscriptionNeeded(showing: showing, toDo: toDo))
     }
 }

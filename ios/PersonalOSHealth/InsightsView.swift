@@ -6,6 +6,7 @@ import SwiftUI
 /// signals and asks Gemma for three suggestions for the moment you pick.
 struct NutritionView: View {
     @EnvironmentObject var health: HealthKitManager
+    @Environment(Store.self) private var store
     @ObservedObject private var readings = Readings.shared
     @State private var latest = ""
     @State private var status = ""
@@ -29,6 +30,7 @@ struct NutritionView: View {
     @State private var book = CuisineClient.Book.empty
     @State private var newDish = ""
     @State private var seeding = false
+    @State private var locked = false
 
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
@@ -261,6 +263,7 @@ struct NutritionView: View {
         .sheet(isPresented: $choosingCountry) {
             CountryPicker(code: $country)
         }
+        .subscriptionNeeded($locked, toDo: "write you a suggestion")
     }
 
     /// "NAMED BY 4" — and for a starter-list dish nobody has vouched for yet,
@@ -322,6 +325,11 @@ struct NutritionView: View {
     }
 
     private func generate() async {
+        // The reading is written on this phone and costs nothing to serve, so
+        // this is a price on the feature rather than on a bill we pay. It is
+        // still the thing being sold, so it is checked before the work starts
+        // rather than after somebody has waited for it.
+        guard store.entitlement.isSubscribed else { locked = true; return }
         isBusy = true
         status = ""
         defer { isBusy = false }
@@ -350,6 +358,7 @@ struct NutritionView: View {
 /// Expert reports — the personas the analyze route already knows how to be.
 struct ExpertsView: View {
     @EnvironmentObject var health: HealthKitManager
+    @Environment(Store.self) private var store
     @EnvironmentObject private var notifier: Notifier
     @State private var expert = InsightPrompts.experts[0].key
     /// Hourly, not daily. The daily report reads the *previous* completed day,
@@ -363,6 +372,7 @@ struct ExpertsView: View {
     /// On-device reports aren't stored on a server, so they live here for the
     /// session. Persisting them is a separate job from generating them.
     @State private var localReport = ""
+    @State private var locked = false
 
     /// One list, in InsightPrompts, shared by the screen and by the on-device
     /// prompts. It was duplicated here, which is how the retired "Health
@@ -517,6 +527,7 @@ struct ExpertsView: View {
         }
         .compactsTabBar()
         .background(Theme.background)
+        .subscriptionNeeded($locked, toDo: "write you a reading")
     }
 
     private var expertLabel: String {
@@ -557,6 +568,8 @@ struct ExpertsView: View {
         // Asked here, at the one moment it is about to be useful, rather than
         // at launch. A minute of waiting is the reason the permission exists,
         // so the prompt arrives with that minute rather than before it.
+        guard store.entitlement.isSubscribed else { locked = true; return }
+
         let mayNotify = await notifier.permitted()
 
         status = "Reading your telemetry on this iPhone…"

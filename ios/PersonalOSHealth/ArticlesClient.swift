@@ -74,7 +74,10 @@ struct ArticlesClient {
     }
 
     func published() async throws -> [Article] {
-        try JSONDecoder().decode([Article].self, from: try await transport.query("articles:published"))
+        let data = try await transport.query(
+            "articles:published", ["now": Date().timeIntervalSince1970 * 1000]
+        )
+        return try JSONDecoder().decode([Article].self, from: data)
     }
 
     /// The back catalogue. `now` travels with the request because a Convex

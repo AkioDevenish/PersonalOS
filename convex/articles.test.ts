@@ -164,16 +164,17 @@ describe("the path to Home", () => {
 
     await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
     expect((await author.query(api.articles.mine, {}))[0].status).toBe("approved")
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
 
     const result = await pay(t, id, "tx_1")
     expect(result.applied).toBe(true)
     expect(result.live_until).toBe(Date.now() + 30 * DAY)
 
-    const live = await t.query(api.articles.published, {})
+    const live = await t.query(api.articles.published, { now: Date.now() })
     expect(live).toHaveLength(1)
     expect(live[0]).toMatchObject({ title: good.title, author: "Dr Author", credentials: "RD" })
-    expect(live[0].body).toHaveLength(3)
+    // On Home, and readable by subscribers; see the subscription tests.
+    expect(live[0].locked).toBe(true)
   })
 
   test("an article cannot be paid for before the team verifies it", async () => {
@@ -189,7 +190,7 @@ describe("the path to Home", () => {
     const t = await setup()
     const id = await verified(t)
     await expect(pay(t, id, "tx_1", STRANGER)).rejects.toThrow("not for one of your articles")
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
   })
 
   test("the same transaction redelivered is applied once", async () => {
@@ -217,15 +218,15 @@ describe("the path to Home", () => {
 
     vi.setSystemTime(Date.now() + 29 * DAY)
     await t.mutation(internal.articles.expire, { id })
-    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(1)
 
     vi.setSystemTime(Date.now() + 2 * DAY)
     await t.mutation(internal.articles.expire, { id })
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
     expect((await t.withIdentity(AUTHOR).query(api.articles.mine, {}))[0].status).toBe("expired")
 
     await pay(t, id, "tx_2")
-    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(1)
   })
 
   test("a draft that fails the checks cannot be submitted", async () => {
@@ -259,11 +260,11 @@ describe("the path to Home", () => {
     await pay(t, id, "tx_1")
 
     await author.mutation(api.articles.save, { id, ...good, title: "Why regular sleep timing helps you" })
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
 
     await author.mutation(api.articles.submit, { id })
     await t.withIdentity(REVIEWER).mutation(api.articles.review, { id, approve: true })
-    expect(await t.query(api.articles.published, {})).toHaveLength(1)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(1)
   })
 
   test("withdrawing removes it from Home and gives up the time left", async () => {
@@ -272,7 +273,7 @@ describe("the path to Home", () => {
     const id = await verified(t)
     await pay(t, id, "tx_1")
     await author.mutation(api.articles.withdraw, { id })
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
     expect((await author.query(api.articles.mine, {}))[0].live_until).toBeNull()
   })
 
@@ -301,7 +302,7 @@ describe("the archive", () => {
   test("an expired article leaves Home and appears in the archive", async () => {
     const t = await setup()
     await expired(t)
-    expect(await t.query(api.articles.published, {})).toHaveLength(0)
+    expect(await t.query(api.articles.published, { now: Date.now() })).toHaveLength(0)
     expect(await t.query(api.articles.archive, { now: Date.now() })).toHaveLength(1)
   })
 
@@ -344,11 +345,25 @@ describe("the archive", () => {
     expect(row.body).toEqual([])
   })
 
-  test("what is on Home is free to everyone, subscription or not", async () => {
+  test("a practitioner's article is titled to everyone and written for subscribers", async () => {
     const t = await setup()
     const id = await verified(t)
     await pay(t, id, "tx_live")
-    const [live] = await t.query(api.articles.published, {})
-    expect(live.body).toHaveLength(3)
+
+    const [shut] = await t.withIdentity(AUTHOR).query(api.articles.published, { now: Date.now() })
+    expect(shut.locked).toBe(true)
+    expect(shut.body).toEqual([])
+    expect(shut.title).toBe(good.title)
+    expect(shut.summary).toBe(good.summary)
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("entitlements", {
+        userId: AUTHOR.subject, subscription_status: "active",
+        product_id: "os.personal.sub.monthly", updated_at: Date.now(),
+      })
+    })
+    const [open] = await t.withIdentity(AUTHOR).query(api.articles.published, { now: Date.now() })
+    expect(open.locked).toBe(false)
+    expect(open.body).toHaveLength(3)
   })
 })

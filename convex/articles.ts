@@ -96,12 +96,12 @@ const articleFields = {
 // MARK: Reading
 
 /**
- * Whether this reader has the archive.
+ * Whether this reader has a subscription.
  *
  * Read inline rather than through the entitlements query, because a query
  * calling a query is two transactions where one will do.
  */
-async function hasArchive(ctx: QueryCtx, now: number): Promise<boolean> {
+async function subscribes(ctx: QueryCtx, now: number): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) return false
   const row = await ctx.db
@@ -112,16 +112,32 @@ async function hasArchive(ctx: QueryCtx, now: number): Promise<boolean> {
   return typeof row.expires_at !== "number" || row.expires_at > now
 }
 
-/** Everything on Home: published, newest first. Free, always. */
+/**
+ * Everything on Home, newest first.
+ *
+ * Titles and summaries are open to everyone; the writing itself is what a
+ * subscription buys. A practitioner still pays for placement because placement
+ * is what puts them in front of people at all — but the readers who can open
+ * them are subscribers, which is worth saying plainly to anyone buying it.
+ *
+ * `now` comes from the caller: a query is not rerun as time passes, so an
+ * expiry decided inside one would go stale.
+ */
 export const published = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { now: v.number() },
+  handler: async (ctx, args) => {
+    const unlocked = await subscribes(ctx, args.now)
     const rows = await ctx.db
       .query("articles")
       .withIndex("by_status_and_published_at", (q) => q.eq("status", "published"))
       .order("desc")
       .take(60)
-    return await Promise.all(rows.map((row) => presented(ctx, row)))
+    return await Promise.all(
+      rows.map(async (row) => {
+        const shown = await presented(ctx, row)
+        return { ...shown, body: unlocked ? shown.body : [], locked: !unlocked }
+      }),
+    )
   },
 })
 
@@ -143,7 +159,7 @@ export const published = query({
 export const archive = query({
   args: { now: v.number() },
   handler: async (ctx, args) => {
-    const unlocked = await hasArchive(ctx, args.now)
+    const unlocked = await subscribes(ctx, args.now)
     const rows = await ctx.db
       .query("articles")
       .withIndex("by_status_and_published_at", (q) => q.eq("status", "expired"))
