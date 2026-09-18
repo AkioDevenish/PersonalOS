@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -10,7 +11,7 @@ export const getProjects = query({
     
     return await ctx.db
       .query("projects")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect();
   },
 });
@@ -34,7 +35,7 @@ export const addProject = mutation({
     
     return await ctx.db.insert("projects", {
       ...args,
-      userId: identity.subject,
+      userId: userIdOf(identity),
     });
   },
 });
@@ -61,7 +62,7 @@ export const updateProject = mutation({
     
     // Verify ownership
     const project = await ctx.db.get(id);
-    if (!project || project.userId !== identity.subject) {
+    if (!project || project.userId !== userIdOf(identity)) {
       throw new Error("Project not found or unauthorized");
     }
     
@@ -78,7 +79,7 @@ export const getTracker = query({
     
     const projects = await ctx.db
       .query("projects")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect();
     
     return { projects };

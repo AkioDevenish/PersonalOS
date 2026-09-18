@@ -1,5 +1,6 @@
 "use node"
 
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { Environment, SignedDataVerifier } from "@apple/app-store-server-library"
 import { action } from "./_generated/server"
@@ -73,7 +74,7 @@ export const confirmPlacement = action({
     if (!tx.transactionId || !tx.appAccountToken) throw new Error("That purchase is missing its article")
 
     return await ctx.runMutation(internal.articles.applyPlacement, {
-      authorToken: identity.tokenIdentifier,
+      authorToken: userIdOf(identity),
       paymentToken: tx.appAccountToken.toLowerCase(),
       transactionId: tx.transactionId,
       productId: tx.productId,

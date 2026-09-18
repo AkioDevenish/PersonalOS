@@ -45,15 +45,24 @@ struct Transport {
         try await call("action", path, args)
     }
 
+    /// A call made before anybody has signed in: signing up, signing in, and
+    /// asking which providers exist. Everything else carries a token.
+    func anonymous(_ kind: String, _ path: String, _ args: [String: Any] = [:]) async throws -> Data {
+        try await call(kind, path, args, token: nil)
+    }
+
     private func call(_ kind: String, _ path: String, _ args: [String: Any]) async throws -> Data {
+        guard let token = await auth.currentToken() else { throw TransportError.notSignedIn }
+        return try await call(kind, path, args, token: token)
+    }
+
+    private func call(_ kind: String, _ path: String, _ args: [String: Any], token: String?) async throws -> Data {
         guard let url = URL(string: "\(AppConfig.convexURL)/api/\(kind)") else {
             throw TransportError.badURL
         }
-        guard let token = await auth.currentToken() else { throw TransportError.notSignedIn }
-
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = timeout
         request.httpBody = try JSONSerialization.data(

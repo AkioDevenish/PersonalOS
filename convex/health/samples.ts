@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query, internalMutation } from "../_generated/server"
 import type { MutationCtx } from "../_generated/server"
@@ -6,7 +7,7 @@ import { METRICS, isMetricKey, isProvider, type MetricKey } from "./metrics"
 /**
  * Ingest + housekeeping for provider-agnostic health samples.
  *
- * Identity always comes from the Convex auth context (`identity.subject`, the
+ * Identity always comes from the Convex auth context (`userIdOf(identity)`, the
  * Clerk user id) for anything a client can call. Server-to-server ingest —
  * aggregator webhooks, the mobile bridge — uses the internal mutation, where
  * the caller has already verified who the payload belongs to.
@@ -149,13 +150,13 @@ export const ingest = mutation({
     if (!identity) throw new Error("Not authenticated")
 
     const result = await writeSamples(ctx, {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       provider: args.provider,
       samples: args.samples,
       timeZone: args.timeZone || "UTC",
     })
 
-    await touchConnection(ctx, identity.subject, args.provider, args.cursor)
+    await touchConnection(ctx, userIdOf(identity), args.provider, args.cursor)
     return result
   },
 })

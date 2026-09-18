@@ -1,5 +1,4 @@
 import SwiftUI
-import ClerkKit
 
 /// The landing page, laid out as a reading catalogue.
 ///
@@ -17,7 +16,7 @@ struct HomeView: View {
     var go: (AppTab) -> Void
 
     @EnvironmentObject private var health: HealthKitManager
-    @Environment(Clerk.self) private var clerk
+    @EnvironmentObject private var session: Session
     @State private var snapshot: HealthSnapshot?
     @State private var query = ""
     @ObservedObject private var library = ArticleLibrary.shared
@@ -117,7 +116,7 @@ struct HomeView: View {
                     .foregroundStyle(Theme.text)
                 Spacer()
                 NavigationLink(value: Route.profile) {
-                    Avatar(user: clerk.user, size: 32)
+                    Avatar(account: session.account, size: 32)
                 }
                 .buttonStyle(.press)
                 .accessibilityLabel("Profile")

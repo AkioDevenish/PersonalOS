@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server"
 
@@ -73,7 +74,7 @@ export const mine = query({
     return await ctx.db
       .query("health_oauth_tokens")
       .withIndex("by_user_provider", (q) =>
-        q.eq("userId", identity.subject).eq("provider", args.provider),
+        q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
       )
       .first()
   },
@@ -100,7 +101,7 @@ export const saveMine = mutation({
     const existing = await ctx.db
       .query("health_oauth_tokens")
       .withIndex("by_user_provider", (q) =>
-        q.eq("userId", identity.subject).eq("provider", args.provider),
+        q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
       )
       .first()
     if (!existing) throw new Error(`No ${args.provider} connection to update`)

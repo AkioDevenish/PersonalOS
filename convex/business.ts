@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -11,7 +12,7 @@ export const getContacts = query({
     
     return await ctx.db
       .query("contacts")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .order("desc")
       .collect();
   },
@@ -34,7 +35,7 @@ export const addContact = mutation({
     
     return await ctx.db.insert("contacts", {
       ...args,
-      userId: identity.subject,
+      userId: userIdOf(identity),
       created_at: Date.now(),
     });
   },
@@ -60,7 +61,7 @@ export const updateContact = mutation({
     
     // Verify ownership
     const contact = await ctx.db.get(id);
-    if (!contact || contact.userId !== identity.subject) {
+    if (!contact || contact.userId !== userIdOf(identity)) {
       throw new Error("Contact not found or unauthorized");
     }
     
@@ -78,7 +79,7 @@ export const getInteractions = query({
     
     const interactions = await ctx.db
       .query("interactions")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .order("desc")
       .take(100);
     
@@ -112,13 +113,13 @@ export const addInteraction = mutation({
     
     // Verify contact ownership
     const contact = await ctx.db.get(args.contact_id);
-    if (!contact || contact.userId !== identity.subject) {
+    if (!contact || contact.userId !== userIdOf(identity)) {
       throw new Error("Contact not found or unauthorized");
     }
     
     return await ctx.db.insert("interactions", {
       ...args,
-      userId: identity.subject,
+      userId: userIdOf(identity),
     });
   },
 });
@@ -133,7 +134,7 @@ export const getPipelineSummary = query({
     
     const contacts = await ctx.db
       .query("contacts")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect();
     
     const summary = contacts.reduce((acc, contact) => {

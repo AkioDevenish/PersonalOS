@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query, internalQuery, internalMutation } from "../_generated/server"
 import { isProvider, isMetricKey, defaultPriority, type MetricKey } from "./metrics"
@@ -17,7 +18,7 @@ export const list = query({
 
     return await ctx.db
       .query("health_connections")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect()
   },
 })
@@ -35,7 +36,7 @@ export const available = query({
 
     const rows = await ctx.db
       .query("health_connections")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect()
 
     const byProvider = new Map(rows.map((r) => [r.provider, r]))
@@ -95,7 +96,7 @@ export const connect = mutation({
     const existing = await ctx.db
       .query("health_connections")
       .withIndex("by_user_provider", (q) =>
-        q.eq("userId", identity.subject).eq("provider", args.provider),
+        q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
       )
       .first()
 
@@ -111,7 +112,7 @@ export const connect = mutation({
     }
 
     return await ctx.db.insert("health_connections", {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       provider: args.provider,
       status: "pending",
       external_user_id: args.external_user_id,
@@ -225,7 +226,7 @@ export const disconnect = mutation({
     const conn = await ctx.db
       .query("health_connections")
       .withIndex("by_user_provider", (q) =>
-        q.eq("userId", identity.subject).eq("provider", args.provider),
+        q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
       )
       .first()
 
@@ -236,7 +237,7 @@ export const disconnect = mutation({
     const token = await ctx.db
       .query("health_oauth_tokens")
       .withIndex("by_user_provider", (q) =>
-        q.eq("userId", identity.subject).eq("provider", args.provider),
+        q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
       )
       .first()
     if (token) await ctx.db.delete(token._id)
@@ -248,7 +249,7 @@ export const disconnect = mutation({
       const batch = await ctx.db
         .query("health_samples")
         .withIndex("by_user_provider", (q) =>
-          q.eq("userId", identity.subject).eq("provider", args.provider),
+          q.eq("userId", userIdOf(identity)).eq("provider", args.provider),
         )
         .take(500)
 
@@ -284,7 +285,7 @@ export const priorityFor = query({
     const override = await ctx.db
       .query("health_metric_sources")
       .withIndex("by_user_metric", (q) =>
-        q.eq("userId", identity.subject).eq("metric", args.metric),
+        q.eq("userId", userIdOf(identity)).eq("metric", args.metric),
       )
       .first()
 
@@ -310,7 +311,7 @@ export const setPriority = mutation({
     const existing = await ctx.db
       .query("health_metric_sources")
       .withIndex("by_user_metric", (q) =>
-        q.eq("userId", identity.subject).eq("metric", args.metric),
+        q.eq("userId", userIdOf(identity)).eq("metric", args.metric),
       )
       .first()
 
@@ -323,7 +324,7 @@ export const setPriority = mutation({
     }
 
     return await ctx.db.insert("health_metric_sources", {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       metric: args.metric,
       priority: args.priority,
       updated_at: Date.now(),

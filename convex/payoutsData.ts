@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { internalMutation, internalQuery, query } from "./_generated/server"
 import { feePercent } from "./fees"
@@ -46,7 +47,7 @@ export const mine = query({
     if (!identity) throw new Error("Not authenticated")
     const row = await ctx.db
       .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
     return {
       started: Boolean(row?.stripe_account),

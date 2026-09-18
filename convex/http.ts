@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
+import { auth } from "./auth"
 
 /**
  * The one page this system still needs to be a web page.
@@ -12,6 +13,9 @@ import { httpAction } from "./_generated/server"
  * the processor, not by which URL somebody landed on.
  */
 const http = httpRouter()
+
+// Token verification keys, and the return leg of Google, Facebook and Apple.
+auth.addHttpRoutes(http)
 
 http.route({
   path: "/pay/done",

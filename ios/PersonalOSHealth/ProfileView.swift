@@ -1,6 +1,4 @@
 import SwiftUI
-import ClerkKit
-import ClerkKitUI
 
 /// The account, and only the account.
 ///
@@ -11,7 +9,7 @@ import ClerkKitUI
 /// belong to: goals in Health, sync and sources behind Health data, and the
 /// practitioner's work behind the card.
 struct ProfileView: View {
-    @Environment(Clerk.self) private var clerk
+    @EnvironmentObject private var session: Session
     @Environment(\.openURL) private var openURL
 
     @State private var application: SpecialistsClient.Application?
@@ -76,7 +74,7 @@ struct ProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { application = try? await SpecialistsClient().desk().application }
         .task { if let a = try? await ArticlesClient().abilities() { abilities = a } }
-        .sheet(isPresented: $showAccount) { UserProfileView() }
+        .sheet(isPresented: $showAccount) { AccountView() }
         .sheet(isPresented: $applying) {
             SpecialistApplicationSheet(existing: application, defaultCountry: Cuisine.deviceDefault) {
                 application = try? await SpecialistsClient().desk().application
@@ -88,7 +86,7 @@ struct ProfileView: View {
                     // Hand the device back before the session goes, or the
                     // token stays pointed at an account nobody is signed in to.
                     await Push.handBack()
-                    try? await clerk.auth.signOut()
+                    await session.signOut()
                 }
             }
         }
@@ -99,7 +97,7 @@ struct ProfileView: View {
     private var you: some View {
         Button { showAccount = true } label: {
             HStack(spacing: 14) {
-                Avatar(user: clerk.user, size: 56)
+                Avatar(account: session.account, size: 56)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(displayName)
                         .font(Theme.sans(18, medium: true))
@@ -117,10 +115,7 @@ struct ProfileView: View {
     }
 
     private var displayName: String {
-        guard let u = clerk.user else { return "Not signed in" }
-        let name = [u.firstName, u.lastName].compactMap { $0 }.joined(separator: " ")
-        if !name.trimmingCharacters(in: .whitespaces).isEmpty { return name }
-        return u.emailAddresses.first?.emailAddress ?? "Your account"
+        session.account?.displayName ?? "Your account"
     }
 
     // MARK: The card
@@ -267,35 +262,101 @@ struct PracticeHubView: View {
     }
 }
 
-/// Circular profile picture, falling back to the mark so the row never
-/// collapses while the image loads or when no photo has been set.
+/// Circular profile picture, or the person's initials when there is none.
 struct Avatar: View {
-    let user: User?
+    let account: Session.Account?
     var size: CGFloat = 46
 
     var body: some View {
         ZStack {
             Circle().fill(Theme.surface)
-
-            if let user, user.hasImage, let url = URL(string: user.imageUrl) {
+            if let link = account?.image, let url = URL(string: link) {
                 AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        placeholder
-                    }
+                    if let image = phase.image { image.resizable().scaledToFill() } else { initials }
                 }
                 .clipShape(Circle())
             } else {
-                placeholder
+                initials
             }
         }
         .frame(width: size, height: size)
     }
 
-    private var placeholder: some View {
-        Image(systemName: "person.fill")
-            .font(.system(size: size * 0.42))
-            .foregroundStyle(Theme.tertiaryText)
+    @ViewBuilder
+    private var initials: some View {
+        let letters = (account?.name ?? "")
+            .split(separator: " ")
+            .prefix(2)
+            .compactMap { $0.first.map(String.init) }
+            .joined()
+            .uppercased()
+        if letters.isEmpty {
+            Image(systemName: "person.fill")
+                .font(.system(size: size * 0.42))
+                .foregroundStyle(Theme.tertiaryText)
+        } else {
+            Text(letters)
+                .font(Theme.sans(size * 0.36, medium: true))
+                .foregroundStyle(Theme.secondaryText)
+        }
+    }
+}
+
+/// The account itself: a name to change, the email it signs in with, and the
+/// way out. What Clerk's profile screen used to be.
+struct AccountView: View {
+    @EnvironmentObject private var session: Session
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var saving = false
+    @State private var failure: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack {
+                        Spacer()
+                        Avatar(account: session.account, size: 84)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                }
+                Section("Name") {
+                    TextField("Your name", text: $name)
+                        .textContentType(.name)
+                        .submitLabel(.done)
+                        .onSubmit { Task { await save() } }
+                }
+                Section("Email") {
+                    Text(session.account?.email ?? "")
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                if let failure {
+                    Section { Text(failure).foregroundStyle(.red) }
+                }
+            }
+            .navigationTitle("Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(saving || name == (session.account?.name ?? ""))
+                }
+            }
+            .onAppear { name = session.account?.name ?? "" }
+        }
+    }
+
+    private func save() async {
+        saving = true
+        defer { saving = false }
+        do {
+            try await session.rename(name)
+            dismiss()
+        } catch {
+            failure = error.localizedDescription
+        }
     }
 }

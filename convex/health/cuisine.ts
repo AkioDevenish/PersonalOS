@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
@@ -66,7 +67,7 @@ export const forCountry = query({
       }
       if (row.seeded) entry.seeded = true
       else entry.votes += 1
-      if (row.userId === identity.subject) entry.mine = true
+      if (row.userId === userIdOf(identity)) entry.mine = true
       byKey.set(row.key, entry)
     }
 
@@ -108,7 +109,7 @@ export const suggest = mutation({
       )
       .collect()
 
-    const mine = existing.find((r) => r.userId === identity.subject && !r.seeded)
+    const mine = existing.find((r) => r.userId === userIdOf(identity) && !r.seeded)
     if (mine) {
       await ctx.db.delete(mine._id)
       return { added: false }
@@ -118,7 +119,7 @@ export const suggest = mutation({
       country: args.country,
       dish,
       key,
-      userId: identity.subject,
+      userId: userIdOf(identity),
       created_at: Date.now(),
     })
     return { added: true }
@@ -159,7 +160,7 @@ export const seed = mutation({
         country: args.country,
         dish,
         key,
-        userId: identity.subject,
+        userId: userIdOf(identity),
         seeded: true,
         created_at: Date.now(),
       })

@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 
@@ -45,7 +46,7 @@ export const ledger = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     const rows = await ctx.db
       .query("time_blocks")
@@ -92,7 +93,7 @@ export const add = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     if (!Number.isInteger(args.minutes)) throw new Error("Minutes must be whole")
     if (args.minutes <= 0) throw new Error("A block needs a length")
@@ -117,7 +118,7 @@ export const remove = mutation({
   args: { id: v.id("time_blocks") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     const row = await ctx.db.get(args.id)
     if (!row || row.userId !== userId) throw new Error("No such block")

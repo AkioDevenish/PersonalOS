@@ -1,10 +1,10 @@
 import SwiftUI
-import ClerkKit
 
 @main
 struct PersonalOSHealthApp: App {
     @StateObject private var health = HealthKitManager()
-    @State private var clerk = Clerk.configure(publishableKey: Auth.publishableKey)
+    /// Who is signed in. The app's own sessions, not a service's.
+    @StateObject private var session = Session.shared
     /// Only for the device token Apple hands back; nothing else uses it.
     @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     /// Owned at app level, not by the paywall: transactions arrive whenever
@@ -20,22 +20,21 @@ struct PersonalOSHealthApp: App {
     var body: some Scene {
         WindowGroup {
             SplashGate {
-                // Clerk restores any existing session on launch; until it has,
-                // showing sign-in would flash at an already-signed-in user.
-                // The splash covers that moment, so it costs nothing visible.
-                if !clerk.isLoaded {
-                    LoadingView()
-                } else if clerk.user != nil {
-                    OnboardingGate { RootView() }
-                } else {
-                    WelcomeView()
+                // The session is restored on launch; until it has, showing the
+                // welcome page would flash at somebody already signed in. The
+                // splash covers that moment, so it costs nothing visible.
+                switch session.state {
+                case .restoring: LoadingView()
+                case .signedIn: OnboardingGate { RootView() }
+                case .signedOut: WelcomeView()
                 }
             }
             .environmentObject(health)
             .environmentObject(notifier)
             .environment(store)
-            .environment(clerk)
+            .environmentObject(session)
             .onAppear { notifier.start() }
+            .task { await session.restore() }
             .task { await Push.registerIfAllowed() }
             // A listed practitioner is present whenever their app is. The
             // call is a no-op for everybody else, which is nearly everybody,
@@ -52,7 +51,7 @@ struct PersonalOSHealthApp: App {
     }
 }
 
-/// Held while Clerk restores the session.
+/// Held while the session is restored.
 ///
 /// Deliberately empty. It shows for a fraction of a second on a good
 /// connection, and anything put here is a flash of something rather than a

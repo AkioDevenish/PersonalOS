@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { internalMutation, internalQuery, mutation } from "./_generated/server"
 
@@ -25,11 +26,11 @@ export const register = mutation({
     if (existing) {
       // A phone handed on to somebody else keeps its token, so the owner is
       // rewritten rather than assumed.
-      await ctx.db.patch(existing._id, { userId: identity.subject, updated_at: now })
+      await ctx.db.patch(existing._id, { userId: userIdOf(identity), updated_at: now })
       return { registered: true }
     }
     await ctx.db.insert("push_devices", {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       token: args.token,
       platform: args.platform,
       updated_at: now,
@@ -48,7 +49,7 @@ export const unregister = mutation({
       .query("push_devices")
       .withIndex("by_token", (q) => q.eq("token", args.token))
       .first()
-    if (row && row.userId === identity.subject) await ctx.db.delete(row._id)
+    if (row && row.userId === userIdOf(identity)) await ctx.db.delete(row._id)
     return null
   },
 })

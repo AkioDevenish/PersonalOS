@@ -1,5 +1,6 @@
 "use node"
 
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { action } from "./_generated/server"
 import { internal } from "./_generated/api"
@@ -57,7 +58,7 @@ export const link = action({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
-    const profile = await ctx.runQuery(internal.payoutsData.profileFor, { userId: identity.subject })
+    const profile = await ctx.runQuery(internal.payoutsData.profileFor, { userId: userIdOf(identity) })
     if (!profile) throw new Error("Apply to be listed first")
     if (profile.status !== "approved") throw new Error("Payouts open once your application is approved")
 
@@ -72,7 +73,7 @@ export const link = action({
       })
       account = created.id as string
       await ctx.runMutation(internal.payoutsData.remember, {
-        userId: identity.subject,
+        userId: userIdOf(identity),
         stripeAccount: account,
       })
     }
@@ -99,13 +100,13 @@ export const refresh = action({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
-    const profile = await ctx.runQuery(internal.payoutsData.profileFor, { userId: identity.subject })
+    const profile = await ctx.runQuery(internal.payoutsData.profileFor, { userId: userIdOf(identity) })
     if (!profile?.stripe_account) return { ready: false }
 
     const account = await stripe(`/accounts/${profile.stripe_account}`)
     const ready = Boolean(account.payouts_enabled && account.charges_enabled)
     await ctx.runMutation(internal.payoutsData.remember, {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       payoutsEnabled: ready,
     })
     return { ready }

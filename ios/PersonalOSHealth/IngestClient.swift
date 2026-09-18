@@ -37,7 +37,7 @@ enum IngestError: LocalizedError {
 
 /// Uploads health samples to Personal OS.
 ///
-/// Identity comes from the signed-in user's Clerk token and nothing else. The
+/// Identity comes from the signed-in user's session token and nothing else. The
 /// previous version sent an `x-personal-os-user-id` header alongside a shared
 /// secret, which meant the phone declared whose data it was writing — anyone
 /// with the secret could write into any account. There is now no way to name a

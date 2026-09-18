@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -14,7 +15,7 @@ export const getPosts = query({
     const limit = args.limit || 20;
     return await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .order("desc")
       .take(limit);
   },
@@ -37,7 +38,7 @@ export const addPost = mutation({
     
     return await ctx.db.insert("posts", {
       ...args,
-      userId: identity.subject,
+      userId: userIdOf(identity),
       created_at: Date.now(),
     });
   },
@@ -59,7 +60,7 @@ export const updatePost = mutation({
     
     // Verify ownership
     const post = await ctx.db.get(id);
-    if (!post || post.userId !== identity.subject) {
+    if (!post || post.userId !== userIdOf(identity)) {
       throw new Error("Post not found or unauthorized");
     }
     
@@ -76,7 +77,7 @@ export const getStats = query({
     
     const posts = await ctx.db
       .query("posts")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .collect();
     
     const totalPosts = posts.length;

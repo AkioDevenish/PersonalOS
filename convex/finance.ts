@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 
@@ -42,7 +43,7 @@ export const ledger = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     const rows = await ctx.db
       .query("finance_entries")
@@ -121,7 +122,7 @@ export const add = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     if (!Number.isInteger(args.minor)) throw new Error("Amount must be whole minor units")
     if (args.minor === 0) throw new Error("An entry needs an amount")
@@ -148,7 +149,7 @@ export const remove = mutation({
   args: { id: v.id("finance_entries") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    const userId = requireIdentity(identity?.subject)
+    const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     const row = await ctx.db.get(args.id)
     // Same answer for "does not exist" and "is not yours": otherwise the error

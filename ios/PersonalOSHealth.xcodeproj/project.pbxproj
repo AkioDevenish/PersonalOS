@@ -36,8 +36,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA0CLERK000000000000B1 /* ClerkKit in Frameworks */,
-				AA0CLERK000000000000B2 /* ClerkKitUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,8 +78,6 @@
 			);
 			name = PersonalOSHealth;
 			packageProductDependencies = (
-				AA0CLERK000000000000P1 /* ClerkKit */,
-				AA0CLERK000000000000P2 /* ClerkKitUI */,
 				AA0WEBRTC00000000000P1 /* WebRTC */,
 			);
 			productName = PersonalOSHealth;
@@ -112,7 +108,6 @@
 			);
 			mainGroup = 66A6BA122FB78D4D00563D4F;
 			packageReferences = (
-				AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */,
 				AA0WEBRTC00000000000R1 /* XCRemoteSwiftPackageReference "WebRTC" */,
 			);
 			minimizedProjectReferenceProxies = 1;
@@ -155,14 +150,6 @@
 				minimumVersion = 152.0.0;
 			};
 		};
-		AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/clerk/clerk-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.3.6;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -170,16 +157,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA0WEBRTC00000000000R1 /* XCRemoteSwiftPackageReference "WebRTC" */;
 			productName = WebRTC;
-		};
-		AA0CLERK000000000000P1 /* ClerkKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */;
-			productName = ClerkKit;
-		};
-		AA0CLERK000000000000P2 /* ClerkKitUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA0CLERK000000000000R1 /* XCRemoteSwiftPackageReference "clerk-ios" */;
-			productName = ClerkKitUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 

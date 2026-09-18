@@ -13,6 +13,7 @@ import type * as ai_preferences from "../ai/preferences.js";
 import type * as articlePayments from "../articlePayments.js";
 import type * as articleRules from "../articleRules.js";
 import type * as articles from "../articles.js";
+import type * as auth from "../auth.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
 import type * as billing_receipts from "../billing/receipts.js";
 import type * as business from "../business.js";
@@ -31,11 +32,13 @@ import type * as health_samples from "../health/samples.js";
 import type * as health_signal from "../health/signal.js";
 import type * as health_tokens from "../health/tokens.js";
 import type * as http from "../http.js";
+import type * as lib_me from "../lib/me.js";
 import type * as marketing from "../marketing.js";
 import type * as payouts from "../payouts.js";
 import type * as payoutsData from "../payoutsData.js";
 import type * as push from "../push.js";
 import type * as time from "../time.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -49,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   articlePayments: typeof articlePayments;
   articleRules: typeof articleRules;
   articles: typeof articles;
+  auth: typeof auth;
   "billing/entitlements": typeof billing_entitlements;
   "billing/receipts": typeof billing_receipts;
   business: typeof business;
@@ -67,11 +71,13 @@ declare const fullApi: ApiFromModules<{
   "health/signal": typeof health_signal;
   "health/tokens": typeof health_tokens;
   http: typeof http;
+  "lib/me": typeof lib_me;
   marketing: typeof marketing;
   payouts: typeof payouts;
   payoutsData: typeof payoutsData;
   push: typeof push;
   time: typeof time;
+  users: typeof users;
 }>;
 
 /**

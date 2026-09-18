@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
@@ -16,7 +17,7 @@ export const get = query({
     if (!identity) throw new Error("Not authenticated")
     return await ctx.db
       .query("ai_preferences")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
   },
 })
@@ -29,11 +30,11 @@ export const set = mutation({
 
     const existing = await ctx.db
       .query("ai_preferences")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
 
     const doc = {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       provider: args.provider,
       model: args.model,
       updated_at: Date.now(),

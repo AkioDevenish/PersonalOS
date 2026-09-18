@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
@@ -34,11 +35,11 @@ export const post = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    await participant(ctx, args.id, identity.subject)
+    await participant(ctx, args.id, userIdOf(identity))
 
     await ctx.db.insert("call_signals", {
       consultId: args.id,
-      from: identity.subject,
+      from: userIdOf(identity),
       kind: args.kind,
       payload: args.payload,
       created_at: Date.now(),
@@ -58,7 +59,7 @@ export const since = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    await participant(ctx, args.id, identity.subject)
+    await participant(ctx, args.id, userIdOf(identity))
 
     const rows = await ctx.db
       .query("call_signals")
@@ -68,7 +69,7 @@ export const since = query({
       .collect()
 
     return rows
-      .filter((r) => r.from !== identity.subject)
+      .filter((r) => r.from !== userIdOf(identity))
       .sort((a, b) => a.created_at - b.created_at)
       .map((r) => ({ kind: r.kind, payload: r.payload, at: r.created_at }))
   },
@@ -86,7 +87,7 @@ export const clear = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    await participant(ctx, args.id, identity.subject)
+    await participant(ctx, args.id, userIdOf(identity))
 
     const rows = await ctx.db
       .query("call_signals")

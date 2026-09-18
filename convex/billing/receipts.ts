@@ -1,5 +1,6 @@
 "use node"
 
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { Environment, SignedDataVerifier } from "@apple/app-store-server-library"
 import { action } from "../_generated/server"
@@ -74,7 +75,7 @@ export const verify = action({
     if (!tx.transactionId) throw new Error("That purchase has no transaction id")
 
     const result = await ctx.runMutation(internal.billing.entitlements.applyVerified, {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       verifiedTransactionId: tx.transactionId,
       productId: tx.productId,
       expiresAt: tx.expiresDate,

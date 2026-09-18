@@ -70,7 +70,7 @@ async function verified(t: Awaited<ReturnType<typeof setup>>, title = good.title
 async function pay(t: Awaited<ReturnType<typeof setup>>, id: any, transactionId: string, who = AUTHOR) {
   const { token } = await t.withIdentity(AUTHOR).mutation(api.articles.startPayment, { id })
   return await t.mutation(internal.articles.applyPlacement, {
-    authorToken: who.tokenIdentifier,
+    authorToken: who.subject,
     paymentToken: token,
     transactionId,
     productId: "os.personal.article.30days",

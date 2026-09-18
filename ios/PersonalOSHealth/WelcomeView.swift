@@ -1,5 +1,4 @@
 import SwiftUI
-import ClerkKitUI
 
 /// The first thing anybody sees, before they have an account.
 ///
@@ -11,7 +10,7 @@ import ClerkKitUI
 /// Replaces a screen that was a name, a slogan and a button reading "Begin
 /// your ledger", which told a stranger nothing about what they were beginning.
 struct WelcomeView: View {
-    @State private var mode: AuthView.Mode?
+    @State private var mode: AuthSheet.Mode?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,7 +80,7 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity)
         .background(Theme.background)
         .sheet(item: $mode) { mode in
-            AuthView(mode: mode)
+            AuthSheet(mode: mode)
         }
     }
 
@@ -98,8 +97,4 @@ struct WelcomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
-}
-
-extension AuthView.Mode: @retroactive Identifiable {
-    public var id: String { rawValue }
 }

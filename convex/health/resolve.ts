@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { query } from "../_generated/server"
 import type { QueryCtx } from "../_generated/server"
@@ -50,7 +51,7 @@ export const dailyMatrix = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    const userId = identity.subject
+    const userId = userIdOf(identity)
 
     const rows = await ctx.db
       .query("health_samples")

@@ -1,7 +1,16 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
+  /**
+   * Accounts, sessions and sign-in state, owned by this database.
+   *
+   * These replaced Clerk. Nobody else holds the list of who has an account;
+   * it lives beside the data it is the key to.
+   */
+  ...authTables,
+
   // Business - CRM
   contacts: defineTable({
     userId: v.string(), // Clerk user ID
@@ -409,7 +418,7 @@ export default defineSchema({
    * than an array of paragraphs: it is bounded by the rules, and a single
    * field means an edit is one write rather than a rewritten list.
    *
-   * Ownership is by tokenIdentifier, the stable identity Convex guarantees.
+   * Ownership is by the user id (see lib/me.ts), which survives signing in again.
    * authorId is the Clerk subject, kept only to find the author's practitioner
    * profile, which is keyed that way.
    */
@@ -476,7 +485,7 @@ export default defineSchema({
   /**
    * Devices to push to, one row per install.
    *
-   * Keyed by the Clerk subject rather than tokenIdentifier, because the things
+   * Keyed by the user id (see lib/me.ts), because the things
    * that trigger a push — a practitioner replying, an article being verified —
    * hold the other party's subject and nothing else.
    *

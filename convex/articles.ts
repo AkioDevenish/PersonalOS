@@ -1,3 +1,4 @@
+import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "./_generated/server"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
@@ -54,7 +55,7 @@ async function practitionerProfile(ctx: QueryCtx | MutationCtx, subject: string)
 
 async function requireAuthor(ctx: MutationCtx) {
   const identity = await signedIn(ctx)
-  const profile = await practitionerProfile(ctx, identity.subject)
+  const profile = await practitionerProfile(ctx, userIdOf(identity))
   if (profile?.status !== "approved") throw new Error("Only approved practitioners can write articles")
   return identity
 }
@@ -106,7 +107,7 @@ async function subscribes(ctx: QueryCtx, now: number): Promise<boolean> {
   if (!identity) return false
   const row = await ctx.db
     .query("entitlements")
-    .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+    .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
     .first()
   if (row?.subscription_status !== "active") return false
   return typeof row.expires_at !== "number" || row.expires_at > now
@@ -180,8 +181,8 @@ export const abilities = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) return { canWrite: false, canReview: false }
-    const profile = await practitionerProfile(ctx, identity.subject)
-    return { canWrite: profile?.status === "approved", canReview: isReviewer(identity.subject) }
+    const profile = await practitionerProfile(ctx, userIdOf(identity))
+    return { canWrite: profile?.status === "approved", canReview: isReviewer(userIdOf(identity)) }
   },
 })
 
@@ -192,7 +193,7 @@ export const mine = query({
     const identity = await signedIn(ctx)
     const rows = await ctx.db
       .query("articles")
-      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", identity.tokenIdentifier))
+      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", userIdOf(identity)))
       .order("desc")
       .take(50)
     return rows.map((row) => ({
@@ -245,7 +246,7 @@ export const save = mutation({
     }
 
     if (args.id) {
-      await ownArticle(ctx, args.id, identity.tokenIdentifier)
+      await ownArticle(ctx, args.id, userIdOf(identity))
       await ctx.db.patch(args.id, { ...fields, status: "draft", published_at: undefined })
       return { id: args.id, errors: findings.errors, flags: findings.flags }
     }
@@ -253,7 +254,7 @@ export const save = mutation({
     // A generous cap on unpublished work, so one account cannot fill the table.
     const recent = await ctx.db
       .query("articles")
-      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", identity.tokenIdentifier))
+      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", userIdOf(identity)))
       .order("desc")
       .take(40)
     if (recent.filter((r) => r.status !== "published").length >= 20) {
@@ -262,8 +263,8 @@ export const save = mutation({
 
     const id = await ctx.db.insert("articles", {
       ...fields,
-      authorToken: identity.tokenIdentifier,
-      authorId: identity.subject,
+      authorToken: userIdOf(identity),
+      authorId: userIdOf(identity),
       status: "draft",
     })
     return { id, errors: findings.errors, flags: findings.flags }
@@ -275,7 +276,7 @@ export const submit = mutation({
   args: { id: v.id("articles") },
   handler: async (ctx, args) => {
     const identity = await requireAuthor(ctx)
-    const row = await ownArticle(ctx, args.id, identity.tokenIdentifier)
+    const row = await ownArticle(ctx, args.id, userIdOf(identity))
     if (row.status !== "draft" && row.status !== "changes_requested") {
       throw new Error("Only a draft can be sent for review")
     }
@@ -286,7 +287,7 @@ export const submit = mutation({
     // Three waiting at once is plenty; a queue one person can flood is not a queue.
     const waiting = await ctx.db
       .query("articles")
-      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", identity.tokenIdentifier))
+      .withIndex("by_authorToken_and_updated_at", (q) => q.eq("authorToken", userIdOf(identity)))
       .order("desc")
       .take(40)
     if (waiting.filter((r) => r.status === "submitted").length >= 3) {
@@ -311,7 +312,7 @@ export const withdraw = mutation({
   args: { id: v.id("articles") },
   handler: async (ctx, args) => {
     const identity = await signedIn(ctx)
-    await ownArticle(ctx, args.id, identity.tokenIdentifier)
+    await ownArticle(ctx, args.id, userIdOf(identity))
     // Withdrawing gives up whatever paid time was left; there is no pause.
     await ctx.db.patch(args.id, { status: "withdrawn", live_until: undefined, updated_at: Date.now() })
     return null
@@ -322,7 +323,7 @@ export const remove = mutation({
   args: { id: v.id("articles") },
   handler: async (ctx, args) => {
     const identity = await signedIn(ctx)
-    const row = await ownArticle(ctx, args.id, identity.tokenIdentifier)
+    const row = await ownArticle(ctx, args.id, userIdOf(identity))
     if (row.status === "published") throw new Error("Withdraw it from Home before deleting it")
     await ctx.db.delete(args.id)
     return null
@@ -336,7 +337,7 @@ export const queue = query({
   args: {},
   handler: async (ctx) => {
     const identity = await signedIn(ctx)
-    if (!isReviewer(identity.subject)) throw new Error("Not allowed")
+    if (!isReviewer(userIdOf(identity))) throw new Error("Not allowed")
     const rows = await ctx.db
       .query("articles")
       .withIndex("by_status_and_submitted_at", (q) => q.eq("status", "submitted"))
@@ -347,7 +348,7 @@ export const queue = query({
         ...(await presented(ctx, row)),
         flags: row.flags,
         submitted_at: row.submitted_at ?? null,
-        own: row.authorId === identity.subject,
+        own: row.authorId === userIdOf(identity),
       })),
     )
   },
@@ -369,11 +370,11 @@ export const review = mutation({
   args: { id: v.id("articles"), approve: v.boolean(), note: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await signedIn(ctx)
-    if (!isReviewer(identity.subject)) throw new Error("Not allowed")
+    if (!isReviewer(userIdOf(identity))) throw new Error("Not allowed")
 
     const row = await ctx.db.get(args.id)
     if (!row || row.status !== "submitted") throw new Error("That article is not waiting for review")
-    if (row.authorId === identity.subject) throw new Error("Someone else has to review your own article")
+    if (row.authorId === userIdOf(identity)) throw new Error("Someone else has to review your own article")
 
     const now = Date.now()
     if (args.approve) {
@@ -383,7 +384,7 @@ export const review = mutation({
       await ctx.db.patch(args.id, {
         status: stillPaid ? "published" : "approved",
         published_at: stillPaid ? (row.published_at ?? now) : row.published_at,
-        reviewed_by: identity.subject,
+        reviewed_by: userIdOf(identity),
         review_note: args.note?.trim() || undefined,
         updated_at: now,
       })
@@ -403,7 +404,7 @@ export const review = mutation({
     if (note.length < 10) throw new Error("Say what needs changing, so the author can fix it")
     await ctx.db.patch(args.id, {
       status: "changes_requested",
-      reviewed_by: identity.subject,
+      reviewed_by: userIdOf(identity),
       review_note: note,
       updated_at: now,
     })
@@ -428,7 +429,7 @@ export const startPayment = mutation({
   args: { id: v.id("articles") },
   handler: async (ctx, args) => {
     const identity = await signedIn(ctx)
-    const row = await ownArticle(ctx, args.id, identity.tokenIdentifier)
+    const row = await ownArticle(ctx, args.id, userIdOf(identity))
     if (row.status !== "approved" && row.status !== "published" && row.status !== "expired") {
       throw new Error("An article can be paid for once the team has verified it")
     }

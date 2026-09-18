@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 
@@ -18,7 +19,7 @@ import { internalMutation, mutation, query } from "../_generated/server"
 async function requireUser(ctx: any): Promise<string> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error("Not authenticated")
-  return identity.subject
+  return userIdOf(identity)
 }
 
 const EMPTY = {
@@ -120,7 +121,7 @@ export const subscribed = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) return false
-    const row = await rowFor(ctx, identity.subject)
+    const row = await rowFor(ctx, userIdOf(identity))
     if (row?.subscription_status !== "active") return false
     return typeof row.expires_at !== "number" || row.expires_at > args.now
   },

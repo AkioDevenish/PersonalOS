@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { internal } from "../_generated/api"
@@ -111,7 +112,7 @@ export const myApplication = query({
 
     const row = await ctx.db
       .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
 
     if (!row) return null
@@ -126,7 +127,7 @@ export const myApplication = query({
       specialties: row.specialties ?? [],
       offers_video: row.offers_video ?? false,
       active: row.active,
-      status: staff().includes(identity.subject) ? "approved" : (row.status ?? "pending"),
+      status: staff().includes(userIdOf(identity)) ? "approved" : (row.status ?? "pending"),
     }
   },
 })
@@ -169,11 +170,11 @@ export const apply = mutation({
 
     const existing = await ctx.db
       .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
 
     const doc = {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       name,
       country: args.country.trim().toUpperCase(),
       credentials,
@@ -215,8 +216,8 @@ export const review = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    if (!isStaff(identity.subject)) throw new Error("Not allowed")
-    if (args.userId === identity.subject) throw new Error("Cannot review your own application")
+    if (!isStaff(userIdOf(identity))) throw new Error("Not allowed")
+    if (args.userId === userIdOf(identity)) throw new Error("Cannot review your own application")
 
     const row = await ctx.db
       .query("nutritionists")
@@ -280,12 +281,12 @@ export const openSession = mutation({
     // practitioner raising their rate cannot change what somebody already owes.
     const now = Date.now()
     const id = await ctx.db.insert("consults", {
-      userId: identity.subject,
+      userId: userIdOf(identity),
       nutritionistId: args.specialistId,
       topic: args.topic?.trim() || (kind === "video" ? "Video consultation" : "Consultation"),
       status: "waiting",
       kind,
-      room: kind === "video" ? `pos-${identity.subject.slice(-8)}-${now}` : undefined,
+      room: kind === "video" ? `pos-${userIdOf(identity).slice(-8)}-${now}` : undefined,
       price_minor: priceMinor,
       currency,
       payment_status: priceMinor === 0 ? "free" : "pending",
@@ -334,7 +335,7 @@ export const billing = query({
     const row = await ctx.db.get(args.id)
     // The same answer for missing and not-yours, so the error cannot be used
     // to discover which session ids are real.
-    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+    if (!row || row.userId !== userIdOf(identity)) throw new Error("No such session")
 
     return {
       id: row._id,
@@ -371,7 +372,7 @@ export const attachPayment = mutation({
     if (!identity) throw new Error("Not authenticated")
 
     const row = await ctx.db.get(args.id)
-    if (!row || row.userId !== identity.subject) throw new Error("No such session")
+    if (!row || row.userId !== userIdOf(identity)) throw new Error("No such session")
 
     await ctx.db.patch(args.id, {
       payment_ref: args.ref,
@@ -402,7 +403,7 @@ export const heartbeat = mutation({
 
     const row = await ctx.db
       .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
     if (!row) return { beat: false }
 
@@ -448,7 +449,7 @@ export const thread = query({
 
     const consult = await ctx.db.get(args.id)
     if (!consult) throw new Error("No such consultation")
-    if (!party(consult, identity.subject)) throw new Error("Not yours to read")
+    if (!party(consult, userIdOf(identity))) throw new Error("Not yours to read")
 
     const messages = await ctx.db
       .query("consult_messages")
@@ -487,11 +488,11 @@ export const send = mutation({
     const consult = await ctx.db.get(args.id)
     if (!consult) throw new Error("No such consultation")
 
-    if (!party(consult, identity.subject)) throw new Error("Not yours to answer")
+    if (!party(consult, userIdOf(identity))) throw new Error("Not yours to answer")
     // Which side of the conversation this is. A message reads as "you" to the
     // person who booked and as the practitioner to them, and the row records
     // which it was rather than guessing later.
-    const mine = consult.userId === identity.subject
+    const mine = consult.userId === userIdOf(identity)
 
     const body = args.body.trim()
     if (!body) throw new Error("An empty message says nothing")
@@ -501,7 +502,7 @@ export const send = mutation({
     await ctx.db.insert("consult_messages", {
       consultId: args.id,
       from: mine ? "you" : "nutritionist",
-      authorId: identity.subject,
+      authorId: userIdOf(identity),
       body,
       created_at: now,
     })
@@ -545,16 +546,16 @@ export const queue = query({
     // filing cabinet somebody left unlocked.
     const profile = await ctx.db
       .query("nutritionists")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
     const approved =
-      (profile && profile.status === "approved") || isStaff(identity.subject)
+      (profile && profile.status === "approved") || isStaff(userIdOf(identity))
     if (!approved) throw new Error("You are not listed as a practitioner")
 
     // by_user indexes the person who booked; the practitioner's own consults
     // have to be found the other way round.
     const all = await ctx.db.query("consults").collect()
-    const mine = all.filter((r) => r.nutritionistId === identity.subject)
+    const mine = all.filter((r) => r.nutritionistId === userIdOf(identity))
 
     const withLast = await Promise.all(
       mine.map(async (r) => {

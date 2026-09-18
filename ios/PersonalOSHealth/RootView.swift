@@ -1,6 +1,4 @@
 import SwiftUI
-import ClerkKit
-import ClerkKitUI
 
 /// What the tab bar shows.
 ///

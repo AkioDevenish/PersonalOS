@@ -1,3 +1,4 @@
+import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
@@ -14,7 +15,7 @@ import { mutation, query } from "../_generated/server"
  * during a provider redirect, which carries no user session, so that path has
  * no identity to check and must run with admin credentials. A user typing
  * their own API key is always signed in, so the identity check can happen here
- * — and scoping every read and write to `identity.subject` is a stronger
+ * — and scoping every read and write to `userIdOf(identity)` is a stronger
  * guarantee than handing the web layer a deploy key that can touch any row.
  *
  * `last4` is stored in the clear so the app can render "which key is saved"
@@ -25,7 +26,7 @@ import { mutation, query } from "../_generated/server"
 async function requireUser(ctx: any): Promise<string> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error("Not authenticated")
-  return identity.subject
+  return userIdOf(identity)
 }
 
 export const store = mutation({
