@@ -57,29 +57,10 @@ struct CycleView: View {
                 .padding(.top, 14)
                 .flowIn(1)
 
-            if let phase = reading.phase {
-                Text(phase.title)
-                    .font(Theme.sans(11, medium: true))
-                    .tracking(1.8)
-                    .textCase(.uppercase)
-                    .foregroundStyle(Theme.accent)
-                    .padding(.top, 6)
-                    .flowIn(1)
-
-                Text(phase.note)
-                    .font(Theme.serifBody(17))
-                    .foregroundStyle(Theme.secondaryText)
-                    .lineSpacing(6)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 14)
-                    .flowIn(2)
-            }
-
-            CycleRing(reading: reading)
-                .frame(height: 210)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 30)
-                .flowIn(3)
+            PhaseCarousel(reading: reading)
+                .padding(.top, 26)
+                .padding(.horizontal, -24)
+                .flowIn(2)
 
             Text(expectation(reading))
                 .font(Theme.sans(12.5))
@@ -197,62 +178,125 @@ struct CycleView: View {
     }
 }
 
-/// The cycle as a ring, with today on it.
+/// The four phases, one to a page, opening on the one you are in.
 ///
-/// Drawn rather than assembled from shapes so the ticks can be struck at the
-/// weight of an engraving: one hairline per day, the bleeding days heavier,
-/// and today the only thing in amber.
-private struct CycleRing: View {
+/// Each is a single picture — a drop, the day rising, its height, the moon —
+/// with its name, which days it covers in your cycle, and what it tends to
+/// feel like. Swiping moves through them in order; the row of small icons
+/// underneath shows where you are and takes you straight to any of them.
+private struct PhaseCarousel: View {
     let reading: Cycle.Reading
 
+    @State private var shown: Cycle.Phase?
+
+    private var length: Int { reading.typicalLength ?? 28 }
+    private var bleed: Int { reading.typicalPeriodDays ?? 5 }
+
     var body: some View {
-        Canvas { context, size in
-            let length = reading.typicalLength ?? 28
-            let bleed = reading.typicalPeriodDays ?? 5
-            let day = reading.day ?? 1
-            let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-            let radius = min(size.width, size.height) / 2 - 24
-
-            for index in 0..<length {
-                // Twelve o'clock is day one, so the ring reads like a face.
-                let angle = (Double(index) / Double(length)) * 2 * .pi - .pi / 2
-                let isBleeding = index < bleed
-                let isToday = index == (day - 1) % length
-                let inner = radius - (isToday ? 16 : (isBleeding ? 10 : 6))
-
-                var line = Path()
-                line.move(to: point(centre, radius, angle))
-                line.addLine(to: point(centre, inner, angle))
-                context.stroke(
-                    line,
-                    with: .color(isToday ? Theme.accent : Theme.text.opacity(isBleeding ? 0.42 : 0.16)),
-                    lineWidth: isToday ? 2.4 : 1
-                )
+        VStack(spacing: 18) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    ForEach(Cycle.Phase.allCases, id: \.self) { phase in
+                        card(phase)
+                            .containerRelativeFrame(.horizontal)
+                            .id(phase)
+                    }
+                }
+                .scrollTargetLayout()
             }
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $shown)
 
-            context.stroke(
-                Path(ellipseIn: CGRect(
-                    x: centre.x - radius, y: centre.y - radius,
-                    width: radius * 2, height: radius * 2
-                )),
-                with: .color(Theme.text.opacity(0.08)),
-                lineWidth: 1
-            )
-        }
-        .overlay {
-            if let phase = reading.phase {
-                Text(phase.title.lowercased())
-                    .font(Theme.serifItalic(17))
-                    .foregroundStyle(Theme.tertiaryText)
+            HStack(spacing: 22) {
+                ForEach(Cycle.Phase.allCases, id: \.self) { phase in
+                    Button {
+                        Haptics.select()
+                        withAnimation(Theme.Motion.flow) { shown = phase }
+                    } label: {
+                        Image(systemName: phase.symbol)
+                            .font(.system(size: 16))
+                            .foregroundStyle((shown ?? current) == phase ? phase.tint : Theme.tertiaryText)
+                            .frame(width: 36, height: 36)
+                            .background {
+                                if phase == reading.phase {
+                                    Circle().stroke(phase.tint.opacity(0.6), lineWidth: 1.5)
+                                }
+                            }
+                            .scaleEffect((shown ?? current) == phase ? 1.15 : 1)
+                    }
+                    .buttonStyle(.press)
+                    .accessibilityLabel(phase.title)
+                }
             }
+            .animation(Theme.Motion.bouncy, value: shown)
         }
-        .accessibilityLabel(
-            reading.day.map { "Day \($0) of about \(reading.typicalLength ?? 28)" } ?? "No cycle recorded"
-        )
+        .onAppear { shown = current }
     }
 
-    private func point(_ centre: CGPoint, _ r: CGFloat, _ angle: Double) -> CGPoint {
-        CGPoint(x: centre.x + cos(angle) * r, y: centre.y + sin(angle) * r)
+    /// Where to open: the phase you are in, or the start of a cycle when that
+    /// is not known yet.
+    private var current: Cycle.Phase { reading.phase ?? .menstrual }
+
+    private func card(_ phase: Cycle.Phase) -> some View {
+        let here = phase == reading.phase
+        return VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(phase.tint.opacity(0.14))
+                    .frame(width: 150, height: 150)
+                if here {
+                    Circle()
+                        .stroke(phase.tint, lineWidth: 2)
+                        .frame(width: 166, height: 166)
+                }
+                Image(systemName: phase.symbol)
+                    .font(.system(size: 58, weight: .regular))
+                    .foregroundStyle(phase.tint)
+                    .symbolEffect(.bounce, value: shown == phase)
+            }
+            .frame(height: 172)
+
+            if here, let day = reading.day {
+                Text("YOU'RE HERE · DAY \(day)")
+                    .font(Theme.sans(11, medium: true))
+                    .tracking(1.4)
+                    .foregroundStyle(phase.tint)
+            } else {
+                Text(" ").font(Theme.sans(11))
+            }
+
+            Text(phase.title)
+                .font(Theme.serif(30))
+                .foregroundStyle(Theme.text)
+
+            if let days = phase.days(in: length, bleedingFor: bleed) {
+                Text(days.count == 1 ? "Day \(days.lowerBound)" : "Days \(days.lowerBound) to \(days.upperBound)")
+                    .font(Theme.sans(13, medium: true))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+
+            Text(phase.note)
+                .font(Theme.serifBody(16))
+                .foregroundStyle(Theme.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 30)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private extension Cycle.Phase {
+    /// Held in both light and dark: mid-tones that read on white and on black.
+    var tint: Color {
+        switch self {
+        case .menstrual: return Color(red: 0.78, green: 0.29, blue: 0.36)
+        case .follicular: return Color(red: 0.36, green: 0.62, blue: 0.42)
+        case .ovulatory: return Color(red: 0.85, green: 0.60, blue: 0.18)
+        case .luteal: return Color(red: 0.40, green: 0.42, blue: 0.78)
+        }
     }
 }
 

@@ -147,6 +147,28 @@ enum Cycle {
             return .luteal
         }
 
+        /// The days this phase covers in a cycle of this length.
+        ///
+        /// Worked out by asking `of` about every day rather than by repeating
+        /// its arithmetic, so the range shown and the phase reported can never
+        /// disagree. Nil for a phase a very short cycle has no room for.
+        func days(in length: Int, bleedingFor bleedDays: Int) -> ClosedRange<Int>? {
+            let mine = (1...max(1, length)).filter { Phase.of(day: $0, in: length, bleedingFor: bleedDays) == self }
+            guard let first = mine.first, let last = mine.last else { return nil }
+            return first...last
+        }
+
+        /// The one picture for each: a drop, then the day rising, its height,
+        /// and the moon as it winds down.
+        var symbol: String {
+            switch self {
+            case .menstrual: return "drop.fill"
+            case .follicular: return "sunrise.fill"
+            case .ovulatory: return "sun.max.fill"
+            case .luteal: return "moon.fill"
+            }
+        }
+
         var title: String {
             switch self {
             case .menstrual: return "Bleeding"
