@@ -17,12 +17,8 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 20)
 
-            Image("stride")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(Theme.text)
-                .frame(maxWidth: 230, maxHeight: 190)
+            WalkingVideo()
+                .frame(maxWidth: 240, maxHeight: 240)
                 .accessibilityHidden(true)
                 .flowIn(0, distance: 16)
 
