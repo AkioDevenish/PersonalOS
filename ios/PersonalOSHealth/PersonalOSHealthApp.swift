@@ -28,7 +28,7 @@ struct PersonalOSHealthApp: App {
                 } else if clerk.user != nil {
                     OnboardingGate { RootView() }
                 } else {
-                    SignInView()
+                    WelcomeView()
                 }
             }
             .environmentObject(health)

@@ -2,65 +2,6 @@ import SwiftUI
 import ClerkKit
 import ClerkKitUI
 
-/// Sign-in per the Figma design.
-///
-/// One honest divergence from the mock: the primary button reads "Begin your
-/// ledger" rather than "Sign in with Apple" — the Sign in with Apple
-/// capability needs a paid developer account, and a button that names Apple
-/// but doesn't call it would be worse than plain words. Clerk + SIWA replace
-/// this when the account exists.
-struct SignInView: View {
-    @State private var showAuth = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            Text("Personal OS")
-                .font(Theme.serif(42))
-                .foregroundStyle(Theme.text)
-                .padding(.top, 28)
-
-            Kicker(text: "Time well spent")
-                .tracking(3)
-                .padding(.top, 10)
-
-            Rule().frame(width: 120).padding(.top, 36)
-
-            Button {
-                showAuth = true
-            } label: {
-                Text("Begin your ledger")
-                    .font(Theme.sans(15, medium: true))
-                    .foregroundStyle(Theme.surface)
-                    // Was a fixed 313 points, which is one phone's width and
-                    // nobody else's: narrow and off-centre on a Pro Max, tight
-                    // on an SE, and liable to clip the label at larger text
-                    // sizes.
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Theme.text)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.press)
-            .padding(.horizontal, 40)
-            .padding(.top, 44)
-
-            Text("Your ledger stays yours.")
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.tertiaryText)
-                .padding(.top, 24)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .background(Theme.background)
-        // Clerk's prebuilt flow — email code, password, and any social
-        // providers enabled in the dashboard, without hand-rolling forms.
-        .sheet(isPresented: $showAuth) { AuthView() }
-    }
-}
-
 /// What the tab bar shows.
 ///
 /// `AppTab` rather than `Tab` because SwiftUI's own `Tab` builds the bar now,
