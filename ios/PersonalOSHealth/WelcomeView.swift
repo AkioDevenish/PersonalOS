@@ -17,13 +17,8 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 20)
 
-            Image("stride")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(Theme.text)
-                .frame(maxWidth: 230, maxHeight: 190)
-                .accessibilityHidden(true)
+            WalkingFigure()
+                .frame(maxWidth: 230, maxHeight: 200)
                 .flowIn(0, distance: 16)
 
             Text("Personal OS")
