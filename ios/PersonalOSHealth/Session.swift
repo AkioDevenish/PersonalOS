@@ -142,6 +142,16 @@ final class Session: NSObject, ObservableObject {
 
     // MARK: The account
 
+    /// Deletes the account on the server, then forgets it here. Nothing held
+    /// on this phone can sign in again afterwards.
+    func deleteAccount() async throws {
+        _ = try await transport.mutation("users:deleteAccount")
+        Keychain.delete("session_token")
+        Keychain.delete("refresh_token")
+        account = nil
+        state = .signedOut
+    }
+
     func loadAccount() async {
         guard let data = try? await transport.query("users:me") else { return }
         account = try? JSONDecoder().decode(Account.self, from: data)

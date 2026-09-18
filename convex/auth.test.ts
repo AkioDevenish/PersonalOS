@@ -88,3 +88,24 @@ describe("email and password", () => {
     expect(() => safeRedirect("http://personalos.example")).toThrow()
   })
 })
+
+describe("deleting an account", () => {
+  test("removes the user, their sign-in and their sessions, so the password stops working", async () => {
+    const t = convexTest(schema, modules)
+    await signUp(t)
+    const userId = await t.run(async (ctx) => (await ctx.db.query("users").first())!._id)
+    const sessionId = await t.run(async (ctx) => (await ctx.db.query("authSessions").first())!._id)
+
+    await t.withIdentity({ subject: `${userId}|${sessionId}` }).mutation(api.users.deleteAccount, {})
+
+    await t.run(async (ctx) => {
+      expect(await ctx.db.query("users").collect()).toHaveLength(0)
+      expect(await ctx.db.query("authAccounts").collect()).toHaveLength(0)
+      expect(await ctx.db.query("authSessions").collect()).toHaveLength(0)
+      expect(await ctx.db.query("authRefreshTokens").collect()).toHaveLength(0)
+    })
+    await expect(t.action(api.auth.signIn, {
+      provider: "password", params: { email, password, flow: "signIn" },
+    })).rejects.toThrow()
+  })
+})

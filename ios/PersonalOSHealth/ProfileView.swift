@@ -310,6 +310,7 @@ struct AccountView: View {
     @State private var name = ""
     @State private var saving = false
     @State private var failure: String?
+    @State private var confirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -335,8 +336,23 @@ struct AccountView: View {
                 if let failure {
                     Section { Text(failure).foregroundStyle(.red) }
                 }
+                Section {
+                    Button("Delete account", role: .destructive) { confirmingDelete = true }
+                } footer: {
+                    Text("Removes your account and signs you out everywhere. This can't be undone.")
+                }
             }
             .navigationTitle("Account")
+            .confirmationDialog("Delete your account?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Delete account", role: .destructive) {
+                    Task {
+                        await Push.handBack()
+                        do { try await session.deleteAccount() } catch { failure = error.localizedDescription }
+                    }
+                }
+            } message: {
+                Text("Your account and every way of signing in to it will be removed.")
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
