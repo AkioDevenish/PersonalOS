@@ -5,6 +5,8 @@ struct PersonalOSHealthApp: App {
     @StateObject private var health = HealthKitManager()
     /// Who is signed in. The app's own sessions, not a service's.
     @StateObject private var session = Session.shared
+    /// Nothing in this app works without a connection, so it is asked first.
+    @StateObject private var network = Network.shared
     /// Only for the device token Apple hands back; nothing else uses it.
     @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
     /// Owned at app level, not by the paywall: transactions arrive whenever
@@ -20,19 +22,29 @@ struct PersonalOSHealthApp: App {
     var body: some Scene {
         WindowGroup {
             SplashGate {
-                // The session is restored on launch; until it has, showing the
-                // welcome page would flash at somebody already signed in. The
-                // splash covers that moment, so it costs nothing visible.
-                switch session.state {
-                case .restoring: LoadingView()
-                case .signedIn: OnboardingGate { RootView() }
-                case .signedOut: WelcomeView()
+                if !network.online {
+                    // In front of everything, including the welcome page: an
+                    // account cannot be made offline either.
+                    OfflineView()
+                        .transition(.opacity)
+                } else {
+                    // The session is restored on launch; until it has, showing
+                    // the welcome page would flash at somebody already signed
+                    // in. The splash covers that moment, so it costs nothing
+                    // visible.
+                    switch session.state {
+                    case .restoring: LoadingView()
+                    case .signedIn: OnboardingGate { RootView() }
+                    case .signedOut: WelcomeView()
+                    }
                 }
             }
+            .animation(Theme.Motion.flow, value: network.online)
             .environmentObject(health)
             .environmentObject(notifier)
             .environment(store)
             .environmentObject(session)
+            .environmentObject(network)
             .onAppear { notifier.start() }
             .task { await session.restore() }
             .task { await Push.registerIfAllowed() }

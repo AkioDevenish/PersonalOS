@@ -80,6 +80,12 @@ struct GoalsView: View {
         }
     }
 
+    private func remove(_ spec: MetricSpec) {
+        Haptics.tap()
+        Goals.set(spec.id, nil)
+        withAnimation(Theme.Motion.flow) { targets = Goals.all }
+    }
+
     private var chosen: [MetricSpec] {
         Goals.settable.filter { targets[$0.id] != nil }
     }
@@ -112,10 +118,29 @@ struct GoalsView: View {
                     .font(Theme.sans(11))
                     .foregroundStyle(Theme.tertiaryText)
             }
+
+            // Removing a goal was a trip into the editor and a second tap at
+            // the bottom of it. It is the most likely thing somebody wants
+            // from a goal they are looking at and disagreeing with, so it is
+            // on the row.
+            Button { remove(spec) } label: {
+                Image(systemName: "minus.circle")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(Theme.tertiaryText)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.press)
+            .accessibilityLabel("Remove \(spec.label) goal")
         }
         .padding(.vertical, 16)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { Rule() }
+        // The same thing again for a long press, which is where a lot of
+        // people look first.
+        .contextMenu {
+            Button("Remove goal", systemImage: "minus.circle", role: .destructive) { remove(spec) }
+        }
     }
 }
 
