@@ -1,11 +1,22 @@
 import SwiftUI
 
-/// Getting set up, five pages, about a minute.
+/// Getting set up, eleven pages, two or three minutes.
 ///
 /// An introduction that only describes the app is skipped by everybody, so
-/// each page here does something: it connects Apple Health, sets a first
-/// goal, and asks about notifications, each at the moment its reason is on
-/// screen. Every step can be passed over; nothing is required to get in.
+/// every page here either does something or answers something. It follows one
+/// rhythm: a page that asks is followed by a page that gives something back,
+/// because five requests in a row is an interrogation and people close it.
+///
+/// The order matters more than the count. The cheap questions come first —
+/// what you care about, how your week usually goes — because they cost
+/// nothing to answer and each one is a small yes. Apple Health, the most
+/// personal permission the app asks for, comes after a goal has been set, so
+/// it arrives with a reason attached rather than as a demand from a stranger.
+///
+/// Nothing collected here is thrown away for show. What you pick on the focus
+/// page decides which goals are offered and which are already ticked; how
+/// often you move sets where the first step target lands. A question whose
+/// answer changes nothing is worse than no question.
 ///
 /// It opens with the walking figure and closes on a real number from the
 /// person's own day, so the last thing they see before the app is the app
@@ -21,11 +32,14 @@ struct OnboardingView: View {
     @State private var forward = true
     @State private var healthConnected = false
     @State private var notificationsOn = false
-    @State private var chosenGoals: Set<String> = ["steps"]
+    @State private var chosenFocus: Set<String> = []
+    @State private var rhythm: String?
+    @State private var chosenGoals: Set<String> = []
+    @State private var showingPlans = false
     @State private var working = false
     @State private var todaySteps: Double?
 
-    private let pages = 5
+    private let pages = 11
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,9 +51,15 @@ struct OnboardingView: View {
                 Group {
                     switch page {
                     case 0: hello
-                    case 1: healthPage
-                    case 2: goalsPage
-                    case 3: notificationsPage
+                    case 1: focusPage
+                    case 2: encouragementPage
+                    case 3: rhythmPage
+                    case 4: goalsPage
+                    case 5: privacyPage
+                    case 6: healthPage
+                    case 7: notificationsPage
+                    case 8: tourPage
+                    case 9: planPage
                     default: readyPage
                     }
                 }
@@ -53,11 +73,18 @@ struct OnboardingView: View {
             .clipped()
         }
         .background(Theme.background)
+        .sheet(isPresented: $showingPlans) {
+            PaywallView(reason: "read what practitioners write and keep your readings")
+        }
     }
 
     // MARK: Chrome
 
-    /// A back arrow, and one segment of progress per page, filling as you go.
+    /// A back arrow and one continuous bar.
+    ///
+    /// Eleven separate segments would be eleven hairlines, which reads as
+    /// clutter rather than as progress. One bar filling across says the same
+    /// thing and says it at a glance.
     private var header: some View {
         HStack(spacing: 14) {
             Button { go(page - 1) } label: {
@@ -71,18 +98,23 @@ struct OnboardingView: View {
             .disabled(page == 0 || page == pages - 1)
             .accessibilityLabel("Back")
 
-            HStack(spacing: 6) {
-                ForEach(0..<pages, id: \.self) { i in
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.separator)
                     Capsule()
-                        .fill(i <= page ? Theme.text : Theme.separator)
-                        .frame(height: 4)
+                        .fill(Theme.text)
+                        .frame(width: max(6, geo.size.width * progress))
                 }
             }
+            .frame(height: 4)
             .animation(Theme.Motion.flow, value: page)
+            .accessibilityLabel("Step \(page + 1) of \(pages)")
 
             Color.clear.frame(width: 32, height: 32)
         }
     }
+
+    private var progress: Double { Double(page + 1) / Double(pages) }
 
     private func go(_ next: Int) {
         guard next >= 0, next < pages else { return }
@@ -93,43 +125,74 @@ struct OnboardingView: View {
 
     /// The layout every page shares: picture, words, then the buttons pinned
     /// to the bottom where a thumb already is.
+    ///
+    /// `artHeight` is fixed for the pages that show a picture, so the words
+    /// land in the same place each time and the eye does not have to hunt.
+    /// The pages that show a list of answers pass nil and take what they need.
     private func layout<Art: View>(
         kicker: String,
         title: String,
         body: String,
+        artHeight: CGFloat? = 230,
         @ViewBuilder art: () -> Art,
         primary: String,
         primaryDone: Bool = false,
+        reassurance: String? = nil,
         action: @escaping () async -> Void,
         skip: String? = nil
     ) -> some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 8)
-            art()
-                .frame(maxWidth: .infinity)
-                .frame(height: 230)
-            Spacer(minLength: 8)
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text(kicker.uppercased())
-                    .font(Theme.sans(11, medium: true))
-                    .tracking(1.8)
-                    .foregroundStyle(Theme.accent)
-                Text(title)
-                    .font(Theme.serif(34))
-                    .foregroundStyle(Theme.text)
-                    .fixedSize(horizontal: false, vertical: true)
+        let words = VStack(alignment: .leading, spacing: 10) {
+            Text(kicker.uppercased())
+                .font(Theme.sans(11, medium: true))
+                .tracking(1.8)
+                .foregroundStyle(Theme.accent)
+            Text(title)
+                .font(Theme.serif(artHeight == nil ? 28 : 34))
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+            if !body.isEmpty {
                 Text(body)
                     .font(Theme.sans(16))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 20)
+        return VStack(spacing: 0) {
+            if artHeight == nil {
+                // A page that asks something puts the question above the
+                // answers, the way a question works. The answers then scroll
+                // inside what is left, so six of them on a small phone push
+                // against each other rather than pushing the button off screen.
+                words.padding(.top, 10)
+                ScrollView {
+                    art().frame(maxWidth: .infinity).padding(.vertical, 14)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            } else {
+                Spacer(minLength: 8)
+                art()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: artHeight)
+                Spacer(minLength: 8)
+                words
+                Spacer(minLength: 20)
+            }
 
             VStack(spacing: 6) {
+                // Said before the button, not after it, because the worry it
+                // answers is the reason somebody's thumb is hovering.
+                if let reassurance {
+                    Text(reassurance)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.tertiaryText)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 4)
+                }
+
                 Button {
                     Task {
                         working = true
@@ -183,59 +246,173 @@ struct OnboardingView: View {
         return name.split(separator: " ").first.map(String.init) ?? name
     }
 
+    /// One tappable answer: a pill that fills in when it is chosen.
+    private func choice(_ label: String, _ symbol: String?, on: Bool, tap: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.select()
+            withAnimation(Theme.Motion.bouncy, tap)
+        } label: {
+            HStack(spacing: 12) {
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: 16, weight: .light))
+                        .environment(\.symbolVariants, .none)
+                        .foregroundStyle(on ? Theme.background : Theme.accent)
+                        .frame(width: 22)
+                }
+                Text(label)
+                    .font(Theme.sans(16, medium: true))
+                    .foregroundStyle(on ? Theme.background : Theme.text)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 15)
+            .frame(maxWidth: .infinity)
+            .background(on ? Theme.text : Theme.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(on ? .clear : Theme.separator, lineWidth: 1))
+        }
+        .buttonStyle(.press)
+    }
+
     // MARK: 1 · Hello
 
     private var hello: some View {
         layout(
             kicker: "Welcome",
             title: firstName.isEmpty ? "Let's get you set up." : "Hello, \(firstName).",
-            body: "Three quick things and you're in. It takes about a minute, and you can skip any of them.",
+            body: "A few questions, then three things to switch on. Two minutes, and you can skip any of it.",
             art: { WalkingVideo().accessibilityHidden(true) },
             primary: "Begin",
             action: { go(1) }
         )
     }
 
-    // MARK: 2 · Apple Health
+    // MARK: 2 · What you care about
 
-    private var healthPage: some View {
+    /// The focus options, and the metric each one is really about.
+    ///
+    /// The metric is what makes this question worth asking: picking "Sleep
+    /// better" is what puts a sleep goal on the goals page with its box
+    /// already ticked. The two without one are honest about it — the cycle is
+    /// tracked on its own page rather than as a goal, and "something else" is
+    /// there so nobody has to lie to get past.
+    private struct Focus {
+        let id: String
+        let label: String
+        let symbol: String
+        let metric: String?
+    }
+
+    private let focuses: [Focus] = [
+        .init(id: "move", label: "Move more", symbol: "figure.walk", metric: "steps"),
+        .init(id: "sleep", label: "Sleep better", symbol: "moon.stars", metric: "sleep"),
+        .init(id: "outside", label: "Get outside", symbol: "sun.max", metric: "daylight"),
+        .init(id: "calm", label: "Feel calmer", symbol: "brain.head.profile", metric: "mindful"),
+        .init(id: "cycle", label: "Follow my cycle", symbol: "drop", metric: nil),
+        .init(id: "other", label: "Something else", symbol: "sparkles", metric: nil),
+    ]
+
+    private var focusPage: some View {
         layout(
-            kicker: "Your readings",
-            title: "Connect Apple Health.",
-            body: "Steps, sleep, heart rate and the rest, read straight from your iPhone and watch. Nothing to type in, ever.",
-            art: { plate("watch") },
-            primary: healthConnected ? "Connected" : "Connect Apple Health",
-            primaryDone: healthConnected,
+            kicker: "To begin with",
+            title: "What would you like to take care of?",
+            body: "Pick as many as you like. It decides what the app puts in front of you first.",
+            artHeight: nil,
+            art: {
+                VStack(spacing: 8) {
+                    ForEach(focuses, id: \.id) { f in
+                        choice(f.label, f.symbol, on: chosenFocus.contains(f.id)) {
+                            if chosenFocus.contains(f.id) { chosenFocus.remove(f.id) }
+                            else { chosenFocus.insert(f.id) }
+                        }
+                    }
+                }
+            },
+            primary: "Continue",
+            reassurance: "Nothing here locks anything away. Every part of the app stays available whatever you pick.",
             action: {
-                if healthConnected { go(2); return }
-                try? await health.requestAuthorization()
-                healthConnected = true
-                // Nothing, or zero, reads as a broken app rather than a quiet
-                // morning; Health also returns nothing when access was declined.
-                if let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 { todaySteps = steps }
-                try? await Task.sleep(for: .milliseconds(450))
+                chosenGoals = Set(focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric))
                 go(2)
             },
-            skip: "Not now"
+            skip: "Skip"
         )
     }
 
-    // MARK: 3 · A first goal
+    // MARK: 3 · A word back
+
+    private var encouragementPage: some View {
+        layout(
+            kicker: "Good start",
+            title: "That is the part most people never get to.",
+            body: "Deciding what you actually want to change is harder than any of the tracking. The rest of this is switches.",
+            art: { plate("stride").padding(.horizontal, 40) },
+            primary: "Keep going",
+            action: { go(3) }
+        )
+    }
+
+    // MARK: 4 · How the week usually goes
+
+    private let rhythms: [(id: String, label: String, scale: Double)] = [
+        ("rarely", "Rarely — I'm mostly sitting", 0.70),
+        ("sometimes", "A few times a week", 0.85),
+        ("most", "Most days", 1.00),
+        ("daily", "Every day, without fail", 1.20),
+    ]
+
+    private var rhythmPage: some View {
+        layout(
+            kicker: "Your week",
+            title: "How often do you get moving?",
+            body: "So the first target is one you can actually hit. A goal set too high is just a daily reminder that you missed it.",
+            artHeight: nil,
+            art: {
+                VStack(spacing: 8) {
+                    ForEach(rhythms, id: \.id) { r in
+                        choice(r.label, nil, on: rhythm == r.id) { rhythm = r.id }
+                    }
+                }
+            },
+            primary: "Continue",
+            reassurance: "You can move any target up or down later, in one tap.",
+            action: { go(4) },
+            skip: "Skip"
+        )
+    }
+
+    // MARK: 5 · A first goal
 
     private struct Suggestion {
         let id: String
         let symbol: String
         let label: String
         let value: String
+        let target: Double
     }
 
+    /// What the goals page offers: whatever the focus page implied, then the
+    /// usual three to fill out the list, never the same one twice.
     private var suggestions: [Suggestion] {
-        ["steps", "sleep", "daylight"].compactMap { id in
-            guard let spec = Metrics.by(id: id), let target = Goals.suggestion(for: spec) else { return nil }
+        let wanted = focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric)
+        var ids = wanted
+        for id in ["steps", "sleep", "daylight"] where !ids.contains(id) { ids.append(id) }
+
+        return ids.prefix(4).compactMap { id in
+            guard let spec = Metrics.by(id: id), let base = Goals.suggestion(for: spec) else { return nil }
+            let target = id == "steps" ? scaled(base) : base
             let unit = spec.unit.isEmpty ? "" : " \(spec.unit)"
             let shown = spec.precision == 0 ? MetricSpec.grouped(target) : Goals.editable(spec, target)
-            return Suggestion(id: id, symbol: spec.symbol, label: spec.label, value: "\(shown)\(unit)")
+            return Suggestion(id: id, symbol: spec.symbol, label: spec.label, value: "\(shown)\(unit)", target: target)
         }
+    }
+
+    /// The step target, moved to meet the week that was described.
+    ///
+    /// Rounded to the nearest hundred, because "6,800 steps" is a target and
+    /// "6,847 steps" is an output.
+    private func scaled(_ base: Double) -> Double {
+        guard let id = rhythm, let scale = rhythms.first(where: { $0.id == id })?.scale else { return base }
+        return (base * scale / 100).rounded() * 100
     }
 
     private var goalsPage: some View {
@@ -243,6 +420,7 @@ struct OnboardingView: View {
             kicker: "Something to aim at",
             title: "Pick a first goal.",
             body: "The daily briefing closes with whichever ones the day hasn't met. You can change them any time.",
+            artHeight: nil,
             art: {
                 VStack(spacing: 10) {
                     ForEach(suggestions, id: \.id) { s in
@@ -253,11 +431,10 @@ struct OnboardingView: View {
             },
             primary: chosenGoals.isEmpty ? "Continue" : "Set \(chosenGoals.count == 1 ? "this goal" : "these goals")",
             action: {
-                for s in suggestions {
-                    guard let spec = Metrics.by(id: s.id) else { continue }
-                    if chosenGoals.contains(s.id) { Goals.set(s.id, Goals.suggestion(for: spec)) }
+                for s in suggestions where chosenGoals.contains(s.id) {
+                    Goals.set(s.id, s.target)
                 }
-                go(3)
+                go(5)
             },
             skip: "Skip"
         )
@@ -301,7 +478,71 @@ struct OnboardingView: View {
         .buttonStyle(.press)
     }
 
-    // MARK: 4 · Notifications
+    // MARK: 6 · What happens to it
+
+    /// Said before Apple Health is asked for, not after.
+    ///
+    /// Everything on this page is a decision in the code rather than a
+    /// promise: the cycle is kept out of HealthSnapshot, and readings are
+    /// written by Apple's on-device model. It is the last thing somebody sees
+    /// before the permission sheet, which is when they are deciding.
+    private var privacyPage: some View {
+        layout(
+            kicker: "Before we go further",
+            title: "What you record here stays yours.",
+            body: "Your readings are written on this phone by Apple's own model — your health data is never sent to an AI company. Cycle tracking never leaves the device at all. Nothing is sold, and there is no advertising or tracking in this app.",
+            art: {
+                ZStack {
+                    Circle().fill(Theme.positive.opacity(0.10)).frame(width: 180, height: 180)
+                    Circle().fill(Theme.positive.opacity(0.16)).frame(width: 120, height: 120)
+                    Image(systemName: "lock")
+                        .font(.system(size: 46, weight: .light))
+                        .environment(\.symbolVariants, .none)
+                        .foregroundStyle(Theme.positive)
+                        .symbolEffect(.bounce, value: page)
+                }
+                .accessibilityHidden(true)
+            },
+            primary: "Good to know",
+            action: { go(6) }
+        )
+    }
+
+    // MARK: 7 · Apple Health
+
+    /// Named after the goal that was just set, when there was one, so the
+    /// permission arrives attached to something the person asked for.
+    private var healthReason: String {
+        guard let first = suggestions.first(where: { chosenGoals.contains($0.id) }) else {
+            return "Steps, sleep, heart rate and the rest, read straight from your iPhone and watch. Nothing to type in, ever."
+        }
+        return "So \(first.label.lowercased()) counts itself. It is read straight from your iPhone and watch — nothing to type in, ever."
+    }
+
+    private var healthPage: some View {
+        layout(
+            kicker: "Your readings",
+            title: "Connect Apple Health.",
+            body: healthReason,
+            art: { plate("watch") },
+            primary: healthConnected ? "Connected" : "Connect Apple Health",
+            primaryDone: healthConnected,
+            reassurance: "Apple asks which categories to share, and you choose. You can change it later in the Health app.",
+            action: {
+                if healthConnected { go(7); return }
+                try? await health.requestAuthorization()
+                healthConnected = true
+                // Nothing, or zero, reads as a broken app rather than a quiet
+                // morning; Health also returns nothing when access was declined.
+                if let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 { todaySteps = steps }
+                try? await Task.sleep(for: .milliseconds(450))
+                go(7)
+            },
+            skip: "Not now"
+        )
+    }
+
+    // MARK: 8 · Notifications
 
     private var notificationsPage: some View {
         layout(
@@ -322,20 +563,91 @@ struct OnboardingView: View {
             },
             primary: notificationsOn ? "Turned on" : "Turn on notifications",
             primaryDone: notificationsOn,
+            reassurance: "There is no daily nag and no streak to keep. Turn them off any time in Settings.",
             action: {
-                if notificationsOn { go(4); return }
+                if notificationsOn { go(8); return }
                 if await Notifier.shared.permitted() {
                     notificationsOn = true
                     Push.register()
                 }
                 try? await Task.sleep(for: .milliseconds(450))
-                go(4)
+                go(8)
             },
             skip: "Not now"
         )
     }
 
-    // MARK: 5 · Ready
+    // MARK: 9 · What is in here
+
+    private var tourPage: some View {
+        layout(
+            kicker: "What you'll find",
+            title: "Four things, and that's the whole app.",
+            body: "",
+            artHeight: nil,
+            art: {
+                VStack(spacing: 2) {
+                    tourRow("newspaper", "Daily news", "What changed since yesterday, in a sentence.")
+                    tourRow("waveform.path.ecg", "Your readings", "Every measurement your phone and watch record.")
+                    tourRow("stethoscope", "Practitioners", "Ask someone qualified, and read what they write.")
+                    tourRow("drop", "Your cycle", "Four phases, tracked on this phone and nowhere else.")
+                }
+            },
+            primary: "Nearly there",
+            action: { go(9) }
+        )
+    }
+
+    private func tourRow(_ symbol: String, _ title: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .light))
+                .environment(\.symbolVariants, .none)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 40, height: 40)
+                .background(Theme.accent.opacity(0.12), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(Theme.sans(16, medium: true))
+                    .foregroundStyle(Theme.text)
+                Text(detail)
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 10)
+    }
+
+    // MARK: 10 · What costs money
+
+    /// Said plainly rather than hidden, because the free app is genuinely
+    /// usable and a paywall that overstates itself is both dishonest and a
+    /// review risk. Skipping it is a full-width button, not a grey word.
+    private var planPage: some View {
+        layout(
+            kicker: "Free, mostly",
+            title: "What you have already is yours.",
+            body: "Every chart, every goal, the cycle tracker and readings written on your own phone cost nothing, for good. A subscription adds the practitioners' articles and keeps your readings in sync.",
+            art: {
+                ZStack {
+                    Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 46, weight: .light))
+                        .environment(\.symbolVariants, .none)
+                        .foregroundStyle(Theme.accent)
+                        .symbolEffect(.bounce, value: page)
+                }
+                .accessibilityHidden(true)
+            },
+            primary: "See what's included",
+            action: { showingPlans = true },
+            skip: "Continue with the free app"
+        )
+    }
+
+    // MARK: 11 · Ready
 
     private var readyPage: some View {
         layout(
@@ -389,7 +701,7 @@ struct OnboardingView: View {
 struct OnboardingGate<Content: View>: View {
     /// Versioned, so a new introduction is shown once even to people who
     /// finished the old one.
-    @AppStorage("onboarded_v2") private var done = false
+    @AppStorage("onboarded_v3") private var done = false
     @ViewBuilder var content: Content
 
     var body: some View {
