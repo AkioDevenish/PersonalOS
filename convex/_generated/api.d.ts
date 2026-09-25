@@ -32,6 +32,7 @@ import type * as health_samples from "../health/samples.js";
 import type * as health_signal from "../health/signal.js";
 import type * as health_tokens from "../health/tokens.js";
 import type * as http from "../http.js";
+import type * as legal from "../legal.js";
 import type * as lib_me from "../lib/me.js";
 import type * as marketing from "../marketing.js";
 import type * as payouts from "../payouts.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   "health/signal": typeof health_signal;
   "health/tokens": typeof health_tokens;
   http: typeof http;
+  legal: typeof legal;
   "lib/me": typeof lib_me;
   marketing: typeof marketing;
   payouts: typeof payouts;

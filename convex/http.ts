@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
 import { auth } from "./auth"
+import { privacy, terms } from "./legal"
 
 /**
  * The one page this system still needs to be a web page.
@@ -68,5 +69,10 @@ http.route({
     )
   }),
 })
+
+// Asked for by Google's consent screen, Meta's app review and the App Store,
+// and by anyone who wants to know what the app does with their health data.
+http.route({ path: "/privacy", method: "GET", handler: httpAction(async () => privacy()) })
+http.route({ path: "/terms", method: "GET", handler: httpAction(async () => terms()) })
 
 export default http

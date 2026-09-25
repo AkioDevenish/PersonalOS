@@ -19,6 +19,15 @@ enum AppConfig {
     /// Provider key this app reports as — see PROVIDERS in convex/health/metrics.ts
     static let provider = "apple_health"
 
+    /// The privacy policy and the terms, served by the same deployment.
+    ///
+    /// `.site` rather than `.cloud`: the same deployment answers both, but
+    /// pages live on one and the API on the other. Written out rather than
+    /// derived from convexURL, so a typo here fails to compile rather than
+    /// shipping a link that opens nothing.
+    static let privacyURL = URL(string: "https://wary-penguin-35.convex.site/privacy")!
+    static let termsURL = URL(string: "https://wary-penguin-35.convex.site/terms")!
+
     /// Resume token from the last anchored query, so each sync asks only for
     /// what changed. Opaque to us; the server round-trips it.
     private static let cursorKey = "personal_os_sync_cursor"

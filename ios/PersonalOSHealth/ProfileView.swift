@@ -46,6 +46,12 @@ struct ProfileView: View {
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }
+                // An app that sells an auto-renewing subscription has to carry
+                // working links to both of these, and somebody handing over
+                // their health data is owed a way to read what happens to it
+                // without going looking for a website.
+                row("hand.raised", "Privacy") { openURL(AppConfig.privacyURL) }
+                row("doc.text", "Terms") { openURL(AppConfig.termsURL) }
 
                 if abilities.canReview {
                     Text("Team")
