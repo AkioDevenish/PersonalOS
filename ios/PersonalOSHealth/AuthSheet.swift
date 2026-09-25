@@ -104,9 +104,22 @@ struct AuthSheet: View {
                         .padding(.vertical, 22)
 
                         VStack(spacing: 10) {
-                            if providers.apple { social("Continue with Apple", "apple.logo", .apple) }
-                            if providers.google { social("Continue with Google", "g.circle", .google) }
-                            if providers.facebook { social("Continue with Facebook", "f.circle", .facebook) }
+                            if providers.apple {
+                                social("Continue with Apple", .apple) {
+                                    // Apple's mark ships with the system, and is
+                                    // the one logo here that should take the
+                                    // text colour: black on white, white on black.
+                                    Image(systemName: "apple.logo")
+                                        .font(.system(size: 19))
+                                        .foregroundStyle(Theme.text)
+                                }
+                            }
+                            if providers.google {
+                                social("Continue with Google", .google) { mark("GoogleG") }
+                            }
+                            if providers.facebook {
+                                social("Continue with Facebook", .facebook) { mark("FacebookF") }
+                            }
                         }
                     }
 
@@ -141,8 +154,26 @@ struct AuthSheet: View {
             .modifier(FieldStyle())
     }
 
-    private func social(_ title: String, _ symbol: String, _ provider: Session.Provider) -> some View {
-        Button {
+    /// A provider's own logo, drawn from the vector in the asset catalogue.
+    ///
+    /// These used to be SF Symbols — a grey letter in a grey circle — which
+    /// read as a placeholder rather than as Google or Facebook. Both companies
+    /// ask that their real mark is used on a sign-in button, and it is also
+    /// simply what people recognise at a glance.
+    private func mark(_ name: String) -> some View {
+        Image(name)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 19, height: 19)
+    }
+
+    private func social<Mark: View>(
+        _ title: String,
+        _ provider: Session.Provider,
+        @ViewBuilder mark: () -> Mark
+    ) -> some View {
+        let logo = mark()
+        return Button {
             Task {
                 working = true
                 failure = nil
@@ -157,15 +188,22 @@ struct AuthSheet: View {
                 }
             }
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: symbol).font(.system(size: 17))
+            HStack(spacing: 12) {
+                logo
                 Text(title)
             }
-            .font(Theme.sans(15, medium: true))
+            .font(Theme.sans(16, medium: true))
             .foregroundStyle(Theme.text)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Theme.surface, in: Capsule())
+            .padding(.vertical, 16)
+            // The same corner as the fields above, so the sheet reads as one
+            // set of controls. The capsule is kept for the primary action,
+            // which is the one thing here that should not look like the rest.
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Theme.separator, lineWidth: 1)
+            )
         }
         .buttonStyle(.press)
         .disabled(working)
