@@ -6,21 +6,7 @@ import { action } from "./_generated/server"
 import { api, internal } from "./_generated/api"
 import { feeOn } from "./fees"
 
-/**
- * Taking payment for a consultation, from Convex rather than a web server.
- *
- * Apple allows a processor other than in-app purchase here: guideline 3.1.3(d)
- * covers real-time person-to-person services and names medical consultations.
- * Article placement is different and uses in-app purchase; see
- * articlePayments.ts.
- *
- * A port of what a Next route used to do, moved because a phone app should not
- * need a web server of ours to be awake. The secrets stay server side either
- * way; they are Convex environment variables now:
- *
- *   STRIPE_SECRET_KEY
- *   WAM_API_KEY, WAM_BUSINESS_ID, WAM_ENVIRONMENT
- */
+/** Taking payment for a consultation, from Convex rather than a web server. */
 
 type Provider = "wam" | "stripe"
 
@@ -46,7 +32,7 @@ function providerFor(currency: string): Provider | null {
   return null
 }
 
-/** Where a checkout sends somebody when it is done. Served by convex/http.ts. */
+/** Where a checkout sends somebody when it is done. */
 function returnUrl(): string {
   const site = (process.env.CONVEX_CLOUD_URL ?? "").replace(".convex.cloud", ".convex.site")
   return `${site}/pay/done`
@@ -59,10 +45,8 @@ function wamBase() {
 }
 
 /**
- * Wam signs the body rather than just the key: HMAC-SHA256 over
- * `{timestamp}.{json}`, keyed with the API key, lowercase hex. Signing the
- * exact string that is sent, not a re-serialised copy of it, is the part that
- * is easy to get wrong.
+ * Wam signs the body rather than just the key: HMAC-SHA256 over `{timestamp}.{json}`, keyed with
+ * the API key, lowercase hex.
  */
 function wamHeaders(body: string) {
   const timestamp = Math.floor(Date.now() / 1000).toString()
@@ -89,8 +73,8 @@ async function wamCheckout(args: {
     orderReference: args.reference,
     description: args.description,
     returnUrl: returnUrl(),
-    // The session id, so a retry after a dropped connection cannot raise a
-    // second charge for the same conversation.
+    // The session id, so a retry after a dropped connection cannot raise a second charge for the
+    // same conversation.
     idempotencyKey: args.reference,
   })
   const response = await fetch(`${wamBase()}/api/public/payment-intents`, {
@@ -115,8 +99,8 @@ async function wamSettled(paymentId: string): Promise<boolean> {
 }
 
 /**
- * Stripe over its REST API rather than the SDK, which keeps a large
- * dependency out of the tree for two requests that are a form post each.
+ * Stripe over its REST API rather than the SDK, which keeps a large dependency out of the tree for
+ * two requests that are a form post each.
  */
 async function stripeCheckout(args: {
   amountMinor: number; currency: string; reference: string; description: string
@@ -134,9 +118,7 @@ async function stripeCheckout(args: {
     "line_items[0][price_data][product_data][name]": args.description,
   })
 
-  // Split at the moment of payment. The practitioner is paid directly and the
-  // platform's share is taken out in the same transaction, so nothing is owed
-  // to anybody afterwards and no money of theirs sits in our account.
+  // Split at the moment of payment.
   if (args.destination) {
     form.set("payment_intent_data[transfer_data][destination]", args.destination)
     form.set("payment_intent_data[application_fee_amount]", String(feeOn(args.amountMinor)))
@@ -199,11 +181,8 @@ export const checkout = action({
           destination,
         })
 
-    // Recorded before the payer leaves, so a payment that completes can be
-    // traced back even if they close the app on the checkout page. The fee is
-    // recorded either way; `owed` marks the ones that were not split, which is
-    // every Wam payment and any Stripe one to a practitioner who has not
-    // finished onboarding.
+    // Recorded before the payer leaves, so a payment that completes can be traced back even if they
+    // close the app on the checkout page.
     await ctx.runMutation(api.health.consult.attachPayment, {
       id: args.id,
       ref: `${raised.provider}:${raised.ref}`,
@@ -214,13 +193,7 @@ export const checkout = action({
   },
 })
 
-/**
- * Asks the processor what happened, and only then marks the session paid.
- *
- * Coming back from a checkout page proves nothing: it is a URL the payer could
- * type themselves, and both processors say so in their own documentation. This
- * is the only path to paid, because the mutation behind it is internal.
- */
+/** Asks the processor what happened, and only then marks the session paid. */
 export const settled = action({
   args: { id: v.id("consults") },
   handler: async (ctx, args): Promise<{ paid: boolean }> => {
@@ -231,8 +204,8 @@ export const settled = action({
     if (bill.payment_status === "paid" || bill.price_minor <= 0) return { paid: true }
     if (!bill.payment_ref) return { paid: false }
 
-    // "wam:pi_123" — the provider travels with its own reference so a stored
-    // payment can still be checked after the routing rules change.
+    // "wam:pi_123" — the provider travels with its own reference so a stored payment can still be
+    // checked after the routing rules change.
     const [provider, ...rest] = bill.payment_ref.split(":")
     const ref = rest.join(":")
     if (provider !== "wam" && provider !== "stripe") return { paid: false }

@@ -2,10 +2,6 @@ import SwiftUI
 import WebRTC
 
 /// One specialist, and the two ways of reaching them.
-///
-/// The fee is stated here and taken here, before anything opens. Somebody
-/// should never find out what a conversation cost by looking at their balance
-/// afterwards.
 struct SpecialistProfileView: View {
     let specialist: SpecialistsClient.Specialist
 
@@ -121,8 +117,7 @@ struct SpecialistProfileView: View {
         .compactsTabBar()
         .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
-        // A paid conversation is confirmed before the credits move. A free one
-        // has nothing to confirm, so it simply opens.
+        // A paid conversation is confirmed before the credits move.
         .confirmationDialog(
             confirmTitle,
             isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
@@ -136,8 +131,6 @@ struct SpecialistProfileView: View {
         }
         .fullScreenCover(item: $session) { opened in
             // A session that owes money does not open into the conversation.
-            // Being able to talk first and settle later is not a payment flow,
-            // it is an invoice nobody agreed to.
             if opened.owing {
                 PaymentView(specialist: specialist, session: opened)
             } else if opened.kind == "video" {
@@ -149,10 +142,6 @@ struct SpecialistProfileView: View {
     }
 
     /// Their face, or the initials standing in for one.
-    ///
-    /// The initials are drawn underneath rather than swapped in while loading:
-    /// a placeholder that flashes on every appearance is worse than one that
-    /// simply sits there until the photograph covers it.
     private var portrait: some View {
         ZStack {
             Circle().fill(Theme.accent.opacity(0.16))
@@ -242,10 +231,6 @@ struct SpecialistProfileView: View {
 extension SessionClient.Opened: Identifiable {}
 
 /// A written conversation.
-///
-/// Polled rather than pushed: the phone reaches Convex over HTTP, so there is
-/// no subscription to hold open. Three seconds apart is close enough to feel
-/// like a conversation, and it stops the moment the screen goes away.
 struct ChatView: View {
     /// Who is on the other end, as it should read in the header.
     let peer: String
@@ -267,10 +252,6 @@ struct ChatView: View {
     private let client = SessionClient()
 
     /// Messages grouped by the day they were sent, oldest first.
-    ///
-    /// A conversation with a practitioner is not read in one sitting: a reply
-    /// can be a day later, and without a date the two halves read as one
-    /// exchange that contradicts itself.
     private var days: [(day: Date, messages: [SessionClient.Message])] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: thread.messages) {
@@ -334,8 +315,8 @@ struct ChatView: View {
             }
         }
         .onDisappear { poller?.cancel() }
-        // Asked here, the first time somebody opens a conversation, because
-        // this is the screen whose whole point is a reply arriving later.
+        // Asked here, the first time somebody opens a conversation, because this is the screen
+        // whose whole point is a reply arriving later.
         .task {
             if await Notifier.shared.permitted() { Push.register() }
         }
@@ -418,8 +399,8 @@ struct ChatView: View {
             }
             Rule()
             HStack(spacing: 12) {
-                // The reason this app exists: a practitioner reading what was
-                // actually recorded rather than what somebody remembers.
+                // The reason this app exists: a practitioner reading what was actually recorded
+                // rather than what somebody remembers.
                 if canShareReadings {
                     Button {
                         Haptics.tap()
@@ -482,10 +463,6 @@ struct ChatView: View {
 }
 
 /// The call, drawn by this app.
-///
-/// No web view and no hosted interface: the two video tracks come out of our
-/// own peer connection and are rendered here, so the screen belongs to the
-/// app rather than to whoever was carrying the media.
 struct VideoCallView: View {
     let peer: String
     let sessionId: String
@@ -493,8 +470,8 @@ struct VideoCallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var engine: CallEngine
     @State private var chatting = false
-    /// How many messages had arrived when the chat was last closed, so the
-    /// badge counts what has not been read rather than what exists.
+    /// How many messages had arrived when the chat was last closed, so the badge counts what has
+    /// not been read rather than what exists.
     @State private var readUpTo = 0
     @State private var messageCount = 0
 
@@ -522,9 +499,7 @@ struct VideoCallView: View {
                 controls
             }
 
-            // Yourself, small, in the corner — and only once there is
-            // somebody else to look at. Before that you are the whole screen,
-            // which is what the waiting state is for.
+            // Yourself, small, in the corner — and only once there is somebody else to look at.
             if engine.remoteTrack != nil, let local = engine.localTrack, engine.cameraOn {
                 VStack {
                     HStack {
@@ -543,8 +518,8 @@ struct VideoCallView: View {
         .onChange(of: engine.state) { _, state in
             if state == .ended { dismiss() }
         }
-        // Counted while the call runs so the badge is right when somebody
-        // writes during it, which is the whole reason chat belongs here.
+        // Counted while the call runs so the badge is right when somebody writes during it, which
+        // is the whole reason chat belongs here.
         .task {
             while !Task.isCancelled {
                 if let thread = try? await SessionClient().thread(id: sessionId) {
@@ -555,8 +530,7 @@ struct VideoCallView: View {
         }
         .sheet(isPresented: $chatting) {
             ChatView(peer: peer, sessionId: sessionId)
-                // Half height, so the call is still visible behind the words
-                // being typed about it.
+                // Half height, so the call is still visible behind the words being typed about it.
                 .presentationDetents([.medium, .large])
                 .presentationBackground(Theme.background)
                 .onDisappear { readUpTo = messageCount }
@@ -616,8 +590,8 @@ struct VideoCallView: View {
                     ProgressView().tint(.white)
                 }
 
-                // Said before a call fails rather than after, since this is
-                // the cause of most calls that cannot connect.
+                // Said before a call fails rather than after, since this is the cause of most calls
+                // that cannot connect.
                 if !engine.relayAvailable, engine.state != .live {
                     Text("No relay server is configured, so this will only connect if a direct route exists.")
                         .font(Theme.sans(10.5))
@@ -632,8 +606,8 @@ struct VideoCallView: View {
         }
     }
 
-    /// Flip and chat: useful, but not the three things somebody reaches for
-    /// in a hurry, so they sit smaller and above.
+    /// Flip and chat: useful, but not the three things somebody reaches for in a hurry, so they sit
+    /// smaller and above.
     private var secondaryControls: some View {
         HStack(spacing: 14) {
             small("arrow.triangle.2.circlepath.camera") {
@@ -723,8 +697,8 @@ private struct VideoTrackView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: RTCMTLVideoView, context: Context) {
-        // Swapping tracks without detaching the old one leaves it rendering
-        // into a view nobody can see, and holding the camera open with it.
+        // Swapping tracks without detaching the old one leaves it rendering into a view nobody can
+        // see, and holding the camera open with it.
         guard context.coordinator.attached !== track else { return }
         context.coordinator.attached?.remove(view)
         track.add(view)
@@ -743,15 +717,6 @@ private struct VideoTrackView: UIViewRepresentable {
 }
 
 /// Paying for a conversation.
-///
-/// The checkout itself belongs to the processor: a hosted page, opened in the
-/// browser, where card details are typed somewhere that is built to receive
-/// them and this app never sees them.
-///
-/// Coming back from that page proves nothing — it is a URL the payer could
-/// type themselves, and both processors say plainly not to act on it. So the
-/// screen asks the server, which asks the processor, and only an answer from
-/// there opens the conversation.
 struct PaymentView: View {
     let specialist: SpecialistsClient.Specialist
     let session: SessionClient.Opened
@@ -863,8 +828,8 @@ struct PaymentView: View {
         starting = false
     }
 
-    /// Asks every few seconds while this screen is up, and gives up after a
-    /// few minutes rather than polling a payment nobody is going to finish.
+    /// Asks every few seconds while this screen is up, and gives up after a few minutes rather than
+    /// polling a payment nobody is going to finish.
     private func watch() {
         poller?.cancel()
         poller = Task {
@@ -883,11 +848,6 @@ struct PaymentView: View {
 }
 
 /// Handing your readings to a practitioner.
-///
-/// The whole text is shown before anything is sent, and it is sent verbatim.
-/// What the practitioner reads is exactly what was on this screen when the
-/// person agreed to it — no summary made afterwards, no field they did not
-/// see. That is the difference between sharing health data and leaking it.
 struct ShareReadingsSheet: View {
     let peerName: String
     let send: (String) async throws -> Void
@@ -975,10 +935,6 @@ struct ShareReadingsSheet: View {
     }
 
     /// The day as a short block of lines, one measure each.
-    ///
-    /// Plain text rather than anything structured: it travels as a message and
-    /// is read by a person, so it has to make sense on its own in a
-    /// conversation rather than needing the app to render it.
     static func compose(_ snapshot: HealthSnapshot?) -> String {
         guard let snapshot else { return "" }
 

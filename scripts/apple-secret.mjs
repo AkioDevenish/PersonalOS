@@ -1,24 +1,7 @@
 #!/usr/bin/env node
 /**
- * Turns an Apple private key into the client secret Sign in with Apple wants.
- *
- * Google and Facebook hand you a secret string you paste and forget. Apple
- * does not: it gives you a .p8 signing key, and the "secret" is a JWT you
- * sign with it yourself. Apple refuses one older than six months, so this is
- * a thing you run again twice a year rather than a thing you do once.
- *
- * The .p8 never leaves this machine — only the JWT it produces goes to the
- * deployment, and the JWT expires on its own.
- *
- *   node scripts/apple-secret.mjs \
- *     --key ~/Downloads/AuthKey_ABC123XYZ.p8 \
- *     --team TEAMID1234 \
- *     --kid ABC123XYZ \
- *     --services-id ADEVSTUDIO.PersonalOSHealth.signin
- *
- * Then, to put it on the deployment:
- *
- *   npx convex env set AUTH_APPLE_SECRET "<the printed JWT>"
+ * Turns an Apple .p8 key into the Sign in with Apple client secret. Valid six months.
+ * Usage: node scripts/apple-secret.mjs --key AuthKey.p8 --team TEAMID --kid KEYID --services-id ID
  */
 import { readFileSync } from "node:fs"
 import { SignJWT, importPKCS8 } from "jose"
@@ -46,8 +29,7 @@ if (missing.length) {
   process.exit(1)
 }
 
-// Apple's cap is six months. Anything longer is rejected outright, so this
-// asks for exactly that and prints the date it stops working.
+// Apple's cap is six months.
 const SIX_MONTHS = 15777000
 const now = Math.floor(Date.now() / 1000)
 const expires = now + SIX_MONTHS

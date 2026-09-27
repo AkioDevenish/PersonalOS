@@ -3,25 +3,6 @@ import AVFoundation
 import CoreImage.CIFilterBuiltins
 
 /// The walking figure, walking.
-///
-/// A short clip rather than a drawing moved around in code: his legs and his
-/// tunic actually move, which no amount of bobbing a still image can fake.
-///
-/// The file is prepared so this can stay simple. The last half second of the
-/// original cross-dissolves into its first, so the loop point is no bigger a
-/// change than an ordinary frame, and the audio track is stripped, so playing
-/// it never takes over whatever somebody is listening to.
-///
-/// It is black ink on white, and every frame is cleaned as it plays. The
-/// clip's white is not quite white: compression leaves a faint speckle and a
-/// tint that cannot be seen on its own but shows as a blotchy box against a
-/// truly white page, and far worse once inverted. So the colour is taken out
-/// and anything near white is pushed to white. On a dark page the result is
-/// then inverted, white ink on black, and black is the page again. Measured
-/// against the page colour, none of the background differs.
-///
-/// A still drawing under Reduce Motion, since a figure pacing on a loop is the
-/// kind of idle movement that setting asks apps not to make.
 struct WalkingVideo: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,8 +16,8 @@ struct WalkingVideo: View {
                 .foregroundStyle(Theme.text)
         } else {
             LoopingPlayer(inverted: scheme == .dark)
-                // Rebuilt when the appearance changes, so the inversion is
-                // decided once per player rather than checked every frame.
+                // Rebuilt when the appearance changes, so the inversion is decided once per player
+                // rather than checked every frame.
                 .id(scheme)
                 .aspectRatio(1, contentMode: .fit)
         }

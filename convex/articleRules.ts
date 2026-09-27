@@ -1,23 +1,4 @@
-/**
- * What an article must be before a person is asked to review it.
- *
- * Plain functions with no database and no identity, so the whole of the
- * automatic check can be tested on its own and run identically on every save
- * and every submission. The server is the only place this runs: a check the
- * app performs is a check an edited request skips.
- *
- * Two kinds of finding, and the difference is the point.
- *
- * Errors block submission. They are things no reviewer should spend time on:
- * a missing summary, a body too short to be an article, a link. Links are the
- * strictest rule here because they are how a health platform ends up sending
- * readers to a supplement shop, and there is no reviewer workload at which
- * checking every destination is sustainable.
- *
- * Flags do not block. A sentence containing "cure" may be a warning against
- * miracle cures. Deciding that is judgement, so it is put in front of the
- * reviewer, highlighted, rather than decided by a regular expression.
- */
+/** What an article must be before a person is asked to review it. */
 
 export const CATEGORIES = ["Your cycle", "Sleep & recovery", "Moving", "Eating", "Mind"] as const
 
@@ -71,13 +52,7 @@ const LINK = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(com|org|net|io|co|shop|store|
 const EMAIL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i
 const PHONE_RUN = /\+?\d[\d\s().-]{6,}\d/g
 
-/**
- * A run of digits and phone punctuation holding at least nine digits.
- *
- * Counted rather than matched by shape, because "2019 - 2023" and "7 to 9
- * hours, 10 - 12" are the same characters as a phone number to a pattern and
- * an article about research years should not be refused for it.
- */
+/** A run of digits and phone punctuation holding at least nine digits. */
 function containsPhone(text: string): boolean {
   return (text.match(PHONE_RUN) ?? []).some((run) => (run.match(/\d/g) ?? []).length >= 9)
 }

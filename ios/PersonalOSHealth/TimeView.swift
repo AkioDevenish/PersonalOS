@@ -1,10 +1,6 @@
 import SwiftUI
 
 /// The time tab.
-///
-/// The money tab's twin, and built to look like it on purpose: the same window
-/// picker, the same headline-then-breakdown-then-entries shape. Two ledgers
-/// that behave differently would be two apps.
 struct TimeView: View {
     @State private var span: LedgerSpan = .week
     @State private var ledger = TimeClient.Ledger.empty
@@ -53,10 +49,7 @@ struct TimeView: View {
                     Composing(lines: 4)
                         .frame(height: 96)
                         .padding(.top, 40)
-                // Only claim the ledger is empty when it actually read
-                // as empty. A failed read shows nothing either, and
-                // "nothing written yet" over a network error tells the
-                // reader their entries are gone.
+                // Only claim the ledger is empty when it actually read as empty.
                 } else if ledger.blocks.isEmpty && failure == nil {
                     empty
                 } else {
@@ -181,8 +174,8 @@ struct TimeView: View {
         do {
             ledger = try await client.ledger(from: w.from, to: w.to)
         } catch where error.isCancellation {
-            // A rebuilt view calls off its own request; that is not a failure
-            // anybody can act on and it is never shown.
+            // A rebuilt view calls off its own request; that is not a failure anybody can act on
+            // and it is never shown.
             return
         } catch {
             failure = error.localizedDescription

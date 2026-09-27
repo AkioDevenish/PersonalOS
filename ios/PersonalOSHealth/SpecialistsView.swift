@@ -2,11 +2,6 @@ import SwiftUI
 import PhotosUI
 
 /// The people you can ask, as cards.
-///
-/// A list of names would not answer the question anyone actually arrives with,
-/// which is "who here knows about the thing that is wrong with me". So the
-/// specialisms are the loudest part of each card, above the qualifications and
-/// well above the price.
 struct SpecialistsView: View {
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
 
@@ -89,10 +84,7 @@ struct SpecialistsView: View {
         .compactsTabBar()
         .background(Theme.background)
         .refreshable { await load() }
-        // Deliberately not `.task`. That binds the request's lifetime to this
-        // view, and SwiftUI tears the view down and rebuilds it as the drawer
-        // closes behind the push, killing the read before it lands. A task
-        // started here outlives the rebuild.
+        // Deliberately not `.task`.
         .onAppear {
             guard desk.specialists.isEmpty else { return }
             Task { await load() }
@@ -100,14 +92,14 @@ struct SpecialistsView: View {
     }
 
 
-    /// Every specialism anyone in the directory actually lists, so the filter
-    /// row offers only things that will return somebody.
+    /// Every specialism anyone in the directory actually lists, so the filter row offers only
+    /// things that will return somebody.
     private var offered: [String] {
         Array(Set(desk.specialists.flatMap(\.specialties))).sorted()
     }
 
-    /// Matches on the things a person would actually type: a name, a
-    /// specialism, a qualification, or where somebody is.
+    /// Matches on the things a person would actually type: a name, a specialism, a qualification,
+    /// or where somebody is.
     private var shown: [SpecialistsClient.Specialist] {
         var list = desk.specialists
 
@@ -124,8 +116,8 @@ struct SpecialistsView: View {
             let haystack = ([one.name, one.credentials, one.place] + one.specialties)
                 .joined(separator: " ")
                 .lowercased()
-            // Every word has to appear somewhere, so "sleep trinidad" narrows
-            // rather than widening the way an any-word match would.
+            // Every word has to appear somewhere, so "sleep trinidad" narrows rather than widening
+            // the way an any-word match would.
             return q.split(separator: " ").allSatisfy { haystack.contains($0) }
         }
     }
@@ -163,8 +155,8 @@ struct SpecialistsView: View {
     private var filterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
-                // First, because "who can answer me now" beats any specialism
-                // when somebody is worried today.
+                // First, because "who can answer me now" beats any specialism when somebody is
+                // worried today.
                 Button {
                     Haptics.select()
                     withAnimation(Theme.Motion.bouncy) { hereOnly.toggle() }
@@ -249,8 +241,8 @@ struct SpecialistsView: View {
                 AsyncImage(url: url) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
-                    // Nothing: the initials underneath are the placeholder,
-                    // which beats a spinner that flashes on every scroll.
+                    // Nothing: the initials underneath are the placeholder, which beats a spinner
+                    // that flashes on every scroll.
                     Color.clear
                 }
                 .clipShape(Circle())
@@ -320,8 +312,8 @@ struct SpecialistsView: View {
                     .font(Theme.sans(12, medium: true))
                     .foregroundStyle(one.free ? Theme.positive : Theme.tertiaryText)
 
-                // What you can actually do with them, said on the card so
-                // nobody taps through to find out there is no call.
+                // What you can actually do with them, said on the card so nobody taps through to
+                // find out there is no call.
                 Label("Chat", systemImage: "bubble.left")
                     .labelStyle(.iconOnly)
                     .font(.system(size: 13, weight: .light))
@@ -367,8 +359,7 @@ struct SpecialistsView: View {
         do {
             desk = try await client.desk()
         } catch where error.isCancellation {
-            // Called off, not refused. Leave the shimmer up: whatever rebuilt
-            // the view will bring us back through onAppear.
+            // Called off, not refused.
             return
         } catch {
             failure = error.localizedDescription
@@ -438,8 +429,8 @@ struct SpecialistApplicationSheet: View {
     @State private var saving = false
     @State private var failure: String?
 
-    /// The things people most often want a practitioner for, so the common
-    /// case is a tap rather than typing.
+    /// The things people most often want a practitioner for, so the common case is a tap rather
+    /// than typing.
     private let suggested = [
         "Diabetes", "Sports nutrition", "Sleep", "Weight", "Gut health",
         "Heart health", "Pregnancy", "Vegetarian",
@@ -671,8 +662,7 @@ struct SpecialistApplicationSheet: View {
         do {
             guard let raw = try await item.loadTransferable(type: Data.self),
                   let image = UIImage(data: raw) else { return }
-            // Down to something a card can use. A twelve megapixel photograph
-            // is forty times the size of the circle it will be shown in.
+            // Down to something a card can use.
             let side: CGFloat = 512
             let scale = min(side / max(image.size.width, 1), side / max(image.size.height, 1), 1)
             let target = CGSize(width: image.size.width * scale, height: image.size.height * scale)

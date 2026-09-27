@@ -4,11 +4,7 @@ import { mutation, query, internalQuery, internalMutation } from "../_generated/
 import { isProvider, isMetricKey, defaultPriority, type MetricKey } from "./metrics"
 import { CONNECTABLE, PROVIDER_INFO } from "./providers"
 
-/**
- * Provider connection lifecycle, plus the per-user trust-order override.
- *
- * No OAuth tokens here — see the note on health_connections in schema.ts.
- */
+/** Provider connection lifecycle, plus the per-user trust-order override. */
 
 export const list = query({
   args: {},
@@ -24,9 +20,9 @@ export const list = query({
 })
 
 /**
- * Every connectable provider merged with this user's connection state — one
- * uniform list for the settings screen, so Apple Health and Oura render as the
- * same kind of card even though their transports differ.
+ * Every connectable provider merged with this user's connection state — one uniform list for the
+ * settings screen, so Apple Health and Oura render as the same kind of card even though their
+ * transports differ.
  */
 export const available = query({
   args: {},
@@ -45,14 +41,7 @@ export const available = query({
       const info = PROVIDER_INFO[key]
       const conn = byProvider.get(key)
 
-      /**
-       * "Connected" is a claim about data, so require the evidence.
-       *
-       * A row saying connected while last_sync_at is empty has never delivered
-       * anything — whatever wrote it was wrong. Deriving the display status
-       * here means a bug upstream (or a row already stored by one) can't
-       * present a green badge for a link that does not exist.
-       */
+      /** "Connected" is a claim about data, so require the evidence. */
       const status =
         conn?.status === "connected" && !conn.last_sync_at ? "pending" : conn?.status ?? "disconnected"
 
@@ -70,18 +59,7 @@ export const available = query({
   },
 })
 
-/**
- * Record the *intent* to connect. Never marks anything live.
- *
- * This is called when the user clicks Connect, which is before anything has
- * actually been established: a cloud provider still has to complete OAuth, and
- * a device still has to send its first batch. Both therefore start `pending`.
- *
- * Only evidence promotes a connection to `connected` — the OAuth callback via
- * linkForUser, or real data arriving via ingest. Marking cloud providers live
- * here previously meant a failed OAuth left behind a card claiming a
- * connection that had never happened.
- */
+/** Record the *intent* to connect. */
 export const connect = mutation({
   args: {
     provider: v.string(),
@@ -122,13 +100,7 @@ export const connect = mutation({
   },
 })
 
-/**
- * Server-to-server link, used by the OAuth callback.
- *
- * The public `connect` derives the user from the session, but a callback has
- * no session it should trust — it has a signed state parameter naming the user
- * who began the flow. So identity is passed explicitly and this stays internal.
- */
+/** Server-to-server link, used by the OAuth callback. */
 export const linkForUser = internalMutation({
   args: {
     userId: v.string(),
@@ -208,15 +180,7 @@ export const recordError = internalMutation({
   },
 })
 
-/**
- * Disconnect a provider.
- *
- * `purge` deletes that provider's samples outright. Offer it — under GDPR and
- * the App Store health-data rules, "I revoked access" should be able to mean
- * "and delete what you took". Default is to keep history so a reconnect
- * doesn't lose a year of data, and because resolution will simply stop
- * choosing a provider once fresher sources exist.
- */
+/** Disconnect a provider. */
 export const disconnect = mutation({
   args: { provider: v.string(), purge: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
@@ -232,8 +196,8 @@ export const disconnect = mutation({
 
     if (conn) await ctx.db.patch(conn._id, { status: "disconnected" })
 
-    // Revoking access must not leave a usable refresh token behind — that is
-    // the whole point of disconnecting.
+    // Revoking access must not leave a usable refresh token behind — that is the whole point of
+    // disconnecting.
     const token = await ctx.db
       .query("health_oauth_tokens")
       .withIndex("by_user_provider", (q) =>
@@ -244,8 +208,8 @@ export const disconnect = mutation({
 
     let purged = 0
     if (args.purge) {
-      // Bounded per call so a heavy account can't blow the transaction limit;
-      // callers should re-invoke until purged === 0.
+      // Bounded per call so a heavy account can't blow the transaction limit; callers should re-
+      // invoke until purged === 0.
       const batch = await ctx.db
         .query("health_samples")
         .withIndex("by_user_provider", (q) =>

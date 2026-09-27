@@ -1,14 +1,6 @@
 import SwiftUI
 
 /// What you're aiming at.
-///
-/// This was every metric the app can measure, each with a text field, which
-/// meant a decimal keypad and a dozen decisions to set one goal. A goal is a
-/// rare thing to set and an easy thing to fumble — a thumb that misses on a
-/// keypad asks for eighty thousand steps — so nothing here is typed.
-///
-/// What is on screen is what you have chosen, and nothing else. Adding one is
-/// a list of what is left, then a single number under your thumb.
 struct GoalsView: View {
     @State private var targets: [String: Double] = [:]
     @State private var adding = false
@@ -101,8 +93,8 @@ struct GoalsView: View {
                 Text(spec.label)
                     .font(Theme.serif(20))
                     .foregroundStyle(Theme.text)
-                // "At least" or "at most" is the whole meaning of the number
-                // beside it, and not something to infer from which metric it is.
+                // "At least" or "at most" is the whole meaning of the number beside it, and not
+                // something to infer from which metric it is.
                 Text(spec.goal == .atMost ? "AT MOST" : "AT LEAST")
                     .font(Theme.sans(9, medium: true))
                     .tracking(1.4)
@@ -119,10 +111,7 @@ struct GoalsView: View {
                     .foregroundStyle(Theme.tertiaryText)
             }
 
-            // Removing a goal was a trip into the editor and a second tap at
-            // the bottom of it. It is the most likely thing somebody wants
-            // from a goal they are looking at and disagreeing with, so it is
-            // on the row.
+            // Removing a goal was a trip into the editor and a second tap at the bottom of it.
             Button { remove(spec) } label: {
                 Image(systemName: "minus.circle")
                     .font(.system(size: 20, weight: .light))
@@ -136,8 +125,7 @@ struct GoalsView: View {
         .padding(.vertical, 16)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { Rule() }
-        // The same thing again for a long press, which is where a lot of
-        // people look first.
+        // The same thing again for a long press, which is where a lot of people look first.
         .contextMenu {
             Button("Remove goal", systemImage: "minus.circle", role: .destructive) { remove(spec) }
         }

@@ -3,12 +3,7 @@ import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
-  /**
-   * Accounts, sessions and sign-in state, owned by this database.
-   *
-   * These replaced Clerk. Nobody else holds the list of who has an account;
-   * it lives beside the data it is the key to.
-   */
+  /** Accounts, sessions and sign-in state, owned by this database. */
   ...authTables,
 
   // Business - CRM
@@ -55,9 +50,8 @@ export default defineSchema({
 
   // Well Being
 
-  // DEPRECATED: Apple-HealthKit-shaped, one column per metric, so every new
-  // provider would need a migration. Superseded by health_samples below.
-  // Kept until the existing read paths are moved over.
+  // DEPRECATED: Apple-HealthKit-shaped, one column per metric, so every new provider would need a
+  // migration.
   health_records: defineTable({
     userId: v.string(), // Clerk user ID
     timestamp: v.number(),
@@ -73,14 +67,7 @@ export default defineSchema({
     .index("by_user_timestamp", ["userId", "timestamp"])
     .index("by_source", ["source"]),
 
-  /**
-   * Provider-agnostic health samples (entity-attribute-value).
-   *
-   * Adding a provider or a metric is data, never a schema change. Raw rows
-   * from every connected provider are kept side by side — overlap is resolved
-   * at read time by convex/health/resolve.ts, never by discarding on write, so
-   * changing the trust order re-resolves history instead of losing it.
-   */
+  /** Provider-agnostic health samples (entity-attribute-value). */
   health_samples: defineTable({
     userId: v.string(), // Clerk user ID
     provider: v.string(), // see PROVIDERS in convex/health/metrics.ts
@@ -89,11 +76,7 @@ export default defineSchema({
     unit: v.string(), // canonical unit for the metric
     recorded_at: v.number(), // epoch ms, start of the sample
     period_end: v.optional(v.number()), // for interval samples (e.g. sleep)
-    /**
-     * Calendar day (YYYY-MM-DD) in the user's timezone at ingest. Denormalised
-     * because bucketing by day in a query would otherwise mean reading a whole
-     * range and grouping in JS on every request.
-     */
+    /** Calendar day (YYYY-MM-DD) in the user's timezone at ingest. */
     day: v.string(),
     /** Provider's own id for the sample, when it has one — used for idempotency. */
     external_id: v.optional(v.string()),
@@ -113,12 +96,7 @@ export default defineSchema({
     ])
     .index("by_user_provider", ["userId", "provider"]),
 
-  /**
-   * A user's link to one provider. OAuth tokens are deliberately NOT stored
-   * here: they live with the aggregator, or in a secrets store. Convex
-   * documents are readable by any function, so a leaked query is a leaked
-   * token — keep this table to non-secret connection state.
-   */
+  /** A user's link to one provider. */
   health_connections: defineTable({
     userId: v.string(),
     provider: v.string(),
@@ -126,13 +104,7 @@ export default defineSchema({
     external_user_id: v.optional(v.string()), // provider/aggregator id
     scopes: v.optional(v.array(v.string())),
     last_sync_at: v.optional(v.number()),
-    /**
-     * Opaque resume point for incremental sync. A timestamp is not enough:
-     * HealthKit hands back a serialised HKQueryAnchor and several cloud
-     * providers hand back a cursor rather than a date. Storing the provider's
-     * own token means we fetch true deltas — and, for HealthKit, learn about
-     * deletions, which a date-range query never reports.
-     */
+    /** Opaque resume point for incremental sync. */
     sync_cursor: v.optional(v.string()),
     last_error: v.optional(v.string()),
     connected_at: v.number(),
@@ -141,14 +113,7 @@ export default defineSchema({
     .index("by_user_provider", ["userId", "provider"])
     .index("by_external_user", ["external_user_id"]),
 
-  /**
-   * Provider OAuth tokens, encrypted before they ever reach Convex.
-   *
-   * The decryption key lives in the Next.js environment only, so these
-   * documents are unreadable from inside Convex — a query that accidentally
-   * returned every row would leak ciphertext and nothing else. Separate from
-   * health_connections so ordinary connection reads never touch them.
-   */
+  /** Provider OAuth tokens, encrypted before they ever reach Convex. */
   health_oauth_tokens: defineTable({
     userId: v.string(),
     provider: v.string(),
@@ -160,8 +125,8 @@ export default defineSchema({
   }).index("by_user_provider", ["userId", "provider"]),
 
   /**
-   * Per-user override of the default trust order — "use Oura for sleep even
-   * though I also wear a Garmin". Absent means the default in metrics.ts.
+   * Per-user override of the default trust order — "use Oura for sleep even though I also wear a
+   * Garmin".
    */
   health_metric_sources: defineTable({
     userId: v.string(),
@@ -172,14 +137,7 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_metric", ["userId", "metric"]),
 
-  /**
-   * Bring-your-own-key credentials for AI platforms.
-   *
-   * Same posture as health_oauth_tokens and for the same reason: an API key is
-   * a billable secret, so Convex only ever holds the ciphertext. `last4` is
-   * stored separately in the clear so the app can show which key is saved
-   * without anything having to decrypt it just to render a list.
-   */
+  /** Bring-your-own-key credentials for AI platforms. */
   ai_keys: defineTable({
     userId: v.string(),
     provider: v.string(),
@@ -190,17 +148,7 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_provider", ["userId", "provider"]),
 
-  /**
-   * What a user has paid for.
-   *
-   * Written only by billing/receipts.ts, after Apple's signature on the
-   * transaction has been checked. Nothing the app sends can grant an
-   * entitlement directly: a client that could write here could give itself a
-   * subscription for free, which is the whole reason receipts are signed.
-   *
-   * A subscription is the only thing sold to readers, and what it buys is the
-   * article archive — everything whose paid time on Home has run out.
-   */
+  /** What a user has paid for. */
   entitlements: defineTable({
     userId: v.string(),
     /** none | active | expired | grace | revoked */
@@ -212,17 +160,7 @@ export default defineSchema({
     updated_at: v.number(),
   }).index("by_user", ["userId"]),
 
-  /**
-   * Every App Store purchase that has been applied.
-   *
-   * Only to claim a transaction id. Apple redelivers transactions routinely —
-   * on reinstall, on restore, on every launch until they are finished — and
-   * applying one twice would be a free month.
-   *
-   * This was a credit ledger, when a purchase bought credits for readings that
-   * ran on a server. The readings are written on the phone now, so there is
-   * nothing to meter and nothing to keep a running balance of.
-   */
+  /** Every App Store purchase that has been applied. */
   purchase_receipts: defineTable({
     userId: v.string(),
     transactionId: v.string(),
@@ -232,103 +170,31 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_transactionId", ["transactionId"]),
 
-  /**
-   * Which platform and model this user's insights should run on. One row per
-   * user; absent means fall back to whatever the server has configured.
-   */
-  /**
-   * A conversation with a nutritionist.
-   *
-   * One row per consultation, with the messages beside it. `status` is what the
-   * person waiting is actually asking about — has a human seen this yet — so it
-   * is derived from real events (a reply exists) rather than set optimistically
-   * when the request is sent.
-   *
-   * `shared` records exactly which readings the person agreed to hand over.
-   * Health data going to another human being is the most consequential thing
-   * this app does, so what was shared is stored as text on the consultation
-   * rather than read live: the nutritionist sees the numbers as they were when
-   * consent was given, and nothing more.
-   */
-  /**
-   * A nutritionist people can choose to ask.
-   *
-   * Written by the professional themselves — the allowlist in the Convex
-   * environment says who is one, and this row says who they are. Country is on
-   * the profile because it is the thing a person actually wants to know before
-   * asking about food: someone who eats what you eat gives different advice
-   * from someone who has read about it.
-   */
+  /** Which platform and model this user's insights should run on. */
+  /** A conversation with a nutritionist. */
+  /** A nutritionist people can choose to ask. */
   nutritionists: defineTable({
     userId: v.string(),
     name: v.string(),
     country: v.string(),          // ISO region code
     credentials: v.string(),      // "RD, MSc Nutrition" — as they state it
     bio: v.string(),
-    /**
-     * What this person will actually answer about: "Diabetes", "Sports
-     * nutrition", "Sleep". The thing someone scans the directory for, and the
-     * reason a card exists rather than a list of names.
-     */
+    /** What this person will actually answer about: "Diabetes", "Sports nutrition", "Sleep". */
     specialties: v.optional(v.array(v.string())),
-    /**
-     * Whether this person will take a video call as well as a written one.
-     * Their choice: plenty of practitioners will answer in writing and have no
-     * wish to appear on camera.
-     */
+    /** Whether this person will take a video call as well as a written one. */
     offers_video: v.optional(v.boolean()),
-    /**
-     * Their photograph, in Convex file storage.
-     *
-     * A storage id rather than a URL: a pasted link rots, points at somebody
-     * else's server, and cannot be revoked. The id is resolved to a signed URL
-     * at read time, so the file is served by the same system that holds the
-     * rest of this.
-     */
+    /** Their photograph, in Convex file storage. */
     photo: v.optional(v.id("_storage")),
-    /**
-     * When this practitioner's app last said it was awake.
-     *
-     * Presence rather than a status they set: a switch marked "online" is
-     * always stale, because nobody remembers to turn it off. A heartbeat is
-     * only ever wrong for as long as the interval.
-     */
+    /** When this practitioner's app last said it was awake. */
     last_seen: v.optional(v.number()),
-    /**
-     * Where the application stands: "pending", "approved", "declined".
-     *
-     * Separate from `active`, and the difference matters. `active` is the
-     * practitioner saying whether they are taking questions this week.
-     * `status` is whether anyone has checked they are who they say they are.
-     * Anyone can type "RD, MSc" into a form, so a profile is invisible to
-     * everyone but its owner until it is approved.
-     *
-     * Optional because rows written before sign-up existed have no value here;
-     * those are the people on the environment allowlist, who are approved by
-     * being on it.
-     */
+    /** Where the application stands: "pending", "approved", "declined". */
     status: v.optional(v.string()),
-    /** What one consultation costs, in credits. Superseded by price_minor. */
+    /** What one consultation costs, in credits. */
     price_credits: v.number(),
-    /**
-     * What a consultation costs, in integer minor units of `currency`.
-     *
-     * Credits were the wrong instrument for paying a person for their time:
-     * they are a token this app invents, and a practitioner is owed money. The
-     * same reasoning as the finance ledger applies to the arithmetic — whole
-     * minor units, never a decimal, and the currency travels with the amount
-     * because a price without one is not a price.
-     */
+    /** What a consultation costs, in integer minor units of `currency`. */
     price_minor: v.optional(v.number()),
     currency: v.optional(v.string()),      // ISO 4217
-    /**
-     * The practitioner's own Stripe account, created through Connect.
-     *
-     * Their fee is paid to them directly at the moment a client pays, with
-     * the platform's share taken out in the same transaction. Before this
-     * existed the money landed in our account with no way onward, which is a
-     * debt to somebody rather than a payment.
-     */
+    /** The practitioner's own Stripe account, created through Connect. */
     stripe_account: v.optional(v.string()),
     /** Whether Stripe says that account can actually be paid yet. */
     payouts_enabled: v.optional(v.boolean()),
@@ -347,45 +213,25 @@ export default defineSchema({
     status: v.string(),          // waiting | answered | closed
     /** The readings shared at the moment of asking, as shown to the user. */
     shared: v.optional(v.string()),
-    /**
-     * "text" or "video". A written conversation and a call are the same
-     * relationship — the same two people, the same history — so they are one
-     * row with a kind rather than two tables that have to be stitched together
-     * to show someone what they have already asked.
-     */
+    /** "text" or "video". */
     kind: v.optional(v.string()),
-    /**
-     * The call's room, when there is one.
-     *
-     * Named here and handed to whichever service ends up carrying the video.
-     * Generating it at the moment the session opens means the room exists
-     * before either party needs it, and swapping providers later changes who
-     * reads this string, not the shape of anything around it.
-     */
+    /** The call's room, when there is one. */
     room: v.optional(v.string()),
     /** What was actually taken for this session, so the ledger can be audited. */
     paid_credits: v.optional(v.number()),
-    /** The agreed price, captured at the moment of opening so a later change
-     *  to the practitioner's rate cannot rewrite what somebody already owed. */
+    /**
+     * The agreed price, captured at the moment of opening so a later change to the practitioner's
+     * rate cannot rewrite what somebody already owed.
+     */
     price_minor: v.optional(v.number()),
     currency: v.optional(v.string()),
-    /**
-     * "free", "pending" or "paid".
-     *
-     * Kept separate from the conversation's own status. A session can be open
-     * and unpaid, and the two facts answer different questions: one is whether
-     * anybody has replied, the other is whether the practitioner is owed.
-     */
+    /** "free", "pending" or "paid". */
     payment_status: v.optional(v.string()),
     /** The processor's own reference, once there is a processor. */
     payment_ref: v.optional(v.string()),
     /** The platform's share of this consultation, in minor units. */
     platform_fee_minor: v.optional(v.number()),
-    /**
-     * True when the fee was collected without a split, so the practitioner is
-     * owed their share. Wam has no equivalent of Connect, so a payment through
-     * it lands whole and is settled by hand.
-     */
+    /** True when the fee was collected without a split, so the practitioner is owed their share. */
     payout_owed: v.optional(v.boolean()),
     country: v.optional(v.string()),
     created_at: v.number(),
@@ -394,34 +240,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_status", ["status"]),
 
-  /**
-   * How two phones find each other for a call.
-   *
-   * WebRTC cannot introduce two devices by itself: each has to describe what
-   * it can do and where it can be reached, and something has to carry those
-   * descriptions between them. That is all signalling is, and it is the part
-   * a hosted video service was doing on our behalf.
-   *
-   * Rows are short-lived and read once. A call needs perhaps a dozen of them
-   * over a few seconds, then never again, which is why they are swept rather
-   * than kept.
-   */
-  /**
-   * Articles written by practitioners, and where each one stands.
-   *
-   * Nothing reaches Home without two things: an author who is an approved
-   * practitioner, checked when they applied, and a reviewer on the staff
-   * allowlist who is not the author. The automatic checks in articleRules.ts
-   * run on every save and again on submission, on the server.
-   *
-   * The body is one string with paragraphs separated by blank lines rather
-   * than an array of paragraphs: it is bounded by the rules, and a single
-   * field means an edit is one write rather than a rewritten list.
-   *
-   * Ownership is by the user id (see lib/me.ts), which survives signing in again.
-   * authorId is the Clerk subject, kept only to find the author's practitioner
-   * profile, which is keyed that way.
-   */
+  /** How two phones find each other for a call. */
+  /** Articles written by practitioners, and where each one stands. */
   articles: defineTable({
     authorToken: v.string(),
     authorId: v.string(),
@@ -433,9 +253,9 @@ export default defineSchema({
     colour: v.string(),
     minutes: v.number(),
     /**
-     * approved is verified by the team and waiting for the author to pay;
-     * published is paid and on Home until live_until; expired is a published
-     * article whose paid time ran out, ready to renew.
+     * approved is verified by the team and waiting for the author to pay; published is paid and on
+     * Home until live_until; expired is a published article whose paid time ran out, ready to
+     * renew.
      */
     status: v.union(
       v.literal("draft"),
@@ -455,8 +275,8 @@ export default defineSchema({
     /** When the paid time on Home ends. */
     live_until: v.optional(v.number()),
     /**
-     * The UUID StoreKit carries through a purchase as appAccountToken, which
-     * is how a signed transaction is tied to this article and no other.
+     * The UUID StoreKit carries through a purchase as appAccountToken, which is how a signed
+     * transaction is tied to this article and no other.
      */
     payment_token: v.optional(v.string()),
     updated_at: v.number(),
@@ -466,13 +286,7 @@ export default defineSchema({
     .index("by_status_and_submitted_at", ["status", "submitted_at"])
     .index("by_status_and_published_at", ["status", "published_at"]),
 
-  /**
-   * Every App Store transaction that paid for time on Home.
-   *
-   * The transaction id is the idempotency key. Apple redelivers transactions
-   * routinely — on every launch until they are finished — and applying one
-   * twice would be thirty free days.
-   */
+  /** Every App Store transaction that paid for time on Home. */
   article_payments: defineTable({
     articleId: v.id("articles"),
     authorToken: v.string(),
@@ -482,17 +296,7 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_transactionId", ["transactionId"]),
 
-  /**
-   * Devices to push to, one row per install.
-   *
-   * Keyed by the user id (see lib/me.ts), because the things
-   * that trigger a push — a practitioner replying, an article being verified —
-   * hold the other party's subject and nothing else.
-   *
-   * A token is not secret, but it is a handle to somebody's lock screen, so
-   * these are never returned to a client; only the internal push action reads
-   * them.
-   */
+  /** Devices to push to, one row per install. */
   push_devices: defineTable({
     userId: v.string(),
     token: v.string(),
@@ -524,18 +328,7 @@ export default defineSchema({
     created_at: v.number(),
   }).index("by_consult", ["consultId"]),
 
-  /**
-   * What people in a country actually eat, and who said so.
-   *
-   * One row per person per dish rather than a dish with a counter, because a
-   * counter cannot be audited, cannot be undone, and cannot stop the same
-   * person voting twice. The count is derived by reading the rows.
-   *
-   * Deliberately global: this is the one table in the app that is not scoped
-   * to a single user, because its whole purpose is that ten people saying
-   * "doubles" means more than one person saying it. Nothing here is health
-   * data — it is the name of a dish and the country it belongs to.
-   */
+  /** What people in a country actually eat, and who said so. */
   cuisine_dishes: defineTable({
     country: v.string(),        // ISO region code, e.g. "TT"
     dish: v.string(),           // as typed, for display
@@ -601,20 +394,7 @@ export default defineSchema({
 
   // Finance
 
-  /**
-   * One movement of money.
-   *
-   * Amounts are integer minor units (cents, not dollars) and signed: negative
-   * is money out, positive is money in. Storing 12.30 as a float and adding a
-   * few hundred of them drifts off the true total by a cent or two, which is
-   * the one error a ledger may never make. The currency travels with the row
-   * because a total across two currencies is meaningless and the reader has to
-   * be able to tell.
-   *
-   * `source` is "manual" for anything typed in. An imported feed writes its own
-   * name plus the provider's row id in `external_id`, which is what lets the
-   * same transaction arrive twice without being counted twice.
-   */
+  /** One movement of money. */
   finance_entries: defineTable({
     userId: v.string(), // Clerk user ID
     date: v.number(), // when the money moved, not when it was recorded
@@ -632,15 +412,7 @@ export default defineSchema({
 
   // Time
 
-  /**
-   * A stretch of time that went somewhere.
-   *
-   * Minutes rather than an end timestamp: the question a person answers is
-   * "how long did that take", and deriving a duration from two clock times is
-   * where daylight saving and midnight crossings go wrong. `source` and
-   * `external_id` work exactly as they do for money, so an imported calendar
-   * event lands in the same ledger as a block typed in by hand.
-   */
+  /** A stretch of time that went somewhere. */
   time_blocks: defineTable({
     userId: v.string(), // Clerk user ID
     start: v.number(),

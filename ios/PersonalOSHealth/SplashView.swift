@@ -1,15 +1,6 @@
 import SwiftUI
 
 /// The flash of brand between tapping the icon and the app appearing.
-///
-/// Two halves, deliberately. The system launch screen is a flat linen colour
-/// (UILaunchScreen in Info.plist), so the very first frame is already the
-/// right colour rather than a white flash. This view then draws the wordmark
-/// on that same linen and fades out — so the transition reads as one continuous
-/// surface rather than two screens swapping.
-///
-/// It is a flash, not a loading screen: nothing waits on it, and the app is
-/// live underneath the whole time.
 struct SplashView: View {
     @State private var appeared = false
 
@@ -39,9 +30,7 @@ struct SplashView: View {
                     .opacity(appeared ? 1 : 0)
                     .padding(.bottom, 44)
             }
-            // The wordmark is drawn at full strength on the first frame. The
-            // whole splash only lives for about a second and a half, so a
-            // fade-in would spend a chunk of that showing nothing.
+            // The wordmark is drawn at full strength on the first frame.
             .scaleEffect(appeared ? 1 : 0.97)
         }
         .onAppear {
@@ -51,11 +40,6 @@ struct SplashView: View {
 }
 
 /// The four faces of the ledger, one per metric group in `MetricCatalog`.
-///
-/// They animate twice over: each glyph rises into place on a stagger, then a
-/// single amber highlight walks along the row. Amber is the design's only
-/// punctuation colour, so lighting one glyph at a time keeps the flash alive
-/// without turning it into a light show.
 private struct GlyphRow: View {
     private let glyphs = [
         "figure.walk",      // Physical activity
@@ -86,8 +70,8 @@ private struct GlyphRow: View {
         }
         .task {
             settled = true
-            // Starts after the last glyph has landed, so the highlight reads
-            // as a second beat rather than a collision.
+            // Starts after the last glyph has landed, so the highlight reads as a second beat
+            // rather than a collision.
             try? await Task.sleep(for: .milliseconds(380))
             for i in glyphs.indices {
                 lit = i
@@ -113,8 +97,7 @@ struct SplashGate<Content: View>: View {
             }
         }
         .task {
-            // Long enough for the glyph row to play through, short enough not
-            // to be a wait.
+            // Long enough for the glyph row to play through, short enough not to be a wait.
             try? await Task.sleep(for: .milliseconds(1500))
             withAnimation(.easeInOut(duration: 0.45)) { showing = false }
         }

@@ -1,18 +1,4 @@
-/**
- * The privacy policy and the terms, as pages.
- *
- * Google will not publish an OAuth consent screen without a privacy policy at
- * a real address; Meta will not accept an app without one; Apple will not take
- * a submission without one. All three want a URL, not a PDF, and the URL has
- * to keep working. This app has no web server any more, so they are served
- * from the same deployment that serves the app — one less thing that can be
- * true today and gone next year.
- *
- * Everything below describes what the code does. Where a claim is unusual —
- * cycle data never leaving the phone, readings never reaching an AI company —
- * it is unusual because of a decision in the code, and the decision is named
- * so that changing it means changing this too.
- */
+/** The privacy policy and the terms, as pages. */
 
 const UPDATED = "24 September 2026"
 const CONTACT = "akiodevenish1@gmail.com"
@@ -55,9 +41,7 @@ ${body}
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
-        // These are read by Google, Meta and Apple as much as by people, and
-        // they are not secret. A day of caching keeps a review bot from
-        // hammering the deployment without making an edit take a week.
+        // These are read by Google, Meta and Apple as much as by people, and they are not secret.
         "cache-control": "public, max-age=86400",
       },
     },

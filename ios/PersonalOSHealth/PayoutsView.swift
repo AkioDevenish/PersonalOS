@@ -1,14 +1,6 @@
 import SwiftUI
 
 /// Being paid.
-///
-/// A client's payment is split by Stripe at the moment it is made: the
-/// practitioner's share goes to their own account and the platform's is taken
-/// out in the same transaction. Nothing is collected on their behalf and paid
-/// on later, which would be a debt rather than a payment.
-///
-/// Bank details are typed on Stripe's own pages. This app never sees them,
-/// which is the reason for using Connect rather than asking here.
 struct PayoutsView: View {
     @State private var status = Status(started: false, ready: false, feePercent: 15)
     @State private var working = false
@@ -91,8 +83,8 @@ struct PayoutsView: View {
     }
 
     private func refresh() async {
-        // What Stripe says, then what we have recorded, so a practitioner who
-        // has just finished onboarding sees it without waiting for a webhook.
+        // What Stripe says, then what we have recorded, so a practitioner who has just finished
+        // onboarding sees it without waiting for a webhook.
         _ = try? await transport.action("payouts:refresh")
         if let data = try? await transport.query("payoutsData:mine"),
            let fresh = try? JSONDecoder().decode(Status.self, from: data) {

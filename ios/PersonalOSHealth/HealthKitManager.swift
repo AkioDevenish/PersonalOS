@@ -80,7 +80,7 @@ final class HealthKitManager: ObservableObject {
         return try await fetchSnapshotForDay(Date())
     }
 
-    /// Fetch snapshots for the last N days (including today). Used for backfilling 7d/30d history.
+    /// Fetch snapshots for the last N days (including today).
     func fetchHistoricalSnapshots(days: Int = 30) async throws -> [HealthSnapshot] {
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthKitError.unavailable }
         let calendar = Calendar.current
@@ -88,14 +88,7 @@ final class HealthKitManager: ObservableObject {
             calendar.date(byAdding: .day, value: -$0, to: Date())
         }
 
-        // The days are independent, so they are read together rather than one
-        // after another. Ninety days used to mean ninety serialised round
-        // trips, which is what kept the history screen saying "Reading your
-        // history" for as long as it did.
-        //
-        // Bounded, though: each day fans out to about twenty queries, and
-        // letting ninety of those go at once asks HealthKit for eighteen
-        // hundred in one breath.
+        // The days are independent, so they are read together rather than one after another.
         let inFlight = 8
         var snapshots: [HealthSnapshot] = []
         snapshots.reserveCapacity(dates.count)
@@ -117,21 +110,11 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        // Oldest first. They came back newest first before, which every caller
-        // that talks about a direction read backwards: Briefing's drift takes
-        // the first half as the earlier one.
+        // Oldest first.
         return snapshots.sorted { $0.recordedAt < $1.recordedAt }
     }
 
     /// Steps bucketed by the hour, over the last `days` days.
-    ///
-    /// One statistics-collection query rather than a query per day. HealthKit
-    /// will happily walk a 56-day window in hourly buckets in a single pass,
-    /// and asking it 56 times instead is how a chart ends up taking seconds to
-    /// draw.
-    ///
-    /// Returned keyed by the start of each hour, so the caller can bucket by
-    /// weekday and hour-of-day without re-deriving dates.
     func hourlySteps(days: Int = 56) async throws -> [Date: Double] {
         guard HKHealthStore.isHealthDataAvailable() else { throw HealthKitError.unavailable }
         guard let type = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [:] }
@@ -182,7 +165,6 @@ final class HealthKitManager: ObservableObject {
         
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
         // Sleep and mindful sessions often start the previous day and end on the current day.
-        // strictEndDate ensures we capture them if they finished today.
         let categoryPredicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictEndDate)
 
         async let steps = cumulative(.stepCount, unit: .count(), predicate: predicate)
@@ -315,7 +297,8 @@ final class HealthKitManager: ObservableObject {
                     continuation.resume(returning: (nil, nil))
                     return
                 }
-                // Map rawValues to strings because Apple doesn't expose string representations natively
+                // Map rawValues to strings because Apple doesn't expose string representations
+                // natively
                 let labelStrings: [String] = sample.labels.compactMap { label in
                     switch label.rawValue {
                     case 1: return "Amazed"

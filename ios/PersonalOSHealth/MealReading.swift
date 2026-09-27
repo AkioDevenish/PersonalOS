@@ -1,18 +1,6 @@
 import SwiftUI
 
 /// What the meal engine actually returns, taken apart.
-///
-/// The prompt asks for `**Name:**`, `**Why:**`, `**Macros:**`, `**Prep:**` and
-/// a closing `[NUTRITION_INSIGHT]`, and the app was printing all of that
-/// verbatim — asterisks, tags, the model's own idea of blank lines. Markdown
-/// shown to someone who never asked for markdown is a leak of the plumbing,
-/// and this design has real typography to say the same things: a name is a
-/// serif line, a reason is body text, macros are a tracked caps figure.
-///
-/// So the structure is read out of the text and thrown away, and what's left is
-/// laid out. The parse is deliberately forgiving — models drop a marker or
-/// double one — and anything it cannot place survives as prose rather than
-/// being silently dropped.
 struct MealSuggestion: Identifiable {
     let id = UUID()
     var name = ""
@@ -30,20 +18,16 @@ enum MealReading {
     struct Parsed {
         var meals: [MealSuggestion] = []
         var insight = ""
-        /// Anything the parser couldn't place. Shown rather than discarded: a
-        /// model that ignores the format still said something.
+        /// Anything the parser couldn't place.
         var prose = ""
 
         var isEmpty: Bool { meals.isEmpty && insight.isEmpty && prose.isEmpty }
     }
 
-    /// Strips the model's own markup. Asterisks, the [MEAL_REC] tag it was told
-    /// to emit, and the runs of blank lines it likes to leave behind.
+    /// Strips the model's own markup.
     static func clean(_ s: String) -> String {
         var out = s.replacingOccurrences(of: "**", with: "")
-        // Models reach for the em dash constantly and it reads as machine
-        // prose. Cleaned on arrival rather than only asked for in the prompt,
-        // because asking is a request and this is a rule.
+        // Models reach for the em dash constantly and it reads as machine prose.
         out = out.replacingOccurrences(of: " — ", with: ", ")
         out = out.replacingOccurrences(of: "—", with: ", ")
         out = out.replacingOccurrences(of: "[MEAL_REC]", with: "")
@@ -82,8 +66,8 @@ enum MealReading {
                 continue
             }
 
-            // "Name: Callaloo with crab" — the field is whatever precedes the
-            // first colon, when that is short enough to be a label.
+            // "Name: Callaloo with crab" — the field is whatever precedes the first colon, when
+            // that is short enough to be a label.
             if let colon = text.firstIndex(of: ":") {
                 let label = text[..<colon].trimmingCharacters(in: .whitespaces).lowercased()
                 let value = String(text[text.index(after: colon)...])
@@ -123,10 +107,6 @@ enum MealReading {
     }
 
     /// The parsed reading, as the runs the typewriter writes out.
-    ///
-    /// Built here rather than in the view so the order things appear in is the
-    /// order they were written in — the name lands, then the reason, then the
-    /// numbers, which is how you'd read it aloud.
     static func runs(for parsed: Parsed) -> [TypedRun] {
         var runs: [TypedRun] = []
 

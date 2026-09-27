@@ -1,16 +1,6 @@
 import SwiftUI
 
 /// Where you cook and eat.
-///
-/// A meal suggestion is only useful if you can actually buy the ingredients.
-/// "Grilled halloumi with za'atar" is a fine answer and a useless one if the
-/// nearest shop sells provision, saltfish and pigeon peas — and a model told
-/// nothing about where you are will reach for the same handful of Californian
-/// wellness food every time.
-///
-/// So the country is part of the request. It is a standing preference rather
-/// than a per-meal choice, which is why it persists: you do not move house
-/// between breakfast and lunch.
 enum Cuisine {
     /// The stored country code, or empty for no preference.
     static let key = "meal_country"
@@ -22,11 +12,6 @@ enum Cuisine {
     }
 
     /// Every country the system knows, named in the reader's own language.
-    ///
-    /// Built from the system rather than typed out: a hand-written list is a
-    /// list that is wrong about somewhere, and being wrong about a country is
-    /// the kind of wrong people remember. Continents and groupings are dropped
-    /// — they have sub-regions, and "Americas" is not a cuisine.
     static let all: [Country] = {
         Locale.Region.isoRegions
             .filter { region in
@@ -42,9 +27,8 @@ enum Cuisine {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }()
 
-    /// The phone already knows where it is, so the useful default is there
-    /// rather than at "no preference" — someone in Port of Spain shouldn't
-    /// have to tell the app twice.
+    /// The phone already knows where it is, so the useful default is there rather than at "no
+    /// preference" — someone in Port of Spain shouldn't have to tell the app twice.
     static var deviceDefault: String {
         Locale.current.region?.identifier ?? ""
     }
@@ -56,9 +40,6 @@ enum Cuisine {
 }
 
 /// Picking the country, in the ledger's list idiom.
-///
-/// Searchable, because two hundred rows is not a list you scroll — and the one
-/// you want is usually the one you can already name.
 struct CountryPicker: View {
     @Binding var code: String
     @Environment(\.dismiss) private var dismiss

@@ -1,33 +1,6 @@
 import SwiftUI
 
 /// Setting the measurements and the figures apart from the sentence around them.
-///
-/// The briefing is prose, and prose is the right form for it: "You slept 7h 13m
-/// a night across 14 recorded nights" says something a table cannot. But nobody
-/// reads a page of it word by word at eight in the morning. They look for the
-/// name of a thing and the number beside it, and in flat body text those are
-/// exactly as prominent as "across" and "a night".
-///
-/// So the two things a reader is hunting for are lifted out of it: the
-/// measurement's name, and every figure.
-///
-/// Emphasis is carried by three things at once rather than one: the Medium
-/// cut, a point of extra size, and colour.
-///
-/// That began as a workaround. Cormorant's two bundled faces were both cut
-/// from the Light master, so 400 against 500 was a difference you had to be
-/// told about before you could see it, and weight was doing nothing. EB
-/// Garamond carries five real weights, so the Medium now pulls its share —
-/// but the other two are kept, because subtle was the point. There is a
-/// SemiBold and a Bold in the file if this ever needs to shout. Names go to ink, which is the
-/// darkest thing on the page. Figures go to amber, the colour this design
-/// already reserves for the part that matters — in a health briefing the
-/// numbers are exactly that, so it is the accent doing its own job rather than
-/// a new rule.
-///
-/// Done by reading the sentence rather than by marking it up at the source. The
-/// composer stays a producer of plain English, which keeps it testable on a
-/// Mac and means nothing has to remember to close a tag.
 enum Emphasis {
 
     /// Units, longest first, so "km/h" is never matched as "km".
@@ -40,8 +13,8 @@ enum Emphasis {
         pattern: #"\d+h\s\d+m|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?"#
     )
 
-    /// Every name a metric goes by, longest first so "walking speed" wins over
-    /// the "walking" inside it.
+    /// Every name a metric goes by, longest first so "walking speed" wins over the "walking" inside
+    /// it.
     private static let names: [String] = {
         var all = Set<String>()
         for spec in Metrics.all {
@@ -97,9 +70,9 @@ enum Emphasis {
         let ns = text as NSString
         let whole = NSRange(location: 0, length: ns.length)
 
-        // Figures, each carrying its unit along with it: "118 mg/dL" is one
-        // thing to the eye, and emphasising the number while leaving the unit
-        // in the body face looks like a mistake rather than a decision.
+        // Figures, each carrying its unit along with it: "118 mg/dL" is one thing to the eye, and
+        // emphasising the number while leaving the unit in the body face looks like a mistake
+        // rather than a decision.
         for match in figures.matches(in: text, range: whole) {
             var r = match.range
             for unit in units {
@@ -114,16 +87,11 @@ enum Emphasis {
                 if r.length != match.range.length { break }
             }
             // "your 14-day average" is a compound adjective, not a reading.
-            // Emphasising the 14 in it makes the eye stop at a number that
-            // isn't one of yours.
             let end = r.location + r.length
             if end < ns.length, ns.substring(with: NSRange(location: end, length: 1)) == "-" {
                 continue
             }
-            // And a figure has to stand as its own word, the same test the
-            // names get. Without it the digits inside "A1C" or "COVID19" were
-            // set in amber, pulling the eye to a fragment of a word as though
-            // it were one of the person's own readings.
+            // And a figure has to stand as its own word, the same test the names get.
             if let converted = Range(r, in: text), isWholeWord(converted, in: text) {
                 found.append(Span(range: converted, isFigure: true))
             }
@@ -145,8 +113,8 @@ enum Emphasis {
             }
         }
 
-        // A name inside a longer name, or a unit already inside a figure, would
-        // otherwise be emphasised twice and split the run.
+        // A name inside a longer name, or a unit already inside a figure, would otherwise be
+        // emphasised twice and split the run.
         let sorted = found.sorted {
             $0.range.lowerBound == $1.range.lowerBound
                 ? $0.range.upperBound > $1.range.upperBound

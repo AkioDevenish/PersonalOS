@@ -1,13 +1,6 @@
 import SwiftUI
 
 /// The account, and only the account.
-///
-/// A title, who you are, one card for the thing you might do next on the
-/// platform, and a list of settings. It used to also hold goals, the sync
-/// buttons, a practitioner's queue and a reviewer's tools, which made it the
-/// place everything without a home was put. Those now live with what they
-/// belong to: goals in Health, sync and sources behind Health data, and the
-/// practitioner's work behind the card.
 struct ProfileView: View {
     @EnvironmentObject private var session: Session
     @Environment(\.openURL) private var openURL
@@ -46,10 +39,9 @@ struct ProfileView: View {
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }
-                // An app that sells an auto-renewing subscription has to carry
-                // working links to both of these, and somebody handing over
-                // their health data is owed a way to read what happens to it
-                // without going looking for a website.
+                // An app that sells an auto-renewing subscription has to carry working links to
+                // both of these, and somebody handing over their health data is owed a way to read
+                // what happens to it without going looking for a website.
                 row("hand.raised", "Privacy") { openURL(AppConfig.privacyURL) }
                 row("doc.text", "Terms") { openURL(AppConfig.termsURL) }
 
@@ -89,8 +81,8 @@ struct ProfileView: View {
         .confirmationDialog("Log out of Personal OS?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
             Button("Log out", role: .destructive) {
                 Task {
-                    // Hand the device back before the session goes, or the
-                    // token stays pointed at an account nobody is signed in to.
+                    // Hand the device back before the session goes, or the token stays pointed at
+                    // an account nobody is signed in to.
                     await Push.handBack()
                     await session.signOut()
                 }
@@ -126,8 +118,8 @@ struct ProfileView: View {
 
     // MARK: The card
 
-    /// The one thing worth putting in front of somebody here: becoming a
-    /// practitioner, or, once they are one, the way into their practice.
+    /// The one thing worth putting in front of somebody here: becoming a practitioner, or, once
+    /// they are one, the way into their practice.
     @ViewBuilder
     private var practiceCard: some View {
         if application?.approved == true {
@@ -308,8 +300,7 @@ struct Avatar: View {
     }
 }
 
-/// The account itself: a name to change, the email it signs in with, and the
-/// way out. What Clerk's profile screen used to be.
+/// The account itself: a name to change, the email it signs in with, and the way out.
 struct AccountView: View {
     @EnvironmentObject private var session: Session
     @Environment(\.dismiss) private var dismiss

@@ -2,19 +2,7 @@ import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 
-/**
- * What a user is entitled to, and what they have left.
- *
- * The asymmetry here is the point. Reads are public and scoped to the caller —
- * the app needs to know whether to show a paywall. Writes that *grant*
- * anything are not callable by the app at all: `applyPurchase` takes a
- * verification marker the Next layer only produces after checking Apple's
- * signature on the transaction. A client that could call it directly could
- * give itself a subscription for nothing.
- *
- * Spending is different from granting and is safe to expose: it only ever
- * decreases a balance, and it refuses to go below zero.
- */
+/** What a user is entitled to, and what they have left. */
 
 async function requireUser(ctx: any): Promise<string> {
   const identity = await ctx.auth.getUserIdentity()
@@ -35,7 +23,7 @@ async function rowFor(ctx: any, userId: string) {
     .first()
 }
 
-/** What the app should show. Expiry is evaluated on read, never on a timer. */
+/** What the app should show. */
 export const mine = query({
   args: {},
   handler: async (ctx) => {
@@ -43,8 +31,8 @@ export const mine = query({
     const row = await rowFor(ctx, userId)
     if (!row) return EMPTY
 
-    // A subscription that lapsed while the app was closed is not active, and
-    // no background job is going to be reliable enough to have noticed.
+    // A subscription that lapsed while the app was closed is not active, and no background job is
+    // going to be reliable enough to have noticed.
     const lapsed =
       row.subscription_status === "active" &&
       typeof row.expires_at === "number" &&
@@ -58,18 +46,7 @@ export const mine = query({
   },
 })
 
-/**
- * Applies a subscription that billing/receipts.ts has verified against Apple.
- *
- * Internal, so verification is the only way in. It used to be public, with an
- * HMAC grant proving a web route had checked the receipt first: a signature
- * scheme that existed only because Convex could not tell that route apart
- * from the phone.
- *
- * The transaction id is the idempotency key. Apple redelivers transactions
- * routinely — on reinstall, on restore, on every launch until they are
- * finished — and applying one twice would be a free month.
- */
+/** Applies a subscription that billing/receipts.ts has verified against Apple. */
 export const applyVerified = internalMutation({
   args: {
     userId: v.string(),
@@ -108,14 +85,7 @@ export const applyVerified = internalMutation({
   },
 })
 
-/**
- * Whether somebody may read the archive.
- *
- * Its own query so the thing that gates an article does not have to know how
- * a subscription is shaped. `now` is passed in rather than read from the
- * clock, because a query is not rerun as time passes and an expiry decided
- * inside one goes stale.
- */
+/** Whether somebody may read the archive. */
 export const subscribed = query({
   args: { now: v.number() },
   handler: async (ctx, args) => {

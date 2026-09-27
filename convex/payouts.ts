@@ -6,22 +6,7 @@ import { action } from "./_generated/server"
 import { internal } from "./_generated/api"
 import { feePercent } from "./fees"
 
-/**
- * Paying practitioners, and taking the platform's share on the way past.
- *
- * Stripe Connect. Each practitioner gets their own Stripe account, and a
- * client's payment is split at the moment it is made: the practitioner is paid
- * directly, and the platform fee is taken out in the same transaction.
- *
- * Before this, a consultation fee landed whole in our account with nothing to
- * send it onward. That is not income, it is a debt to whoever did the work.
- *
- *   PLATFORM_FEE_PERCENT   the platform's share, default 15 (see fees.ts)
- *   STRIPE_SECRET_KEY      the same key the checkout uses
- *
- * Bank details are typed on Stripe's own pages, never here. This app never
- * sees them, which is the point of using Connect rather than collecting them.
- */
+/** Paying practitioners, and taking the platform's share on the way past. */
 
 const STRIPE = "https://api.stripe.com/v1"
 
@@ -46,11 +31,7 @@ function site(): string {
 }
 
 /**
- * Starts or resumes a practitioner's Stripe onboarding, and hands back the
- * page to send them to.
- *
- * The account is made once and remembered; the link is short-lived by Stripe's
- * design, so a fresh one is minted every time somebody asks.
+ * Starts or resumes a practitioner's Stripe onboarding, and hands back the page to send them to.
  */
 export const link = action({
   args: {},
@@ -88,12 +69,7 @@ export const link = action({
   },
 })
 
-/**
- * Asks Stripe whether this practitioner can actually be paid yet.
- *
- * Onboarding is not finished when somebody returns from it: Stripe may still
- * be verifying, and it is `payouts_enabled` that decides, not the redirect.
- */
+/** Asks Stripe whether this practitioner can actually be paid yet. */
 export const refresh = action({
   args: {},
   handler: async (ctx): Promise<{ ready: boolean }> => {

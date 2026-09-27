@@ -15,9 +15,9 @@ struct SpecialistsClient {
         let specialties: [String]
         let offers_video: Bool
         let photo_url: String?
-        /// When their app was last awake. Zero means never.
+        /// When their app was last awake.
         let last_seen: Double
-        /// Whole minor units of `currency`. Zero means free.
+        /// Whole minor units of `currency`.
         let price_minor: Int
         let currency: String
 
@@ -25,11 +25,6 @@ struct SpecialistsClient {
         var free: Bool { price_minor == 0 }
 
         /// How present somebody is, said honestly.
-        ///
-        /// Three states rather than a green dot, because a dot claims more
-        /// than a phone can know. Somebody whose app checked in a minute ago
-        /// is probably there; somebody last seen this morning is not, and
-        /// saying so is more use than an optimistic light.
         enum Presence: Equatable {
             case here
             case recently(String)
@@ -50,8 +45,8 @@ struct SpecialistsClient {
 
         var online: Bool { presence == .here }
 
-        /// The country in words, which is what someone wants to know before
-        /// asking about food or exercise.
+        /// The country in words, which is what someone wants to know before asking about food or
+        /// exercise.
         var place: String { Cuisine.name(for: country) }
 
         var price: String {
@@ -85,8 +80,8 @@ struct SpecialistsClient {
         static let empty = Desk(specialists: [], application: nil)
     }
 
-    /// Two calls rather than one route returning both, which is what the
-    /// forwarding layer was doing on the phone's behalf.
+    /// Two calls rather than one route returning both, which is what the forwarding layer was doing
+    /// on the phone's behalf.
     func desk() async throws -> Desk {
         async let listing = transport.query("health/consult:directory")
         async let mine = transport.query("health/consult:myApplication")
@@ -122,15 +117,14 @@ struct SpecialistsClient {
                 "currency": currency,
                 "active": active,
         ]
-        // Omitted rather than sent as null when unchanged, so editing a bio
-        // cannot silently drop a photograph already uploaded.
+        // Omitted rather than sent as null when unchanged, so editing a bio cannot silently drop a
+        // photograph already uploaded.
         if let photo { body["photo"] = photo }
         let data = try await transport.mutation("health/consult:apply", body)
         return (try? JSONDecoder().decode(Result.self, from: data))?.status ?? "pending"
     }
 
-    /// Says this practitioner's app is awake. Silent for anybody not listed,
-    /// since it is called on a timer and a failure a minute helps nobody.
+    /// Says this practitioner's app is awake.
     func heartbeat() async {
         _ = try? await transport.mutation("health/consult:heartbeat")
     }
@@ -154,17 +148,13 @@ struct SpecialistsClient {
         var unpaid: Bool { payment_status == "pending" }
     }
 
-    /// The practitioner's own queue. Throws when the caller is not listed.
+    /// The practitioner's own queue.
     func queue() async throws -> [Consultation] {
         let data = try await transport.query("health/consult:queue")
         return try JSONDecoder().decode([Consultation].self, from: data)
     }
 
     /// Sends a photograph to storage and returns its id.
-    ///
-    /// Two steps on purpose. The route hands back a one-time URL and the image
-    /// goes straight from the phone to Convex, so several megabytes of JPEG
-    /// never pass through a JSON body.
     func uploadPhoto(_ jpeg: Data) async throws -> String {
         struct Stored: Decodable { let storageId: String }
 

@@ -9,7 +9,7 @@ struct FinanceClient {
     struct Entry: Decodable, Identifiable, Hashable {
         let id: String
         let date: Double
-        /// Signed minor units. Negative is money out.
+        /// Signed minor units.
         let minor: Int
         let currency: String
         let category: String
@@ -28,8 +28,7 @@ struct FinanceClient {
         let outgoing: Int
         let net: Int
 
-        // "in" and "out" are the server's words; "in" is not available as a
-        // Swift name.
+        // "in" and "out" are the server's words; "in" is not available as a Swift name.
         enum CodingKeys: String, CodingKey {
             case currency, net
             case incoming = "in"
@@ -83,22 +82,14 @@ struct FinanceClient {
 }
 
 /// Turning integer minor units into something a person reads, and back.
-///
-/// Everything is held as whole minor units because a ledger that drifts by a
-/// cent is worse than no ledger. The conversion to and from a major amount
-/// belongs in exactly one place, which is here.
 enum Money {
-    /// The currency this phone is set up for, falling back to US dollars only
-    /// when the locale names none.
+    /// The currency this phone is set up for, falling back to US dollars only when the locale names
+    /// none.
     static var deviceDefault: String {
         Locale.current.currency?.identifier ?? "USD"
     }
 
     /// How many minor units make a major one, for this currency.
-    ///
-    /// Not always a hundred: yen has no minor unit at all, and dinars have a
-    /// thousand. The formatter already knows, so it is asked rather than
-    /// assumed.
     static func fractionDigits(_ currency: String) -> Int {
         let f = NumberFormatter()
         f.numberStyle = .currency
@@ -116,17 +107,13 @@ enum Money {
         f.numberStyle = .currency
         f.currencyCode = currency
         let major = Double(minor) / divisor(currency)
-        // The sign is carried by the words around the figure on most screens,
-        // so it is shown only where a row could be either.
+        // The sign is carried by the words around the figure on most screens, so it is shown only
+        // where a row could be either.
         let shown = showingSign ? major : abs(major)
         return f.string(from: NSNumber(value: shown)) ?? String(format: "%.2f", shown)
     }
 
     /// Minor units as a bare major-unit number, for a text field.
-    ///
-    /// No currency symbol and no grouping: this is a value being edited, and a
-    /// field that reads "$1,500.00" cannot be typed into without first
-    /// deleting the punctuation.
     static func major(_ minor: Int, _ currency: String) -> String {
         let digits = fractionDigits(currency)
         let value = Double(minor) / pow(10.0, Double(digits))
@@ -134,9 +121,6 @@ enum Money {
     }
 
     /// What someone typed, as whole minor units.
-    ///
-    /// Rounds rather than truncates: typing 12.999 and having it recorded as
-    /// 12.99 is a silent loss, and the person meant 13.
     static func minor(from text: String, currency: String) -> Int? {
         let cleaned = text
             .trimmingCharacters(in: .whitespaces)

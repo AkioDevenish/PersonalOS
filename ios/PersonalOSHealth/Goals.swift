@@ -1,36 +1,13 @@
 import Foundation
 
 /// What you are trying to do, in numbers.
-///
-/// The briefing used to close with advice invented from thresholds this app
-/// chose: under four thousand steps was "the day still owes you a walk",
-/// because four thousand was a number in a source file. That is a guess about
-/// a stranger. A goal is the same sentence with the guessing removed, and it
-/// is the only part of the app the person, rather than the model, gets to
-/// decide.
-///
-/// Kept on the phone rather than in Convex. A goal is small, personal, and
-/// wanted offline — the briefing composes with no network, and it would be a
-/// poor trade to have it lose your targets when the signal goes.
 enum Goals {
     private static let key = "personal_os_goals"
 
     /// Decoded once and kept.
-    ///
-    /// This used to read UserDefaults and decode the whole dictionary on every
-    /// access, and `target(_:)` is one access per metric — so asking for the
-    /// day's progress meant a dozen reads and a dozen JSON decodes. Cheap once
-    /// a second; the home screen asks for it inside `body`, which on a drag is
-    /// every frame, and a hundred-odd decodes a second on the main thread is
-    /// something you can feel under your thumb.
-    ///
-    /// Goals change when somebody sets one, which happens on a screen with a
-    /// stepper on it. Nothing else writes this key, so the cache is correct as
-    /// long as the setter clears it, which is the only way in.
     private static var cache: [String: Double]?
 
-    /// Metric id to target. Absent means no goal, which is different from a
-    /// target of zero.
+    /// Metric id to target.
     static var all: [String: Double] {
         get {
             if let cache { return cache }
@@ -59,13 +36,6 @@ enum Goals {
     }
 
     /// Reads a number a person typed, or one this app printed back to them.
-    ///
-    /// `Double("8,000")` is nil, and the goals screen was printing targets with
-    /// a thousands separator and then parsing them back, so simply opening the
-    /// screen deleted every goal of a thousand or more. Grouping separators are
-    /// stripped before parsing, and a locale that writes a comma for the
-    /// decimal point is honoured, so a European "7,5" is seven and a half
-    /// rather than seventy-five.
     static func number(from text: String) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
@@ -75,13 +45,13 @@ enum Goals {
         formatter.locale = .current
         if let parsed = formatter.number(from: trimmed)?.doubleValue { return parsed }
 
-        // Fall back to the plain reading, for a keypad that gave us a bare
-        // "7.5" in a locale that would not have written it that way.
+        // Fall back to the plain reading, for a keypad that gave us a bare "7.5" in a locale that
+        // would not have written it that way.
         return Double(trimmed.replacingOccurrences(of: ",", with: ""))
     }
 
-    /// A target as a person should see it in an editable field: no grouping
-    /// separator, because what is printed here has to survive being read back.
+    /// A target as a person should see it in an editable field: no grouping separator, because what
+    /// is printed here has to survive being read back.
     static func editable(_ spec: MetricSpec, _ value: Double) -> String {
         spec.precision == 0
             ? String(Int(value.rounded()))
@@ -89,11 +59,6 @@ enum Goals {
     }
 
     /// How much one tap of the stepper moves a target.
-    ///
-    /// Scaled to what the number means rather than to its digits: steps move
-    /// in hundreds, hours in halves, a heart rate one beat at a time. Typing
-    /// a goal on a decimal keypad was the old way, and a keypad is how you get
-    /// 80000 steps from a thumb that missed.
     static func step(for spec: MetricSpec) -> Double {
         if spec.precision > 0 { return (suggestion(for: spec) ?? 1) >= 20 ? 1 : 0.5 }
         switch suggestion(for: spec) ?? 100 {
@@ -114,9 +79,6 @@ enum Goals {
     static var settable: [MetricSpec] { Metrics.all.filter { $0.goal.isSettable } }
 
     /// Sensible opening numbers, so the screen isn't a wall of empty fields.
-    ///
-    /// Offered, never applied: a suggestion you have to accept is a suggestion,
-    /// and a number written in for you is this app deciding again.
     static func suggestion(for spec: MetricSpec) -> Double? {
         switch spec.id {
         case "steps":         return 8000
@@ -142,12 +104,6 @@ enum Goals {
         var id: String { spec.id }
 
         /// Where the day stands against this goal.
-        ///
-        /// Three states, not two. A floor with nothing recorded is genuinely
-        /// missed: no steps taken is no steps taken. A ceiling with nothing
-        /// recorded is neither met nor missed, because nothing was measured
-        /// and so nothing was exceeded. Reporting it as a miss told people
-        /// they had broken a glucose limit on a day they never tested.
         enum State { case met, missed, unmeasured }
 
         var state: State {
@@ -162,7 +118,7 @@ enum Goals {
         /// Whether the day says anything at all about this goal.
         var judged: Bool { state != .unmeasured }
 
-        /// How far short, in the metric's own units. Nil unless it was missed.
+        /// How far short, in the metric's own units.
         var shortfall: Double? {
             guard state == .missed else { return nil }
             guard let actual else { return target }
@@ -170,8 +126,7 @@ enum Goals {
         }
     }
 
-    /// Every goal, measured against a day. Unmet first, because those are the
-    /// ones the closing list is for.
+    /// Every goal, measured against a day.
     static func progress(on snapshot: HealthSnapshot?) -> [Progress] {
         settable.compactMap { spec -> Progress? in
             guard let target = target(spec.id) else { return nil }

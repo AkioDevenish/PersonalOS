@@ -1,26 +1,6 @@
 import SwiftUI
 
 /// Getting set up, eleven pages, two or three minutes.
-///
-/// An introduction that only describes the app is skipped by everybody, so
-/// every page here either does something or answers something. It follows one
-/// rhythm: a page that asks is followed by a page that gives something back,
-/// because five requests in a row is an interrogation and people close it.
-///
-/// The order matters more than the count. The cheap questions come first —
-/// what you care about, how your week usually goes — because they cost
-/// nothing to answer and each one is a small yes. Apple Health, the most
-/// personal permission the app asks for, comes after a goal has been set, so
-/// it arrives with a reason attached rather than as a demand from a stranger.
-///
-/// Nothing collected here is thrown away for show. What you pick on the focus
-/// page decides which goals are offered and which are already ticked; how
-/// often you move sets where the first step target lands. A question whose
-/// answer changes nothing is worse than no question.
-///
-/// It opens with the walking figure and closes on a real number from the
-/// person's own day, so the last thing they see before the app is the app
-/// already working for them.
 struct OnboardingView: View {
     /// Called once the person is through, whatever they chose along the way.
     var finish: () -> Void
@@ -81,10 +61,6 @@ struct OnboardingView: View {
     // MARK: Chrome
 
     /// A back arrow and one continuous bar.
-    ///
-    /// Eleven separate segments would be eleven hairlines, which reads as
-    /// clutter rather than as progress. One bar filling across says the same
-    /// thing and says it at a glance.
     private var header: some View {
         HStack(spacing: 14) {
             Button { go(page - 1) } label: {
@@ -123,12 +99,8 @@ struct OnboardingView: View {
         withAnimation(Theme.Motion.settle) { page = next }
     }
 
-    /// The layout every page shares: picture, words, then the buttons pinned
-    /// to the bottom where a thumb already is.
-    ///
-    /// `artHeight` is fixed for the pages that show a picture, so the words
-    /// land in the same place each time and the eye does not have to hunt.
-    /// The pages that show a list of answers pass nil and take what they need.
+    /// The layout every page shares: picture, words, then the buttons pinned to the bottom where a
+    /// thumb already is.
     private func layout<Art: View>(
         kicker: String,
         title: String,
@@ -162,10 +134,8 @@ struct OnboardingView: View {
 
         return VStack(spacing: 0) {
             if artHeight == nil {
-                // A page that asks something puts the question above the
-                // answers, the way a question works. The answers then scroll
-                // inside what is left, so six of them on a small phone push
-                // against each other rather than pushing the button off screen.
+                // A page that asks something puts the question above the answers, the way a
+                // question works.
                 words.padding(.top, 10)
                 ScrollView {
                     art().frame(maxWidth: .infinity).padding(.vertical, 14)
@@ -182,8 +152,8 @@ struct OnboardingView: View {
             }
 
             VStack(spacing: 6) {
-                // Said before the button, not after it, because the worry it
-                // answers is the reason somebody's thumb is hovering.
+                // Said before the button, not after it, because the worry it answers is the reason
+                // somebody's thumb is hovering.
                 if let reassurance {
                     Text(reassurance)
                         .font(Theme.sans(13))
@@ -290,12 +260,6 @@ struct OnboardingView: View {
     // MARK: 2 · What you care about
 
     /// The focus options, and the metric each one is really about.
-    ///
-    /// The metric is what makes this question worth asking: picking "Sleep
-    /// better" is what puts a sleep goal on the goals page with its box
-    /// already ticked. The two without one are honest about it — the cycle is
-    /// tracked on its own page rather than as a goal, and "something else" is
-    /// there so nobody has to lie to get past.
     private struct Focus {
         let id: String
         let label: String
@@ -390,8 +354,8 @@ struct OnboardingView: View {
         let target: Double
     }
 
-    /// What the goals page offers: whatever the focus page implied, then the
-    /// usual three to fill out the list, never the same one twice.
+    /// What the goals page offers: whatever the focus page implied, then the usual three to fill
+    /// out the list, never the same one twice.
     private var suggestions: [Suggestion] {
         let wanted = focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric)
         var ids = wanted
@@ -407,9 +371,6 @@ struct OnboardingView: View {
     }
 
     /// The step target, moved to meet the week that was described.
-    ///
-    /// Rounded to the nearest hundred, because "6,800 steps" is a target and
-    /// "6,847 steps" is an output.
     private func scaled(_ base: Double) -> Double {
         guard let id = rhythm, let scale = rhythms.first(where: { $0.id == id })?.scale else { return base }
         return (base * scale / 100).rounded() * 100
@@ -481,11 +442,6 @@ struct OnboardingView: View {
     // MARK: 6 · What happens to it
 
     /// Said before Apple Health is asked for, not after.
-    ///
-    /// Everything on this page is a decision in the code rather than a
-    /// promise: the cycle is kept out of HealthSnapshot, and readings are
-    /// written by Apple's on-device model. It is the last thing somebody sees
-    /// before the permission sheet, which is when they are deciding.
     private var privacyPage: some View {
         layout(
             kicker: "Privacy",
@@ -510,8 +466,8 @@ struct OnboardingView: View {
 
     // MARK: 7 · Apple Health
 
-    /// Named after the goal that was just set, when there was one, so the
-    /// permission arrives attached to something the person asked for.
+    /// Named after the goal that was just set, when there was one, so the permission arrives
+    /// attached to something the person asked for.
     private var healthReason: String {
         guard let first = suggestions.first(where: { chosenGoals.contains($0.id) }) else {
             return "Steps, sleep, heart rate and more, straight from your iPhone and watch."
@@ -532,8 +488,8 @@ struct OnboardingView: View {
                 if healthConnected { go(7); return }
                 try? await health.requestAuthorization()
                 healthConnected = true
-                // Nothing, or zero, reads as a broken app rather than a quiet
-                // morning; Health also returns nothing when access was declined.
+                // Nothing, or zero, reads as a broken app rather than a quiet morning; Health also
+                // returns nothing when access was declined.
                 if let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 { todaySteps = steps }
                 try? await Task.sleep(for: .milliseconds(450))
                 go(7)
@@ -622,9 +578,8 @@ struct OnboardingView: View {
 
     // MARK: 10 · What costs money
 
-    /// Said plainly rather than hidden, because the free app is genuinely
-    /// usable and a paywall that overstates itself is both dishonest and a
-    /// review risk. Skipping it is a full-width button, not a grey word.
+    /// Said plainly rather than hidden, because the free app is genuinely usable and a paywall that
+    /// overstates itself is both dishonest and a review risk.
     private var planPage: some View {
         layout(
             kicker: "Pricing",
@@ -687,8 +642,8 @@ struct OnboardingView: View {
             }
         )
         .task {
-            // Counted up from nothing the first time the page appears, so the
-            // figure arrives rather than simply sitting there.
+            // Counted up from nothing the first time the page appears, so the figure arrives rather
+            // than simply sitting there.
             guard let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 else { return }
             todaySteps = 0
             try? await Task.sleep(for: .milliseconds(200))
@@ -699,8 +654,7 @@ struct OnboardingView: View {
 
 /// Shows the introduction once, then gets out of the way for good.
 struct OnboardingGate<Content: View>: View {
-    /// Versioned, so a new introduction is shown once even to people who
-    /// finished the old one.
+    /// Versioned, so a new introduction is shown once even to people who finished the old one.
     @AppStorage("onboarded_v3") private var done = false
     @ViewBuilder var content: Content
 
@@ -718,12 +672,7 @@ struct OnboardingGate<Content: View>: View {
         .onAppear(perform: honourResetRequest)
     }
 
-    /// Lets a debug build be launched with RESET_ONBOARDING set to see the
-    /// introduction again.
-    ///
-    /// The alternative is deleting the app, which clears the flag but takes
-    /// the signed-in session and the granted Health permissions with it. This
-    /// is compiled out of release builds entirely.
+    /// Lets a debug build be launched with RESET_ONBOARDING set to see the introduction again.
     private func honourResetRequest() {
         #if DEBUG
         if ProcessInfo.processInfo.environment["RESET_ONBOARDING"] != nil {

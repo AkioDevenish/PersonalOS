@@ -4,19 +4,7 @@ import { internalMutation, mutation, query } from "./_generated/server"
 import { internal } from "./_generated/api"
 import { configured } from "./auth"
 
-/**
- * Every table that holds a person's own rows, and the index that finds them.
- *
- * Deleting an account used to delete the login and nothing else, which left
- * years of health measurements, readings and consultations sitting in the
- * database under an id that no longer had an owner — unreachable, but kept.
- * That is not what deleting an account means, and it is not what the App
- * Store's own rule on account deletion asks for.
- *
- * Adding a table with a userId means adding it here. There is no clever
- * reflection over the schema that would do this automatically, and a clever
- * one would fail silently the day it stopped working.
- */
+/** Every table that holds a person's own rows, and the index that finds them. */
 const OWNED = [
   { table: "health_samples", index: "by_user_day_metric" },
   { table: "health_records", index: "by_user" },
@@ -42,12 +30,7 @@ const OWNED = [
 /** Rows deleted per run, before the sweep hands off to a fresh transaction. */
 const BUDGET = 1500
 
-/**
- * The signed-in person's own account.
- *
- * What Clerk's profile screen used to show and edit, now that the account is
- * a row in this database.
- */
+/** The signed-in person's own account. */
 export const me = query({
   args: {},
   handler: async (ctx) => {
@@ -76,12 +59,7 @@ export const setName = mutation({
   },
 })
 
-/**
- * Which ways in exist, so the app only shows buttons that work.
- *
- * Deliberately public: the sign-in screen needs it before anybody has signed
- * in, and it says nothing beyond which providers are set up.
- */
+/** Which ways in exist, so the app only shows buttons that work. */
 export const providers = query({
   args: {},
   handler: async () => ({
@@ -92,16 +70,7 @@ export const providers = query({
   }),
 })
 
-/**
- * Deleting the account, from inside the app.
- *
- * Apple requires this of any app that lets people create an account
- * (guideline 5.1.1(v)): it has to be possible without writing to anybody.
- *
- * Removes the account and everything that signs in as it — its sign-in
- * methods, its sessions, and those sessions' refresh tokens — so nothing
- * held on a phone can sign in again afterwards.
- */
+/** Deleting the account, from inside the app. */
 export const deleteAccount = mutation({
   args: {},
   handler: async (ctx) => {
@@ -136,23 +105,14 @@ export const deleteAccount = mutation({
 
     await ctx.db.delete(id)
 
-    // The login is gone before this returns, so nobody can sign back in while
-    // the rest is still being swept. Health history can run to tens of
-    // thousands of rows, which is more than one transaction should carry, so
-    // the data goes in the background and in batches.
+    // The login is gone before this returns, so nobody can sign back in while the rest is still
+    // being swept.
     await ctx.scheduler.runAfter(0, internal.users.purge, { userId: id })
     return null
   },
 })
 
-/**
- * Deletes everything a departed account owned, a batch at a time.
- *
- * Reschedules itself until a run finds nothing left to delete. Starting from
- * the top of OWNED each time costs an empty index read per finished table,
- * which is cheap, and means a run that dies halfway is simply retried rather
- * than leaving a cursor to be trusted.
- */
+/** Deletes everything a departed account owned, a batch at a time. */
 export const purge = internalMutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -160,10 +120,8 @@ export const purge = internalMutation({
 
     for (const { table, index } of OWNED) {
       while (budget > 0) {
-        // The table name is a variable here, so the types collapse to the
-        // intersection of twenty different row shapes and the index name
-        // narrows to never. All this loop touches is _id, which every table
-        // has, so the cast buys nothing away. OWNED is what has to be right.
+        // The table name is a variable here, so the types collapse to the intersection of twenty
+        // different row shapes and the index name narrows to never.
         const query = ctx.db.query(table) as unknown as {
           withIndex: (
             name: string,
@@ -183,9 +141,8 @@ export const purge = internalMutation({
       }
     }
 
-    // A consultation's messages and call signalling hang off the consultation
-    // rather than off the person, so they go first — deleting the parent first
-    // would leave children nothing points at.
+    // A consultation's messages and call signalling hang off the consultation rather than off the
+    // person, so they go first — deleting the parent first would leave children nothing points at.
     while (budget > 0) {
       const consults = await ctx.db
         .query("consults")
@@ -210,9 +167,8 @@ export const purge = internalMutation({
       }
     }
 
-    // One vote per person per dish, indexed by country rather than by person,
-    // so this is the one table that has to be looked through instead of looked
-    // up. It is small, and it is last.
+    // One vote per person per dish, indexed by country rather than by person, so this is the one
+    // table that has to be looked through instead of looked up.
     if (budget > 0) {
       const votes = await ctx.db
         .query("cuisine_dishes")

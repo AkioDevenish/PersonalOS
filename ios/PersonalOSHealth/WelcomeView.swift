@@ -1,14 +1,6 @@
 import SwiftUI
 
 /// The first thing anybody sees, before they have an account.
-///
-/// It has one job: say in a few seconds what this is, then get out of the
-/// way. A picture, a name, three plain lines about what it does, and two
-/// ways in — one for somebody new and one for somebody coming back, because
-/// "sign in" is the wrong first word to somebody who has never had an account.
-///
-/// Replaces a screen that was a name, a slogan and a button reading "Begin
-/// your ledger", which told a stranger nothing about what they were beginning.
 struct WelcomeView: View {
     @State private var mode: AuthSheet.Mode?
 

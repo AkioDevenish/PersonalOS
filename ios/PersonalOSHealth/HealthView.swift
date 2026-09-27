@@ -5,9 +5,7 @@ import Charts
 struct HealthView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var snapshot: HealthSnapshot?
-    /// Recent days, for the comparison against your own usual weekday. Loaded
-    /// separately from today so a slow history read never delays the figure
-    /// the page is actually about.
+    /// Recent days, for the comparison against your own usual weekday.
     @State private var history: [HealthSnapshot] = []
     @State private var historyLoading = true
     /// Today's steps hour by hour, and the same for recent same-weekdays.
@@ -17,10 +15,7 @@ struct HealthView: View {
 
     private var dateKicker: String { Formatters.dayAndDate.string(from: Date()) }
 
-    /// Which groups this page prints. Recovery & environment is not one of
-    /// them: its two figures are large at the top, and what remained under the
-    /// heading was mindful minutes and headphone volume, which is not a section
-    /// of a health summary. Both still live in Records and in the briefing.
+    /// Which groups this page prints.
     private var shownGroups: [MetricSpec.Group] {
         Metrics.populatedGroups(snapshot).filter { $0 != .recovery }
     }
@@ -28,11 +23,8 @@ struct HealthView: View {
     /// The groups, minus anything already shown large above it.
     private func rest(_ group: MetricSpec.Group) -> [MetricSpec] {
         Metrics.inGroup(group).filter { spec -> Bool in
-            // Excludes whatever is already shown large above: the headline
-            // figure and the supporting four. This used to filter against a
-            // separate list of "lead" metrics that stopped being displayed
-            // when the page was rebuilt, so the groups were hiding figures on
-            // the strength of a list nothing rendered any more.
+            // Excludes whatever is already shown large above: the headline figure and the
+            // supporting four.
             let shownAbove = [headlineSpec].compactMap { $0 } + pairs
             return snapshot.flatMap { spec.value($0) } != nil && !shownAbove.contains(spec)
         }
@@ -54,8 +46,8 @@ struct HealthView: View {
                     .padding(.top, 16)
                     .flowIn(1)
 
-                // Someone's state of mind is the softest thing the app knows:
-                // it belongs in the italic, with nothing drawn around it.
+                // Someone's state of mind is the softest thing the app knows: it belongs in the
+                // italic, with nothing drawn around it.
                 if let mood = snapshot?.stateOfMindLabels, !mood.isEmpty {
                     Text(mood.lowercased() + ".")
                         .font(Theme.serifItalic(19))
@@ -64,11 +56,7 @@ struct HealthView: View {
                         .flowIn(2)
                 }
 
-                // The briefing's prose lives on Home now. What stays here is
-                // the way through to it, so this page is the body in figures
-                // rather than the same two paragraphs a second time.
-                // Goals moved here from Profile: what you are aiming at belongs
-                // beside the readings that measure it, not among account settings.
+                // The briefing's prose lives on Home now.
                 HStack(spacing: 22) {
                     NavigationLink(value: Route.briefing) {
                         Text("READ THE FULL BRIEFING  \u{2192}")
@@ -111,9 +99,8 @@ struct HealthView: View {
                     }
                 }
 
-                // A refused read and a quiet day used to render identically, so
-                // someone who had denied Health access saw an empty page and no
-                // reason for it. The flag was being set and never read.
+                // A refused read and a quiet day used to render identically, so someone who had
+                // denied Health access saw an empty page and no reason for it.
                 if loadFailed {
                     Text("No Health access. Allow it in Settings → Privacy & Security → Health.")
                         .font(Theme.sans(12))
@@ -141,10 +128,6 @@ struct HealthView: View {
     // MARK: The headline figure
 
     /// The one number the day is judged on.
-    ///
-    /// Steps where there are steps, because it is the figure people recognise
-    /// without being taught to read it. Energy and sleep stand in when the day
-    /// has no step count at all.
     private var headlineSpec: MetricSpec? {
         ["steps", "active_energy", "sleep"]
             .compactMap { Metrics.by(id: $0) }
@@ -187,9 +170,8 @@ struct HealthView: View {
                         .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 10)
                 } else {
-                    // Said plainly rather than left blank: the comparison is
-                    // missing because the history is, not because today was
-                    // unremarkable.
+                    // Said plainly rather than left blank: the comparison is missing because the
+                    // history is, not because today was unremarkable.
                     Text("Not enough \(weekdayName)s recorded yet to say what is usual")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.tertiaryText)
@@ -197,8 +179,7 @@ struct HealthView: View {
                 }
             }
         } else {
-            // Nothing measured. The briefing's own headline is the only thing
-            // on the page that knows why.
+            // Nothing measured.
             Text(briefing.headline)
                 .font(Theme.serif(34))
                 .foregroundStyle(Theme.text)
@@ -226,10 +207,6 @@ struct HealthView: View {
     // MARK: How the day has gone
 
     /// Today's climb against the way this weekday usually goes.
-    ///
-    /// Two lines and no axis furniture beyond what is needed to read them. The
-    /// usual day is drawn first and quietly, because it is the thing being
-    /// measured against rather than the thing being read.
     private func progress(_ curve: DayCurve) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionRule(text: "How the day has gone")
@@ -276,7 +253,7 @@ struct HealthView: View {
                     .interpolationMethod(.monotone)
                 }
 
-                // Where the day has got to. The one point worth marking.
+                // Where the day has got to.
                 if let last = curve.today.last {
                     PointMark(
                         x: .value("Hour", curve.today.count - 1),
@@ -368,12 +345,6 @@ struct HealthView: View {
     }
 
     /// Driven by the catalogue, so a metric added there appears here.
-    ///
-    /// No plates. The warm-white cards put a lighter rectangle behind every
-    /// figure, which on a linen ground read as a box floating on paper rather
-    /// than a number written on it — and fifteen of them turned the screen
-    /// into a grid of tiles. The numbers now sit directly on the ground with a
-    /// hairline under each, the same mark the rest of the app uses.
     private func grid(_ specs: [MetricSpec]) -> some View {
         let columns = [GridItem(.flexible(), spacing: 18), GridItem(.flexible(), spacing: 18)]
         return LazyVGrid(columns: columns, spacing: 26) {
@@ -391,21 +362,18 @@ struct HealthView: View {
         } catch {
             loadFailed = true
         }
-        // Drives the glyph stagger. Set after the read so the icons animate in
-        // alongside their numbers rather than over an empty grid.
+        // Drives the glyph stagger.
         withAnimation(Theme.Motion.flow) { appeared = true }
 
-        // Eight weeks, read after today rather than alongside it. It is dozens
-        // of queries for a line of supporting text, and today's figure should
-        // never wait on it.
+        // Eight weeks, read after today rather than alongside it.
         await loadHistory()
     }
 
     private func loadHistory() async {
         historyLoading = true
         history = (try? await health.fetchHistoricalSnapshots(days: 56)) ?? []
-        // One statistics query for eight weeks of hourly buckets, which is
-        // what the curve is drawn from.
+        // One statistics query for eight weeks of hourly buckets, which is what the curve is drawn
+        // from.
         let hourly = (try? await health.hourlySteps(days: 56)) ?? [:]
         withAnimation(Theme.Motion.flow) {
             curve = DayCurve.build(from: hourly)

@@ -1,16 +1,6 @@
-/**
- * Canonical health vocabulary.
- *
- * Every provider names and measures things differently — Fitbit reports
- * distance in km, Apple in metres, Oura reports sleep as one nightly block
- * while Apple emits a row per stage. Adapters translate into the metric keys
- * and units below, and nothing downstream ever sees a provider's own naming.
- *
- * Lives under convex/ so both the Convex functions and the Next app can
- * import it without duplicating the table.
- */
+/** Canonical health vocabulary. */
 
-/** Units are canonical. An adapter that can't convert should drop the sample. */
+/** Units are canonical. */
 export const METRICS = {
   steps: { unit: "count", aggregation: "sum" },
   distance: { unit: "m", aggregation: "sum" },
@@ -44,8 +34,8 @@ export const METRICS = {
   mindful_minutes: { unit: "min", aggregation: "sum" },
   time_in_daylight: { unit: "min", aggregation: "sum" },
 
-  // gait detail — Apple Health / Health Connect supply these; without them
-  // the iOS bridge would have samples silently rejected as unknown metrics
+  // gait detail — Apple Health / Health Connect supply these; without them the iOS bridge would
+  // have samples silently rejected as unknown metrics
   walking_asymmetry: { unit: "pct", aggregation: "avg" },
   walking_step_length: { unit: "m", aggregation: "avg" },
   walking_double_support: { unit: "pct", aggregation: "avg" },
@@ -62,7 +52,7 @@ export function isMetricKey(value: string): value is MetricKey {
   return Object.prototype.hasOwnProperty.call(METRICS, value)
 }
 
-/** Providers we can ingest from. `manual` is user-entered. */
+/** Providers we can ingest from. */
 export const PROVIDERS = [
   "apple_health",
   "health_connect",
@@ -83,18 +73,7 @@ export function isProvider(value: string): value is Provider {
   return (PROVIDERS as readonly string[]).includes(value)
 }
 
-/**
- * Default trust order per metric, most trusted first.
- *
- * This is what stops a user with a phone, a ring and a watch from being shown
- * three different step counts added together. For each day and metric we take
- * the highest-ranked provider that actually reported, and ignore the rest.
- *
- * The ordering reflects what the hardware is genuinely good at rather than
- * brand preference: dedicated sleep hardware wins sleep, chest/wrist optical
- * sensors win cardiac, a worn watch beats a pocketed phone for movement.
- * Users can override per metric — see `metric_sources` in the schema.
- */
+/** Default trust order per metric, most trusted first. */
 const MOVEMENT_ORDER: Provider[] = [
   "garmin", "whoop", "fitbit", "apple_health", "samsung_health", "health_connect", "polar", "strava", "manual",
 ]
@@ -145,11 +124,7 @@ export function defaultPriority(metric: MetricKey): Provider[] {
   return PRIORITY_BY_METRIC[metric] ?? GENERAL_ORDER
 }
 
-/**
- * Rank a provider for a metric. Lower wins. Providers absent from the list
- * sort last rather than being discarded, so a newly added provider still
- * shows data before anyone has tuned its priority.
- */
+/** Rank a provider for a metric. */
 export function providerRank(
   metric: MetricKey,
   provider: string,
@@ -170,14 +145,7 @@ export type ResolvedDay = {
   alternatives: { provider: string; value: number }[]
 }
 
-/**
- * The dedup rule, kept pure and free of Convex imports so it can be unit
- * tested on its own.
- *
- * Group one day's samples by provider, aggregate each provider independently,
- * then let the trust order pick a single winner. Never sums across providers —
- * that is exactly the triple-counting this exists to prevent.
- */
+/** The dedup rule, kept pure and free of Convex imports so it can be unit tested on its own. */
 export function resolveDay(
   metric: MetricKey,
   day: string,

@@ -1,28 +1,4 @@
-/**
- * What people actually cook at home, written down rather than recalled.
- *
- * The app used to ask the model on the phone to name a country's everyday
- * food. Asked for twenty dishes from Trinidad it produced ackee and saltfish
- * (Jamaican), rice and peas (Jamaican), bunny chow (South African) and fish
- * and chips, with no doubles, roti or pelau. Asked about Angola it knew caldo
- * verde and moqueca — Portuguese and Brazilian — and padded to twenty by
- * cross-producting them with four proteins: caldo verde de peixe, caldo verde
- * de frango, moqueca de peixe, and so on down the list.
- *
- * That is not a prompt that needs sharpening. Recalling a small country's
- * everyday food is the task the model is worst at, and asking for a fixed
- * count makes it worse, because a model that knows two dishes and is asked for
- * twenty will invent eighteen rather than stop.
- *
- * So the countries below are written out. Where a list exists it is used and
- * the model is never asked; where one does not, the model still seeds, and
- * people's votes still outrank whatever it produces. Adding a country here is
- * better than any prompt, and the list improves by someone who eats there
- * editing this file.
- *
- * Everyday home food, in the name and spelling used there — not restaurant or
- * festival food, and not what a tourist board would put on a poster.
- */
+/** What people actually cook at home, written down rather than recalled. */
 export const CURATED: Record<string, string[]> = {
   // Caribbean
   TT: [

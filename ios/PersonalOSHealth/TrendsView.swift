@@ -2,29 +2,12 @@ import SwiftUI
 import Charts
 
 /// History: any measurement over time, and any two of them against each other.
-///
-/// This was two screens. Trends could draw four hardcoded series — steps,
-/// sleep, resting heart rate, active energy — while Correlations, sitting one
-/// row below it in the same list, could reach all nineteen. So the screen whose
-/// whole job was showing a measurement over time was the one that couldn't show
-/// you your walking steadiness, and the way to chart it was to open the other
-/// screen and correlate it against something you didn't care about.
-///
-/// One screen now, and one idea: pick a measurement and read it. Pick a second
-/// and the same chart becomes the comparison, with Pearson's r underneath. Both
-/// pickers are the catalogue, so anything the app records can be read either
-/// way.
-///
-/// Deliberately reads HealthKit directly rather than the server. The charts are
-/// then honest about what the phone actually holds, work with no network, and
-/// don't wait on a sync having happened.
 struct TrendsView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var snapshots: [HealthSnapshot] = []
     @State private var days = 30
     @State private var primary: MetricSpec = Metrics.by(id: "steps") ?? Metrics.all[0]
-    /// Nil is the normal state, not a missing value: most readings are one
-    /// measurement over time. Setting it turns the screen into the comparison.
+    /// Nil is the normal state, not a missing value: most readings are one measurement over time.
     @State private var against: MetricSpec?
     @State private var loading = true
     @State private var picking: Slot?
@@ -74,8 +57,8 @@ struct TrendsView: View {
             MetricPicker(
                 title: slot == .primary ? "Read" : "Compare with",
                 selected: slot == .primary ? primary : against,
-                // Only the second slot may be empty: a chart of nothing
-                // against nothing isn't a reading.
+                // Only the second slot may be empty: a chart of nothing against nothing isn't a
+                // reading.
                 clearable: slot == .against
             ) { chosen in
                 Haptics.select()
@@ -140,8 +123,7 @@ struct TrendsView: View {
         }
     }
 
-    /// Only days where both metrics have a value — a correlation over gaps is
-    /// not a correlation.
+    /// Only days where both metrics have a value — a correlation over gaps is not a correlation.
     private var pairs: [(date: Date, a: Double, b: Double)] {
         guard let against else { return [] }
         return snapshots.compactMap { s in
@@ -201,18 +183,13 @@ struct TrendsView: View {
         .chartYAxis { ledgerYAxis }
         .chartXAxis { ledgerXAxis }
         .frame(height: 220)
-        // Bars and lines are different marks, and asking Charts to morph one
-        // into the other looks like a mistake. Redrawn on a cross-fade.
+        // Bars and lines are different marks, and asking Charts to morph one into the other looks
+        // like a mistake.
         .id("single-\(primary.id)")
         .transition(.opacity)
     }
 
     /// Two measurements, normalised onto a shared 0–1 scale before plotting.
-    ///
-    /// Steps run to five figures and resting heart rate to two; drawn on one
-    /// axis the smaller series would flatten into the baseline and look like
-    /// nothing was happening. The plates underneath keep the real numbers, and
-    /// Pearson's r is computed on the raw values, never the normalised ones.
     private var comparisonChart: some View {
         let rows = pairs
         let na = normalise(rows.map(\.a))
@@ -236,8 +213,8 @@ struct TrendsView: View {
                 .interpolationMethod(.catmullRom)
             }
         }
-        // The axis is a shared 0–1 scale that belongs to neither measurement,
-        // so labelling it with numbers would invite reading them as values.
+        // The axis is a shared 0–1 scale that belongs to neither measurement, so labelling it with
+        // numbers would invite reading them as values.
         .chartYAxis(.hidden)
         .chartXAxis { ledgerXAxis }
         .frame(height: 220)
@@ -387,10 +364,6 @@ struct TrendsView: View {
 }
 
 /// The catalogue, as a sheet.
-///
-/// Both slots pick from the same list, because both are the same question —
-/// which measurement — and a picker that offered fewer options for one of them
-/// is how the old Trends screen ended up with four series.
 struct MetricPicker: View {
     let title: String
     let selected: MetricSpec?

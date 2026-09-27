@@ -1,20 +1,6 @@
 import SwiftUI
 
 /// One measurement, written on the ground rather than on a card.
-///
-/// The glyph does two things. It arrives on a stagger with its neighbours, so
-/// the grid assembles rather than appearing all at once — the same idea as the
-/// splash, and it makes a dense screen legible for the second it takes to land.
-/// Then it keeps moving the way its own measurement moves: a heart beats, a
-/// flame breathes, a sun turns, footprints wiggle.
-///
-/// Only four of them used to move at all, on the reasoning that a step count
-/// which throbs is decoration rather than information. The worry behind that
-/// was right — nineteen icons pulsing in unison is a light show — but holding
-/// most of them still was the wrong fix. What keeps this quiet is timing, not
-/// stillness: the continuous effects belong to the handful of things that
-/// genuinely never stop, everything else moves on a long period, and each
-/// tile's period is offset by its position so no two glyphs ever move together.
 struct MetricTile: View {
     let spec: MetricSpec
     let snapshot: HealthSnapshot?
@@ -24,8 +10,7 @@ struct MetricTile: View {
 
     private var delay: Double { Double(index) * 0.06 }
 
-    /// Far apart, and never the same for two tiles. Movement you notice on
-    /// glance and stop seeing while you read.
+    /// Far apart, and never the same for two tiles.
     private var period: Double { 3.5 + Double(index % 7) * 0.9 }
 
     var body: some View {
@@ -48,9 +33,9 @@ struct MetricTile: View {
                 }
             }
         }
-        // The hairline under each figure used to stretch the tile across its
-        // grid column; without it the content shrank to its own width and got
-        // centred, so a column of figures no longer lined up with anything.
+        // The hairline under each figure used to stretch the tile across its grid column; without
+        // it the content shrank to its own width and got centred, so a column of figures no longer
+        // lined up with anything.
         .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
@@ -65,9 +50,7 @@ struct MetricTile: View {
             .scaleEffect(appeared ? 1 : 0.6)
             .animation(Theme.Motion.pop.delay(delay), value: appeared)
 
-        // Reduce Motion means no idle movement at all. A glyph that never
-        // stops is exactly what that setting exists to turn off, so the
-        // entrance stays and the loop doesn't start.
+        // Reduce Motion means no idle movement at all.
         if Theme.Motion.reduced {
             base
         } else {

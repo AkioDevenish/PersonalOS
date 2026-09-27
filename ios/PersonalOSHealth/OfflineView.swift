@@ -1,10 +1,6 @@
 import SwiftUI
 
 /// What the app is when there is no connection.
-///
-/// Shown instead of everything, including the welcome page: an account cannot
-/// be made without the database either, and a sign-up form that cannot
-/// possibly work is worse than a page saying why.
 struct OfflineView: View {
     @EnvironmentObject private var network: Network
 

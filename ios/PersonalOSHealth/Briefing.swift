@@ -1,12 +1,6 @@
 import Foundation
 
 /// How much of the ledger a briefing reads.
-///
-/// Not just three lengths of the same paragraph: a day is a report of what
-/// happened, and a month is a report of what is happening — an average, a
-/// direction, a best day. The prose is written separately for each because the
-/// honest sentence about one day ("you slept 5h 40m") is a dishonest one about
-/// thirty ("you slept 5h 40m" every night?).
 enum BriefingPeriod: String, CaseIterable, Identifiable {
     case daily, weekly, monthly
 
@@ -47,10 +41,6 @@ enum BriefingPeriod: String, CaseIterable, Identifiable {
 }
 
 /// The briefing content, composed on-device from recorded snapshots.
-///
-/// This is deliberately rule-based for now: honest sentences derived from
-/// real numbers. When the server's AI reports move off SQLite, this struct
-/// is the seam where they arrive — same shape, better prose.
 struct Briefing {
     let headline: String
     let paragraphs: [String]
@@ -61,12 +51,6 @@ struct Briefing {
     // MARK: What the day still owes
 
     /// The closing list, from the goals the person actually set.
-    ///
-    /// This used to be advice invented from numbers in a source file: under
-    /// four thousand steps meant "the day still owes you a walk", because four
-    /// thousand was hardcoded. That is a guess about a stranger. Now it is
-    /// arithmetic against what they said they were aiming at, and when they
-    /// have set nothing it says so rather than inventing an ambition for them.
     static func owing(_ snapshot: HealthSnapshot?) -> [String] {
         let progress = Goals.progress(on: snapshot)
         guard !progress.isEmpty else { return [] }
@@ -141,10 +125,9 @@ struct Briefing {
         }
 
         if paras.isEmpty {
-            // This narrative only reads sleep, steps and active energy, so a
-            // day of glucose and carbohydrates and nothing else used to be
-            // called empty while the breakdown three lines below listed both.
-            // Someone wearing a CGM and no watch saw that every morning.
+            // This narrative only reads sleep, steps and active energy, so a day of glucose and
+            // carbohydrates and nothing else used to be called empty while the breakdown three
+            // lines below listed both.
             let anything = Metrics.all.contains { $0.display(s) != nil }
             paras.append(anything
                 ? "Nothing moved yet today, though the day has entries."
@@ -152,8 +135,7 @@ struct Briefing {
         }
         let goals = owing(s)
         if !goals.isEmpty {
-            // What you set outranks what the app guessed. The invented advice
-            // only survives when there is nothing of your own to say.
+            // What you set outranks what the app guessed.
             sugg = goals
         } else if sugg.isEmpty {
             sugg.append("No goals set yet. Set some and this list becomes yours.")
@@ -189,9 +171,7 @@ struct Briefing {
         if let avgSleep = mean(nights) {
             let d = HealthView.duration(avgSleep)
             var line = "You slept \(d) a night across \(nights.count) recorded \(nights.count == 1 ? "night" : "nights")"
-            // The window against itself: later half versus earlier. A trend
-            // inside the period is a claim the data can actually support,
-            // where "against last month" would need history this doesn't hold.
+            // The window against itself: later half versus earlier.
             if let drift = drift(nights), abs(drift) >= 0.25 {
                 let mins = Int((abs(drift) * 60).rounded())
                 line += ", and \(drift > 0 ? "gained" : "lost") about \(mins) minutes a night as it went on"
@@ -250,26 +230,6 @@ struct Briefing {
     // MARK: The whole ledger, written out
 
     /// Every metric with a reading, as prose rather than as a table.
-    ///
-    /// This was a column of figures with a shorthand line under each — "average
-    /// · 5.2–8.1 · 14 days" — which is a spreadsheet with the headings taken
-    /// off. Someone reading a briefing should not have to work out what a
-    /// middle dot means.
-    ///
-    /// One paragraph a group, one sentence a measurement. The first sentence in
-    /// a paragraph is written in full and the rest are shortened, because six
-    /// sentences of identical shape read as a mail merge — the day count and
-    /// the window are established once and then assumed, the way a person
-    /// writing this would do it.
-    ///
-    /// Composed here beside the rest of the prose rather than in the view, so
-    /// there is one place where this app decides how to describe a number.
-    /// Returns the sentences rather than a paragraph.
-    ///
-    /// They were joined into one block per group, which is a wall: six
-    /// measurements run together read as an essay about nothing, and there is
-    /// no way to find the one you wanted. One line per measurement, set as a
-    /// list, is scannable and still reads as written English.
     static func breakdown(
         period: BriefingPeriod,
         today: HealthSnapshot?,
@@ -324,9 +284,9 @@ struct Briefing {
                 : "Your \(spec.spoken) read \(figure(spec, now))\(comparison)."
         }
 
-        // Shortened: the window and the phrase "your N-day average" were
-        // established by the sentence above, and repeating them five times is
-        // what made this read as a form rather than a paragraph.
+        // Shortened: the window and the phrase "your N-day average" were established by the
+        // sentence above, and repeating them five times is what made this read as a form rather
+        // than a paragraph.
         guard let usual, usual > 0 else {
             return "\(capitalised(spec.spoken)) came to \(figure(spec, now))."
         }
@@ -337,9 +297,7 @@ struct Briefing {
         return "\(capitalised(spec.spoken)) reached \(figure(spec, now)) against a usual \(figure(spec, usual))."
     }
 
-    /// Today against the days behind it. A number on its own says nothing about
-    /// whether it is a lot for you, which is the only question a daily briefing
-    /// is really being asked.
+    /// Today against the days behind it.
     private static func against(
         _ baseline: Double?,
         now: Double,
@@ -348,8 +306,8 @@ struct Briefing {
     ) -> String {
         guard let baseline, baseline > 0, days >= 2 else { return "" }
         let delta = now - baseline
-        // Under a twentieth is noise, and calling noise a change is how a
-        // briefing stops being worth reading.
+        // Under a twentieth is noise, and calling noise a change is how a briefing stops being
+        // worth reading.
         guard abs(delta) / baseline >= 0.05 else {
             return ", in line with your \(days)-day average of \(figure(spec, baseline))"
         }
@@ -394,14 +352,7 @@ struct Briefing {
         return "\(capitalised(spec.spoken)) \(verb(spec)) \(figure(spec, avg))\(movement)."
     }
 
-    /// Rotated by the metric's own id, so a paragraph doesn't say "averaged"
-    /// six times.
-    ///
-    /// Summed scalars rather than `hashValue`: Swift seeds string hashing per
-    /// process, so a hash would have picked a different verb for the same
-    /// metric on every launch. Prose that rewords itself when you reopen a
-    /// screen reads as a glitch, and makes a briefing look generated where the
-    /// whole point is that it was derived.
+    /// Rotated by the metric's own id, so a paragraph doesn't say "averaged" six times.
     private static func verb(_ spec: MetricSpec) -> String {
         let verbs = ["ran to", "held at", "came in at", "averaged"]
         let seed = spec.id.unicodeScalars.reduce(0) { $0 + Int($1.value) }
@@ -422,8 +373,7 @@ struct Briefing {
         guard let d = drift(readings), let base = mean(readings), base > 0 else { return "" }
         let each = spec.cumulative ? " a day" : ""
         guard abs(d) / base >= 0.05 else {
-            // Worth saying once. Five metrics all "holding steady throughout"
-            // is a paragraph that says nothing at length.
+            // Worth saying once.
             return opening ? ", holding steady throughout" : ""
         }
         let verb = d > 0 ? "rising" : "falling"
@@ -434,22 +384,22 @@ struct Briefing {
 
     // MARK: Figures, in words
 
-    /// "8,431" or "7h 12m" — sleep is stored in hours and reads as a decimal
-    /// nowhere except a spreadsheet.
+    /// "8,431" or "7h 12m" — sleep is stored in hours and reads as a decimal nowhere except a
+    /// spreadsheet.
     private static func figure(_ spec: MetricSpec, _ v: Double) -> String {
         spec.id == "sleep" ? HealthView.duration(v) : spec.format(v) + unitSuffix(spec)
     }
 
-    /// A gap between two figures, which is not always written like the figures
-    /// themselves: two thirds of an hour of sleep is 40 minutes, not 0h 40m.
+    /// A gap between two figures, which is not always written like the figures themselves: two
+    /// thirds of an hour of sleep is 40 minutes, not 0h 40m.
     private static func difference(_ spec: MetricSpec, _ v: Double) -> String {
         guard spec.id == "sleep" else { return figure(spec, v) }
         let mins = Int((v * 60).rounded())
         return mins < 60 ? "\(mins) minutes" : HealthView.duration(Double(mins) / 60)
     }
 
-    /// A space before every unit except the percent sign, which closes up
-    /// against its number in every style guide worth following.
+    /// A space before every unit except the percent sign, which closes up against its number in
+    /// every style guide worth following.
     private static func unitSuffix(_ spec: MetricSpec) -> String {
         if spec.unit.isEmpty { return "" }
         return spec.unit == "%" ? "%" : " \(spec.unit)"
@@ -478,14 +428,7 @@ struct Briefing {
             .max { $0.1 < $1.1 }
     }
 
-    /// Later half minus earlier half. Needs four readings to mean anything:
-    /// two points either side, or one day's oddity becomes "a trend".
-    ///
-    /// This depends on the snapshots arriving oldest first, which they now do.
-    /// They used to arrive newest first, so "prefix" was the recent half and
-    /// "suffix" the older one, and every sentence about a direction was
-    /// backwards: a week of worsening sleep reported that you had gained
-    /// minutes as it went on.
+    /// Later half minus earlier half.
     private static func drift(_ values: [Double]) -> Double? {
         guard values.count >= 4 else { return nil }
         let half = values.count / 2

@@ -5,15 +5,6 @@ import AuthenticationServices
 import UIKit
 
 /// Who is signed in, run by this app rather than by a service.
-///
-/// Accounts live in the app's own Convex database (convex/auth.ts). Signing in
-/// hands back two tokens: a short-lived one sent with every request, and a
-/// refresh token that buys the next. Both are kept in the Keychain, which is
-/// encrypted, survives a relaunch, and is not in the phone's plain backups.
-///
-/// The session token is renewed shortly before it expires rather than after a
-/// request is refused, so nothing somebody is doing ever fails because an hour
-/// passed.
 @MainActor
 final class Session: NSObject, ObservableObject {
     static let shared = Session()
@@ -46,17 +37,16 @@ final class Session: NSObject, ObservableObject {
 
     private var token: String? { Keychain.read("session_token") }
     private var refreshToken: String? { Keychain.read("refresh_token") }
-    /// One refresh at a time: several requests arriving together should wait
-    /// on the same renewal, not each spend the refresh token.
+    /// One refresh at a time: several requests arriving together should wait on the same renewal,
+    /// not each spend the refresh token.
     private var refreshing: Task<String?, Never>?
 
     private let transport = Transport()
 
     // MARK: Starting up
 
-    /// On launch: signed in if a refresh token is on the device and still
-    /// works, signed out otherwise. There is nothing to show until this is
-    /// known, so it is fast and it is the first thing that runs.
+    /// On launch: signed in if a refresh token is on the device and still works, signed out
+    /// otherwise.
     func restore() async {
         guard refreshToken != nil else { state = .signedOut; return }
         if await validToken() != nil {
@@ -86,9 +76,9 @@ final class Session: NSObject, ObservableObject {
 
     // MARK: Google, Facebook, Apple
 
-    /// Opens the provider in a secure browser sheet, which closes the moment
-    /// it is sent back to the app with a one-time code; that code, with the
-    /// verifier from the first step, is exchanged for tokens.
+    /// Opens the provider in a secure browser sheet, which closes the moment it is sent back to the
+    /// app with a one-time code; that code, with the verifier from the first step, is exchanged for
+    /// tokens.
     func signIn(with provider: Provider) async throws {
         struct Started: Decodable { let redirect: String; let verifier: String }
         let data = try await transport.anonymous("action", "auth:signIn", [
@@ -104,8 +94,8 @@ final class Session: NSObject, ObservableObject {
                 else { done.resume(throwing: error ?? SessionError.cancelled) }
             }
             sheet.presentationContextProvider = self
-            // Remembers somebody already signed in to Google in the browser,
-            // so they are not asked for their password again.
+            // Remembers somebody already signed in to Google in the browser, so they are not asked
+            // for their password again.
             sheet.prefersEphemeralWebBrowserSession = false
             sheet.start()
         }
@@ -131,8 +121,8 @@ final class Session: NSObject, ObservableObject {
     // MARK: Signing out
 
     func signOut() async {
-        // Ends the session on the server too, so the refresh token on this
-        // phone stops being worth anything even if it were copied.
+        // Ends the session on the server too, so the refresh token on this phone stops being worth
+        // anything even if it were copied.
         _ = try? await transport.action("auth:signOut")
         Keychain.delete("session_token")
         Keychain.delete("refresh_token")
@@ -142,8 +132,7 @@ final class Session: NSObject, ObservableObject {
 
     // MARK: The account
 
-    /// Deletes the account on the server, then forgets it here. Nothing held
-    /// on this phone can sign in again afterwards.
+    /// Deletes the account on the server, then forgets it here.
     func deleteAccount() async throws {
         _ = try await transport.mutation("users:deleteAccount")
         Keychain.delete("session_token")
@@ -182,8 +171,8 @@ final class Session: NSObject, ObservableObject {
         guard let data = try? await transport.anonymous("action", "auth:signIn", ["refreshToken": refreshToken]),
               (try? await adopt(data)) != nil
         else {
-            // A refresh token that no longer works means the session is over,
-            // signed out elsewhere or expired. Say so rather than retrying.
+            // A refresh token that no longer works means the session is over, signed out elsewhere
+            // or expired.
             Keychain.delete("session_token")
             Keychain.delete("refresh_token")
             state = .signedOut
@@ -268,8 +257,8 @@ enum Keychain {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: Data(value.utf8),
-            // Readable once the phone has been unlocked after a restart, so a
-            // sync after the first unlock of the day still has a session.
+            // Readable once the phone has been unlocked after a restart, so a sync after the first
+            // unlock of the day still has a session.
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         SecItemAdd(item as CFDictionary, nil)

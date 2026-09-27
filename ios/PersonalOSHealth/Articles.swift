@@ -1,10 +1,6 @@
 import SwiftUI
 
 /// Something to read.
-///
-/// Two sources, one shape. Practitioners write articles that reach Home only
-/// after review (convex/articles.ts), and a handful ship inside the app in
-/// `Articles.json` so the page is never empty. `ArticleLibrary` merges them.
 struct Article: Decodable, Hashable, Identifiable {
     let id: String
     let title: String
@@ -15,12 +11,11 @@ struct Article: Decodable, Hashable, Identifiable {
     let colour: String
     let summary: String
     let body: [String]
-    /// Who wrote it, for articles from a practitioner. The bundled ones are
-    /// the app's own and carry no byline.
+    /// Who wrote it, for articles from a practitioner.
     var author: String? = nil
     var credentials: String? = nil
-    /// True for an archive article without a subscription: the title and
-    /// summary are here, the words are not.
+    /// True for an archive article without a subscription: the title and summary are here, the
+    /// words are not.
     var locked: Bool? = nil
 
     var isLocked: Bool { locked == true }
@@ -38,8 +33,7 @@ struct Article: Decodable, Hashable, Identifiable {
 }
 
 enum Articles {
-    /// Read once from the bundle. A file that fails to decode is a build
-    /// mistake, so it shows as an empty shelf rather than a crash.
+    /// Read once from the bundle.
     static let bundled: [Article] = {
         guard let url = Bundle.main.url(forResource: "Articles", withExtension: "json"),
               let data = try? Data(contentsOf: url),
@@ -48,9 +42,7 @@ enum Articles {
         return decoded
     }()
 
-    /// What an author may choose from. Mirrors convex/articleRules.ts, which
-    /// is the list that is actually enforced; a mismatch here shows as a
-    /// server error on save, never as an article that slips through.
+    /// What an author may choose from.
     static let categories = ["Your cycle", "Sleep & recovery", "Moving", "Eating", "Mind"]
     static let symbols = [
         "circle.dotted", "calendar.badge.clock", "heart", "moon.stars", "figure.walk",
@@ -62,23 +54,18 @@ enum Articles {
 
 // MARK: - The card
 
-/// One card, at the size of the ones in a content catalogue: a picture band on
-/// top and the words beneath it, wide enough that a title reads as a title.
-///
-/// Shared by Explore and the articles so the page has one shape of card
-/// rather than two that nearly match.
+/// One card, at the size of the ones in a content catalogue: a picture band on top and the words
+/// beneath it, wide enough that a title reads as a title.
 struct ContentCard: View {
     let title: String
     var note: String? = nil
     let symbol: String
     let tint: Color
-    /// The card body sits one step off whatever it is laid on. On the banded
-    /// section that is the raised colour; on the plain page it is the surface.
+    /// The card body sits one step off whatever it is laid on.
     var raised = false
 
-    /// Measured off the reference screenshot's Most Read card, which is
-    /// about 185 points wide at iPhone 15 Pro scale. The first cut was a
-    /// quarter bigger again and read as posters rather than a shelf.
+    /// Measured off the reference screenshot's Most Read card, which is about 185 points wide at
+    /// iPhone 15 Pro scale.
     static let width: CGFloat = 184
     static let pictureHeight: CGFloat = 98
     static let bodyHeight: CGFloat = 62
@@ -136,8 +123,8 @@ struct ArticleView: View {
     }
 }
 
-/// The article itself, without a scroll view around it, so the reviewer's
-/// screen can show exactly what readers will see inside its own page.
+/// The article itself, without a scroll view around it, so the reviewer's screen can show exactly
+/// what readers will see inside its own page.
 struct ArticleContent: View {
     let article: Article
 

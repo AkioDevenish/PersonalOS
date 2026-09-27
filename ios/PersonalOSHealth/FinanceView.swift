@@ -1,10 +1,6 @@
 import SwiftUI
 
 /// The money tab.
-///
-/// A ledger, like the rest of the app: what came in, what went out, and where
-/// it went, over a window you choose. The figures are derived on the server at
-/// read time, so correcting an entry corrects every total that quotes it.
 struct FinanceView: View {
     @AppStorage("ledger_currency") private var currency = Money.deviceDefault
 
@@ -16,8 +12,7 @@ struct FinanceView: View {
 
     private let client = FinanceClient()
 
-    /// The totals for the currency being written in. Rows in other currencies
-    /// are still listed; they are simply not added to this one's figure.
+    /// The totals for the currency being written in.
     private var total: FinanceClient.Total? {
         ledger.totals.first { $0.currency == currency } ?? ledger.totals.first
     }
@@ -61,10 +56,7 @@ struct FinanceView: View {
                     Composing(lines: 4)
                         .frame(height: 96)
                         .padding(.top, 40)
-                // Only claim the ledger is empty when it actually read
-                // as empty. A failed read shows nothing either, and
-                // "nothing written yet" over a network error tells the
-                // reader their entries are gone.
+                // Only claim the ledger is empty when it actually read as empty.
                 } else if ledger.entries.isEmpty && failure == nil {
                     empty
                 } else {
@@ -110,8 +102,8 @@ struct FinanceView: View {
                 .padding(.top, 8)
                 .contentTransition(.numericText())
 
-            // Two figures rather than one signed number, because "in" and
-            // "out" are the two things anyone actually wants to compare.
+            // Two figures rather than one signed number, because "in" and "out" are the two things
+            // anyone actually wants to compare.
             HStack(spacing: 18) {
                 figure("In", Money.text(total?.incoming ?? 0, currency), Theme.positive)
                 figure("Out", Money.text(total?.outgoing ?? 0, currency), Theme.accent)
@@ -130,9 +122,9 @@ struct FinanceView: View {
     }
 
     private var categories: some View {
-        // The widest category sets the scale, so the bars compare against the
-        // biggest thing you spent on rather than against the total, which on a
-        // long list would leave every bar a stub.
+        // The widest category sets the scale, so the bars compare against the biggest thing you
+        // spent on rather than against the total, which on a long list would leave every bar a
+        // stub.
         let widest = ledger.spendByCategory.first?.minor ?? 1
         return VStack(spacing: 14) {
             ForEach(Array(ledger.spendByCategory.prefix(6).enumerated()), id: \.element.id) { i, row in
@@ -199,8 +191,8 @@ struct FinanceView: View {
         do {
             ledger = try await client.ledger(from: w.from, to: w.to)
         } catch where error.isCancellation {
-            // A rebuilt view calls off its own request; that is not a failure
-            // anybody can act on and it is never shown.
+            // A rebuilt view calls off its own request; that is not a failure anybody can act on
+            // and it is never shown.
             return
         } catch {
             failure = error.localizedDescription
@@ -235,16 +227,16 @@ private struct FinanceRow: View {
 
             Spacer(minLength: 8)
 
-            // Money out is the common case, so it stays in ink; money in is
-            // the exception and gets the colour.
+            // Money out is the common case, so it stays in ink; money in is the exception and gets
+            // the colour.
             Text((entry.spent ? "" : "+") + Money.text(entry.minor, entry.currency))
                 .font(Theme.sans(13, medium: true))
                 .foregroundStyle(entry.spent ? Theme.text : Theme.positive)
         }
         .padding(.vertical, 13)
         .opacity(removing ? 0.4 : 1)
-        // A context menu rather than a swipe: these rows are in a plain stack,
-        // not a List, and swipeActions silently does nothing outside one.
+        // A context menu rather than a swipe: these rows are in a plain stack, not a List, and
+        // swipeActions silently does nothing outside one.
         .contextMenu {
             Button(role: .destructive) {
                 Task {
@@ -260,10 +252,6 @@ private struct FinanceRow: View {
 }
 
 /// Writing one entry.
-///
-/// Deliberately short: a form long enough to put you off filling it in is a
-/// ledger that stays empty. Amount, what it was for, and the sign. Everything
-/// else has a sensible default you can leave alone.
 struct FinanceEntrySheet: View {
     let currency: String
     /// Throws so the sheet can show why a rejected entry was rejected.
@@ -320,8 +308,7 @@ struct FinanceEntrySheet: View {
                     .foregroundStyle(Theme.text)
                     .padding(.top, 8)
 
-                // Tapping beats typing for the handful of categories most
-                // entries fall into.
+                // Tapping beats typing for the handful of categories most entries fall into.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 7) {
                         ForEach(suggestions, id: \.self) { s in

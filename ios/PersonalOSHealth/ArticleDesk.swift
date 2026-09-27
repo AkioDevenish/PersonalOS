@@ -4,12 +4,6 @@ import StoreKit
 // MARK: - Writing
 
 /// Writing or editing one article.
-///
-/// Save keeps a draft even when it is unfinished and shows what the automatic
-/// check still wants. Send for review saves first and then submits, and the
-/// server refuses anything that fails a check, so the button cannot be the
-/// thing that decides. Preview shows the article exactly as a reader will see
-/// it, because that is what the reviewer approves.
 struct ArticleEditorView: View {
     let existing: ArticlesClient.Draft?
     let done: () async -> Void
@@ -462,8 +456,8 @@ struct ArticleReviewQueueView: View {
     }
 }
 
-/// One submission: what the check found first, then the article as readers
-/// will see it, then the decision.
+/// One submission: what the check found first, then the article as readers will see it, then the
+/// decision.
 struct ArticleReviewView: View {
     let item: ArticlesClient.Submission
     let done: () async -> Void

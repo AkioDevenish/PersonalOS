@@ -3,23 +3,7 @@ import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { internal } from "../_generated/api"
 
-/**
- * Asking a human.
- *
- * Everything else in this app is a model reading numbers. This is the one
- * place a person can put a question to another person, which makes it the one
- * place where the app must not overstate what is happening: a consultation is
- * "waiting" until a real reply exists, and the app says so in those words.
- * Nothing here marks a request as seen, received or in progress on the
- * strength of it having been sent.
- *
- * Who counts as a nutritionist is an allowlist of Clerk user ids in the Convex
- * environment, `NUTRITIONIST_IDS`, comma separated. Deliberately not a flag on
- * a user row: a row can be written by any code path that gets it wrong, where
- * an environment variable has to be set deliberately by someone with access to
- * the deployment. The people who can read strangers' health questions should be
- * a list somebody typed on purpose.
- */
+/** Asking a human. */
 
 function staff(): string[] {
   return (process.env.NUTRITIONIST_IDS ?? "")
@@ -32,27 +16,12 @@ function isStaff(userId: string) {
   return staff().includes(userId)
 }
 
-/**
- * Whether somebody is party to a consultation.
- *
- * The person who booked it, or the one practitioner it was addressed to.
- * Nobody else, and specifically not "anybody on the staff allowlist" — that
- * was fine when a nutritionist meant one trusted person, and became a hole
- * the moment practitioners could sign themselves up. It would have let any
- * approved practitioner read every health conversation in the app.
- */
+/** Whether somebody is party to a consultation. */
 function party(consult: any, userId: string) {
   return consult.userId === userId || consult.nutritionistId === userId
 }
 
-/**
- * Everyone a person may actually choose to ask.
- *
- * Approved and taking questions, nothing else. A pending application is
- * invisible here: it is a stranger's claim about their own qualifications
- * until somebody has checked it, and a directory that shows those is worse
- * than no directory at all where health advice is concerned.
- */
+/** Everyone a person may actually choose to ask. */
 export const directory = query({
   args: {},
   handler: async (ctx) => {
@@ -64,11 +33,10 @@ export const directory = query({
     const fresh = Date.now() - 3 * 60 * 1000
 
     const listed = rows
-      // Being on the environment allowlist is itself an approval: those rows
-      // predate applications and were vetted by whoever added the id.
+      // Being on the environment allowlist is itself an approval: those rows predate applications
+      // and were vetted by whoever added the id.
       .filter((r) => r.active && (r.status === "approved" || staff().includes(r.userId)))
-      // Whoever can answer now, first. Somebody scanning this list wants a
-      // reply today, and alphabetical order answers a question nobody asked.
+      // Whoever can answer now, first.
       .sort((a, b) => {
         const onA = (a.last_seen ?? 0) > fresh
         const onB = (b.last_seen ?? 0) > fresh
@@ -77,8 +45,8 @@ export const directory = query({
         return a.name.localeCompare(b.name)
       })
 
-    // Signed URLs are minted at read time rather than stored, so a photo can
-    // be replaced or withdrawn without anything else having to be rewritten.
+    // Signed URLs are minted at read time rather than stored, so a photo can be replaced or
+    // withdrawn without anything else having to be rewritten.
     return await Promise.all(
       listed.map(async (r) => ({
         id: r.userId,
@@ -97,13 +65,7 @@ export const directory = query({
   },
 })
 
-/**
- * The caller's own application, however it stands.
- *
- * Returns null for the overwhelming majority of people, who are not
- * practitioners and never will be. The screen uses that to decide whether it
- * is showing a form or a status.
- */
+/** The caller's own application, however it stands. */
 export const myApplication = query({
   args: {},
   handler: async (ctx) => {
@@ -132,14 +94,7 @@ export const myApplication = query({
   },
 })
 
-/**
- * Applying to appear in the directory, or editing an application already made.
- *
- * Open to anyone signed in — that is the point of it — but an application is
- * only ever a request. Editing an approved profile does not send it back for
- * checking: the person has been verified, and making them requeue because they
- * reworded their bio would mean nobody ever updates one.
- */
+/** Applying to appear in the directory, or editing an application already made. */
 export const apply = mutation({
   args: {
     name: v.string(),
@@ -181,16 +136,16 @@ export const apply = mutation({
       bio: args.bio.trim(),
       specialties,
       offers_video: args.offers_video,
-      // Left alone when no new file was chosen, so editing a bio does not
-      // silently remove a photograph.
+      // Left alone when no new file was chosen, so editing a bio does not silently remove a
+      // photograph.
       photo: args.photo ?? existing?.photo,
       price_minor: Math.max(0, Math.floor(args.price_minor)),
       currency: args.currency.trim().toUpperCase() || "TTD",
       // Kept at zero so the old column stops being consulted anywhere.
       price_credits: 0,
       active: args.active,
-      // An approved profile stays approved through an edit; anything else is
-      // pending, including a previously declined application being redone.
+      // An approved profile stays approved through an edit; anything else is pending, including a
+      // previously declined application being redone.
       status: existing?.status === "approved" ? "approved" : "pending",
       updated_at: Date.now(),
     }
@@ -204,13 +159,7 @@ export const apply = mutation({
   },
 })
 
-/**
- * Approving or declining an application. Allowlist only.
- *
- * Whoever holds NUTRITIONIST_IDS is the one who checks qualifications. There
- * is no self-approval: an applicant cannot be the person who reviews them,
- * which is the whole reason the two fields are separate.
- */
+/** Approving or declining an application. */
 export const review = mutation({
   args: { userId: v.string(), approved: v.boolean() },
   handler: async (ctx, args) => {
@@ -233,19 +182,7 @@ export const review = mutation({
   },
 })
 
-/**
- * Opening a conversation with one specialist, in writing or on a call.
- *
- * The payment happens here and nowhere else. A free specialist costs nothing
- * and the charge is skipped entirely rather than being a charge of zero — that
- * distinction is what keeps a free consultation out of the credit ledger,
- * where a row saying "-0 credits" would be noise forever.
- *
- * The room is named for a video session whether or not a video service is
- * connected yet. Naming it here means the identifier exists before anybody
- * needs it, and connecting a provider later is a matter of who reads the
- * string rather than a change to any of this.
- */
+/** Opening a conversation with one specialist, in writing or on a call. */
 export const openSession = mutation({
   args: {
     specialistId: v.string(),
@@ -276,9 +213,6 @@ export const openSession = mutation({
     const currency = (profile.currency ?? "TTD").toUpperCase()
 
     // Free means free: nothing to collect, so the session opens outright.
-    // A priced one opens unpaid and waits on a processor. Recording the price
-    // here rather than reading it back off the profile later means a
-    // practitioner raising their rate cannot change what somebody already owes.
     const now = Date.now()
     const id = await ctx.db.insert("consults", {
       userId: userIdOf(identity),
@@ -304,12 +238,7 @@ export const openSession = mutation({
   },
 })
 
-/**
- * A one-time URL for the phone to send a photograph to.
- *
- * The file goes straight from the device to Convex storage rather than through
- * the route layer, which keeps a few megabytes of JPEG out of a JSON body.
- */
+/** A one-time URL for the phone to send a photograph to. */
 export const photoUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
@@ -319,13 +248,7 @@ export const photoUploadUrl = mutation({
   },
 })
 
-/**
- * What a session owes, for the payment route.
- *
- * Deliberately narrow: the amount, the currency and where the payment stands.
- * The route needs nothing else to raise a checkout, and a query that returned
- * the conversation as well would be handing a payment endpoint the messages.
- */
+/** What a session owes, for the payment route. */
 export const billing = query({
   args: { id: v.id("consults") },
   handler: async (ctx, args) => {
@@ -333,8 +256,8 @@ export const billing = query({
     if (!identity) throw new Error("Not authenticated")
 
     const row = await ctx.db.get(args.id)
-    // The same answer for missing and not-yours, so the error cannot be used
-    // to discover which session ids are real.
+    // The same answer for missing and not-yours, so the error cannot be used to discover which
+    // session ids are real.
     if (!row || row.userId !== userIdOf(identity)) throw new Error("No such session")
 
     return {
@@ -351,13 +274,7 @@ export const billing = query({
   },
 })
 
-/**
- * Records which processor is carrying this payment, and its reference.
- *
- * Written before the person is sent to the checkout page, so a payment that
- * completes can always be traced back to a session even if they close the app
- * on the way.
- */
+/** Records which processor is carrying this payment, and its reference. */
 export const attachPayment = mutation({
   args: {
     id: v.id("consults"),
@@ -384,17 +301,7 @@ export const attachPayment = mutation({
   },
 })
 
-/**
- * "I am here."
- *
- * Sent by a listed practitioner's app while it is open. Presence is derived
- * from this rather than from a switch somebody sets, because a switch marked
- * online is always stale — nobody remembers to turn it off when they put the
- * phone down. A heartbeat is only wrong for as long as the interval.
- *
- * Silent for anybody not listed. It is called on a timer and an error every
- * minute in somebody's console helps nobody.
- */
+/** "I am here." */
 export const heartbeat = mutation({
   args: {},
   handler: async (ctx) => {
@@ -412,23 +319,8 @@ export const heartbeat = mutation({
   },
 })
 
-/**
- * Marks a session paid.
- *
- * Only ever called after the processor has been asked directly what happened.
- * Being returned to the app from a checkout page proves nothing: the redirect
- * is a URL the payer could type themselves, and both processors say plainly
- * not to fulfil on it alone.
- */
-/**
- * Marks a session paid. Internal, and that is the whole point of it.
- *
- * It used to be public, checking only that the session was yours, with a
- * comment saying it was "only ever called after the processor has been asked".
- * Nothing enforced that: any signed-in person could call it for their own
- * unpaid session and read a paid conversation for nothing. The only caller now
- * is consultPayments.settled, after the processor has confirmed.
- */
+/** Marks a session paid. */
+/** Marks a session paid. */
 export const markPaidVerified = internalMutation({
   args: { id: v.id("consults") },
   handler: async (ctx, args) => {
@@ -474,11 +366,7 @@ export const thread = query({
   },
 })
 
-/**
- * Adds a message. The same call for both sides — who you are decides how it
- * reads, and a reply from staff is the only thing that moves a consultation
- * out of "waiting".
- */
+/** Adds a message. */
 export const send = mutation({
   args: { id: v.id("consults"), body: v.string() },
   handler: async (ctx, args) => {
@@ -489,9 +377,7 @@ export const send = mutation({
     if (!consult) throw new Error("No such consultation")
 
     if (!party(consult, userIdOf(identity))) throw new Error("Not yours to answer")
-    // Which side of the conversation this is. A message reads as "you" to the
-    // person who booked and as the practitioner to them, and the row records
-    // which it was rather than guessing later.
+    // Which side of the conversation this is.
     const mine = consult.userId === userIdOf(identity)
 
     const body = args.body.trim()
@@ -509,17 +395,12 @@ export const send = mutation({
 
     await ctx.db.patch(args.id, {
       updated_at: now,
-      // Only a real answer changes the state. Sending another message of your
-      // own does not mean anybody has read the first one.
+      // Only a real answer changes the state.
       status: mine ? consult.status : "answered",
     })
 
-    // Tell the other side, on their lock screen, because the whole point of a
-    // written consultation is that neither person has to sit in the app.
-    //
-    // Deliberately says nothing about the message. A health question and its
-    // answer are the most private things in this app, and a notification is
-    // read by whoever is holding the phone.
+    // Tell the other side, on their lock screen, because the whole point of a written consultation
+    // is that neither person has to sit in the app.
     const other = mine ? consult.nutritionistId : consult.userId
     if (other) {
       await ctx.scheduler.runAfter(0, internal.push.send, {
@@ -541,9 +422,7 @@ export const queue = query({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
-    // Approved practitioners only, and only the consultations addressed to
-    // them. A queue of everybody's conversations is not a queue, it is a
-    // filing cabinet somebody left unlocked.
+    // Approved practitioners only, and only the consultations addressed to them.
     const profile = await ctx.db
       .query("nutritionists")
       .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
@@ -552,8 +431,8 @@ export const queue = query({
       (profile && profile.status === "approved") || isStaff(userIdOf(identity))
     if (!approved) throw new Error("You are not listed as a practitioner")
 
-    // by_user indexes the person who booked; the practitioner's own consults
-    // have to be found the other way round.
+    // by_user indexes the person who booked; the practitioner's own consults have to be found the
+    // other way round.
     const all = await ctx.db.query("consults").collect()
     const mine = all.filter((r) => r.nutritionistId === userIdOf(identity))
 
@@ -575,15 +454,15 @@ export const queue = query({
           updated_at: r.updated_at,
           replies: sorted.length,
           last_message: last?.body ?? "",
-          // Waiting on you, rather than on them. The one thing a queue is for.
+          // Waiting on you, rather than on them.
           needs_reply: !last || last.from === "you",
         }
       })
     )
 
-    // Oldest unanswered first: somebody who asked yesterday has waited longer
-    // than somebody who asked an hour ago, and a queue sorted by newest hides
-    // exactly the people who have been waiting.
+    // Oldest unanswered first: somebody who asked yesterday has waited longer than somebody who
+    // asked an hour ago, and a queue sorted by newest hides exactly the people who have been
+    // waiting.
     return withLast.sort((a, b) => {
       if (a.needs_reply !== b.needs_reply) return a.needs_reply ? -1 : 1
       return a.created_at - b.created_at

@@ -2,22 +2,6 @@ import Foundation
 import FoundationModels
 
 /// Insights generated on the phone, by the phone.
-///
-/// This is the only engine in the app that needs nothing: no API key, no
-/// account with a model vendor, no Mac awake on the same network, no internet.
-/// A person installs the app, signs in, and their first report works. Every
-/// other provider asks them to go and get a credential first, which is a fine
-/// ask for someone who already has one and a wall for everyone else.
-///
-/// It matters more than convenience here. A hosted report means posting
-/// someone's glucose, sleep and heart data to a third party. On-device, the
-/// numbers never leave the phone — the model is already there, and the prompt
-/// is built from HealthKit data the app has read locally.
-///
-/// The tradeoff is real and worth stating plainly: this is a roughly 3-billion
-/// parameter model. It writes a decent read of a week. It is not Claude
-/// examining a quarter of correlations. The app offers it as the default that
-/// always works, not as the best available.
 enum OnDeviceInsights {
 
     // MARK: Availability
@@ -67,11 +51,6 @@ enum OnDeviceInsights {
     // MARK: Generation
 
     /// Runs a prompt through the on-device model.
-    ///
-    /// `instructions` are the persona and the rules; they are separated from
-    /// the prompt because the framework treats them as more trustworthy than
-    /// prompt text, which is the right place for "you are an endocrinologist,
-    /// never diagnose".
     static func generate(
         instructions: String,
         prompt: String,
@@ -112,14 +91,13 @@ enum OnDeviceInsights {
             case .generation(let e):
                 switch e {
                 case .exceededContextWindowSize:
-                    // The on-device context is far smaller than a hosted
-                    // model's, so a long window genuinely won't fit.
+                    // The on-device context is far smaller than a hosted model's, so a long window
+                    // genuinely won't fit.
                     return "That's more history than the on-device model can hold at once. Try a shorter range, or switch to a hosted model."
                 case .assetsUnavailable:
                     return "Apple Intelligence is still downloading. Try again shortly."
                 case .guardrailViolation, .refusal:
-                    // Health telemetry can read as medical content to a safety
-                    // filter. Say what happened rather than showing a failure.
+                    // Health telemetry can read as medical content to a safety filter.
                     return "The on-device model declined to answer this one. Health readings sometimes trip its safety filter. A hosted model will usually handle it."
                 case .rateLimited, .concurrentRequests:
                     return "The on-device model is busy. Try again in a moment."
@@ -136,35 +114,19 @@ enum OnDeviceInsights {
 // MARK: - Prompts
 
 /// Turns HealthKit snapshots into the prompts the insight views ask for.
-///
-/// Deliberately mirrors the personas and the tag vocabulary the server's
-/// analyze route uses, so a report written on the phone reads like one written
-/// by Claude — same shape, same constraints, same refusal to diagnose. Only
-/// the engine differs.
 enum InsightPrompts {
 
-    /// The four specialists, each with the measurements they read and the
-    /// question they are the right person to answer.
-    ///
-    /// "Health architect" used to head this list and is gone. It was allowed
-    /// every finding the other four were, so its report was their union and
-    /// read as none of them — and having "all of the above" first made the
-    /// real specialists look like filters on one report rather than four
-    /// different readings.
+    /// The four specialists, each with the measurements they read and the question they are the
+    /// right person to answer.
     struct Expert {
         let key: String
         let label: String
         let persona: String
-        /// Which measurements this one reads. The prompt is built from these,
-        /// so a strength coach is handed gait and load, and an endocrinologist
-        /// is handed glucose and sleep timing — they are not looking at the
-        /// same table and calling it a different job.
+        /// Which measurements this one reads.
         let metrics: [String]
         /// The request itself, in that specialist's terms.
         let asks: String
-        /// A worked observation in that voice. Belongs to a fictional other
-        /// person, and uses metrics the real table won't contain, because an
-        /// earlier version's example came back verbatim as observation one.
+        /// A worked observation in that voice.
         let example: String
     }
 
@@ -250,12 +212,6 @@ enum InsightPrompts {
     static func persona(for expert: String) -> String { self.expert(expert).persona }
 
     /// The system half: who the model is and what it may not do.
-    ///
-    /// Every line here was earned by watching the on-device model ignore a
-    /// vaguer one. It is a ~3B model: it follows a few concrete rules well and
-    /// many abstract ones badly, so each is a single checkable instruction
-    /// rather than a principle. "Never use #, *, or bullet characters" holds
-    /// where "no markdown headers" did not.
     static func instructions(for expert: String) -> String {
         """
         You are a \(persona(for: expert)) reading one person's health measurements.
@@ -272,36 +228,6 @@ enum InsightPrompts {
     }
 
     /// The data half: a compact table the model can actually read.
-    ///
-    /// Only metrics with a reading are included. Empty columns spend context
-    /// the on-device model does not have to spare, and invite the model to
-    /// comment on absent data as though it were a finding.
-    ///
-    /// The sentence-by-sentence structure is not fussiness. Asked for "a short
-    /// paragraph and a hypothesis" this model produced markdown headers it had
-    /// been told not to use and, worse, two observations that contradicted each
-    /// other. Given three numbered sentences to fill it stays inside the data.
-    ///
-    /// The worked example belongs to a fictional other person and uses metrics
-    /// that appear nowhere in the real data, because an earlier version using
-    /// the same shape was copied back verbatim as the first observation.
-    /// Whether there is enough here to ask for three paired observations.
-    ///
-    /// This guard is the most important thing in the file. Handed two days of
-    /// step counts and asked for three observations about pairs of
-    /// measurements, the on-device model invented the missing half: it reported
-    /// stair-climbing speeds of 0.12 and 0.24 m/s that appear nowhere in the
-    /// input, as though they were readings. Fabricated numbers presented to
-    /// someone as their own health data are worse than no report at all, and a
-    /// person might act on them.
-    ///
-    /// No prompt rule reliably stops a model this size filling a gap it has
-    /// been asked to fill. So the gap is never presented: unless the data can
-    /// support the question, the question is not asked.
-    /// Asked per specialist, because each reads its own columns. An
-    /// endocrinologist with a fortnight of step counts and no glucose has
-    /// nothing to read, however full the table looks overall — and a model
-    /// asked about glucose anyway will supply some.
     static func canReport(snapshots: [HealthSnapshot], expert: String) -> Bool {
         let e = self.expert(expert)
         let specs = e.metrics.isEmpty ? Metrics.all : e.metrics.compactMap { Metrics.by(id: $0) }
@@ -311,8 +237,8 @@ enum InsightPrompts {
         }
         guard withData.count >= 3 else { return false }
 
-        // Three distinct metrics, each present on at least two days — enough
-        // for three observations about different pairs without reaching.
+        // Three distinct metrics, each present on at least two days — enough for three observations
+        // about different pairs without reaching.
         let usable = specs.filter { spec in
             withData.filter { spec.value($0) != nil }.count >= 2
         }
@@ -320,19 +246,6 @@ enum InsightPrompts {
     }
 
     /// The specialist's own request, over the measurements that specialist reads.
-    ///
-    /// This used to take `expert` and never use it: every specialist was handed
-    /// the whole table and the identical instruction to find three pairs that
-    /// moved together. The persona was one line of the system prompt over an
-    /// otherwise identical request, and a ~3B model given the same question
-    /// four times answers it the same way four times — which is exactly what a
-    /// reader sees when the endocrinologist and the strength coach hand back
-    /// the same report under different headings.
-    ///
-    /// Now the lens is in the data as well as the words: each specialist gets
-    /// their own columns, their own question and their own worked example. The
-    /// data scientist keeps the whole table, because relating everything to
-    /// everything is that one's actual job.
     static func report(snapshots: [HealthSnapshot], expert: String, rangeLabel: String) -> String {
         let e = self.expert(expert)
         let specs = e.metrics.isEmpty
@@ -371,12 +284,6 @@ enum InsightPrompts {
     }
 
     /// Meal suggestions, from the same local data, cooked where you live.
-    ///
-    /// The country is not decoration. Without it a model reaches for the same
-    /// handful of Californian wellness food every time — and a suggestion you
-    /// cannot buy the ingredients for is not a suggestion. Named twice on
-    /// purpose: once as the place, once as the constraint, because a 3B model
-    /// will drop a single mention by the third meal.
     static func meals(
         snapshots: [HealthSnapshot],
         context: String,
@@ -404,10 +311,7 @@ enum InsightPrompts {
             """
         }
 
-        // The list is the whole point. Asked to recall a country's everyday
-        // food, a small model invents names that sound right; handed the names,
-        // it only has to choose. Where people have told us what they eat, that
-        // is what it chooses from.
+        // The list is the whole point.
         if !dishes.isEmpty {
             place += """
 
@@ -419,11 +323,8 @@ enum InsightPrompts {
             outside it if nothing on it suits the readings, and say so if you do.
             """
         } else if !place.isEmpty {
-            // Nobody has named anything for this country yet, so the model has
-            // only its own recall to go on — which is the thing that put bunny
-            // chow in Trinidad's list. Describing a dish is a far safer request
-            // than naming one: getting a name wrong asserts something false
-            // about a place, and people notice.
+            // Nobody has named anything for this country yet, so the model has only its own recall
+            // to go on — which is the thing that put bunny chow in Trinidad's list.
             place += """
 
 

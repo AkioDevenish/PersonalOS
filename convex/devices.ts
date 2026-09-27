@@ -2,13 +2,7 @@ import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { internalMutation, internalQuery, mutation } from "./_generated/server"
 
-/**
- * Where to reach somebody when they are not in the app.
- *
- * A device token arrives from Apple after the app registers, changes when the
- * app is reinstalled or restored, and stops working when the app is deleted.
- * So it is upserted on every launch and deleted when Apple says it is dead.
- */
+/** Where to reach somebody when they are not in the app. */
 
 export const register = mutation({
   args: { token: v.string(), platform: v.string() },
@@ -24,8 +18,8 @@ export const register = mutation({
       .first()
 
     if (existing) {
-      // A phone handed on to somebody else keeps its token, so the owner is
-      // rewritten rather than assumed.
+      // A phone handed on to somebody else keeps its token, so the owner is rewritten rather than
+      // assumed.
       await ctx.db.patch(existing._id, { userId: userIdOf(identity), updated_at: now })
       return { registered: true }
     }

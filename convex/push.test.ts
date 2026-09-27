@@ -11,8 +11,8 @@ const THEM = { subject: "user_them", tokenIdentifier: "clerk|user_them" }
 const TOKEN = "a".repeat(64)
 
 beforeEach(() => {
-  // No APNs key: exactly the state the deployment is in until the paid
-  // account exists, and the state every one of these tests runs in.
+  // No APNs key: exactly the state the deployment is in until the paid account exists, and the
+  // state every one of these tests runs in.
   vi.stubEnv("APNS_KEY_ID", "")
   vi.stubEnv("APNS_TEAM_ID", "")
   vi.stubEnv("APNS_P8", "")
@@ -80,7 +80,7 @@ describe("a reply still lands when push cannot", () => {
     })
     await t.withIdentity(ME).mutation(api.health.consult.send, { id: opened.id, body: "Is this normal?" })
 
-    // Runs the push the reply queued. Unconfigured, it must be a no-op.
+    // Runs the push the reply queued.
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     const thread = await t.withIdentity(ME).query(api.health.consult.thread, { id: opened.id })

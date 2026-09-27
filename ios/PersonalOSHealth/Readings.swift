@@ -2,15 +2,6 @@ import Foundation
 import Combine
 
 /// Readings and meal suggestions, kept on the phone that wrote them.
-///
-/// They used to be written by a server and stored in a SQLite file on a Mac,
-/// which is why neither survived the app leaving that machine. They are
-/// written on this iPhone now, so they are kept here: a file in Application
-/// Support, which is backed up with the phone and goes when the app does.
-///
-/// Not sent anywhere. A reading is a paragraph about somebody's body, and the
-/// app already has one place that is deliberately not on a server — the cycle
-/// — for the same reason.
 struct Reading: Codable, Identifiable, Hashable {
     enum Kind: String, Codable { case report, meal }
 

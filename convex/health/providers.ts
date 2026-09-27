@@ -1,16 +1,8 @@
 import { METRIC_KEYS, type MetricKey, type Provider } from "./metrics"
 
 /**
- * One descriptor per provider, so the UI can render every integration the same
- * way regardless of how the data physically arrives.
- *
- * The transport difference is real — Apple Health has no server to call, so a
- * phone has to push, while Oura hands us an OAuth token and posts webhooks —
- * but that is an implementation detail. To the user both are a card with a
- * Connect button and a status. `kind` is what the connect flow branches on:
- *
- *   cloud  → redirect to the provider, come back with an external user id
- *   device → hand off to the app on that platform, which then pushes
+ * One descriptor per provider, so the UI can render every integration the same way regardless of
+ * how the data physically arrives.
  */
 
 export type ProviderKind = "cloud" | "device"

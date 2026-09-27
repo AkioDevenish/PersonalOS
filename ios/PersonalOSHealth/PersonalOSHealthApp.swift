@@ -3,19 +3,18 @@ import SwiftUI
 @main
 struct PersonalOSHealthApp: App {
     @StateObject private var health = HealthKitManager()
-    /// Who is signed in. The app's own sessions, not a service's.
+    /// Who is signed in.
     @StateObject private var session = Session.shared
     /// Nothing in this app works without a connection, so it is asked first.
     @StateObject private var network = Network.shared
     /// Only for the device token Apple hands back; nothing else uses it.
     @UIApplicationDelegateAdaptor(PushDelegate.self) private var pushDelegate
-    /// Owned at app level, not by the paywall: transactions arrive whenever
-    /// Apple feels like it — a renewal, an Ask-to-Buy approval days later, a
-    /// purchase made on another device — and the listener has to be running to
-    /// catch them.
+    /// Owned at app level, not by the paywall: transactions arrive whenever Apple feels like it — a
+    /// renewal, an Ask-to-Buy approval days later, a purchase made on another device — and the
+    /// listener has to be running to catch them.
     @State private var store = Store()
-    /// Owned at app level so the notification delegate is set before any
-    /// notification can arrive, and so a tap can route the app from anywhere.
+    /// Owned at app level so the notification delegate is set before any notification can arrive,
+    /// and so a tap can route the app from anywhere.
     @StateObject private var notifier = Notifier.shared
     @Environment(\.scenePhase) private var scene
 
@@ -23,15 +22,13 @@ struct PersonalOSHealthApp: App {
         WindowGroup {
             SplashGate {
                 if !network.online {
-                    // In front of everything, including the welcome page: an
-                    // account cannot be made offline either.
+                    // In front of everything, including the welcome page: an account cannot be made
+                    // offline either.
                     OfflineView()
                         .transition(.opacity)
                 } else {
-                    // The session is restored on launch; until it has, showing
-                    // the welcome page would flash at somebody already signed
-                    // in. The splash covers that moment, so it costs nothing
-                    // visible.
+                    // The session is restored on launch; until it has, showing the welcome page
+                    // would flash at somebody already signed in.
                     switch session.state {
                     case .restoring: LoadingView()
                     case .signedIn: OnboardingGate { RootView() }
@@ -48,15 +45,12 @@ struct PersonalOSHealthApp: App {
             .onAppear { notifier.start() }
             .task { await session.restore() }
             .task { await Push.registerIfAllowed() }
-            // A listed practitioner is present whenever their app is. The
-            // call is a no-op for everybody else, which is nearly everybody,
-            // so it costs one request rather than a check to find out.
+            // A listed practitioner is present whenever their app is.
             .onChange(of: scene) { _, phase in
                 guard phase == .active else { return }
                 Task { await SpecialistsClient().heartbeat() }
-                // Today's readings go up on their own, at most every half
-                // hour, rather than waiting for somebody to press a button
-                // they should never have had to know about.
+                // Today's readings go up on their own, at most every half hour, rather than waiting
+                // for somebody to press a button they should never have had to know about.
                 Task { await AutoSync.shared.runIfDue(health) }
             }
         }
@@ -64,10 +58,6 @@ struct PersonalOSHealthApp: App {
 }
 
 /// Held while the session is restored.
-///
-/// Deliberately empty. It shows for a fraction of a second on a good
-/// connection, and anything put here is a flash of something rather than a
-/// thing anybody reads.
 struct LoadingView: View {
     var body: some View {
         VStack {}

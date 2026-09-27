@@ -1,14 +1,6 @@
 import SwiftUI
 
 /// The other side of the desk.
-///
-/// Everything before this could list a practitioner, take their fee and open a
-/// conversation with them — and they had no way to read a word of it. This is
-/// where somebody answers.
-///
-/// It reuses the same chat and the same call the client sees, from the other
-/// end, which is the point: one conversation with two people in it rather than
-/// two systems that have to be kept in step.
 struct PractitionerView: View {
     @State private var queue: [SpecialistsClient.Consultation] = []
     @State private var loading = true
@@ -79,8 +71,6 @@ struct PractitionerView: View {
             Task { await load() }
         }
         // Somebody with their queue open is as present as this app can know.
-        // A minute apart, against a three minute window, so one missed beat
-        // does not make them vanish from the directory.
         .task {
             while !Task.isCancelled {
                 await client.heartbeat()
@@ -94,8 +84,8 @@ struct PractitionerView: View {
 
     private func row(_ one: SpecialistsClient.Consultation) -> some View {
         NavigationLink {
-            // A practitioner reads the ledger they were sent; they do not get
-            // a button that hands over their own.
+            // A practitioner reads the ledger they were sent; they do not get a button that hands
+            // over their own.
             ChatView(peer: "Your client", sessionId: one.id, canShareReadings: false)
                 .hidesSystemTabBar()
         } label: {

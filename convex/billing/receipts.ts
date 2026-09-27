@@ -6,31 +6,11 @@ import { Environment, SignedDataVerifier } from "@apple/app-store-server-library
 import { action } from "../_generated/server"
 import { internal } from "../_generated/api"
 
-/**
- * Turning an App Store purchase into an entitlement, if Apple really signed it.
- *
- * Moved here from a web route, so a subscription can be bought with nothing of
- * ours running but Convex. The check is the same one articlePayments.ts makes:
- * the transaction's JWS chains to Apple's public roots, so a forged or altered
- * receipt fails the signature and never reaches the grant.
- *
- * Trusting the client instead is the single most common way in-app purchase is
- * got wrong. "purchased == true" from a device is an assertion by whoever
- * controls that device, not a fact.
- *
- * Environment variables: APPLE_ROOT_CERTS, APPLE_IAP_ENVIRONMENT. See
- * articlePayments.ts, which documents both and shares them.
- */
+/** Turning an App Store purchase into an entitlement, if Apple really signed it. */
 
 const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
 
-/**
- * What can be bought, and never the client's to say which.
- *
- * Two products, both the same subscription: the article archive. The credit
- * packs that were here bought readings that ran on a server, and those are
- * written on the phone now, for nothing.
- */
+/** What can be bought, and never the client's to say which. */
 const SUBSCRIPTIONS = new Set(["os.personal.sub.monthly", "os.personal.sub.yearly"])
 
 function environment(): Environment {

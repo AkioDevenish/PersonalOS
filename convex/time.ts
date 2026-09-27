@@ -2,18 +2,7 @@ import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 
-/**
- * The time ledger.
- *
- * The money ledger's twin, and deliberately the same shape: rows in, reading
- * derived on the way out, no idea where a row came from. A calendar feed will
- * write the same rows a person types.
- *
- * A block is a start and a number of minutes rather than a start and an end.
- * The question anyone actually answers is "how long did that take", and a
- * duration derived from two clock times is where daylight saving and midnight
- * crossings quietly produce negative hours.
- */
+/** The time ledger. */
 
 const MAX_CATEGORY = 40
 
@@ -31,14 +20,7 @@ function cleanText(raw: string, limit: number, what: string): string {
   return c
 }
 
-/**
- * Every block that starts inside the window, with the totals worked out.
- *
- * Blocks are indexed by when they start, so one running past the end of the
- * window is included whole rather than clipped. Splitting it would mean
- * inventing a row nobody recorded; counting the whole thing is at least a
- * number a person can recognise.
- */
+/** Every block that starts inside the window, with the totals worked out. */
 export const ledger = query({
   args: {
     from: v.number(),

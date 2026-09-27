@@ -6,28 +6,7 @@ import { Environment, SignedDataVerifier } from "@apple/app-store-server-library
 import { action } from "./_generated/server"
 import { internal } from "./_generated/api"
 
-/**
- * Turns an App Store purchase into time on Home, if Apple really signed it.
- *
- * The app sends the transaction's JWS. Its signature chains to Apple's root
- * certificates, so it can be checked here with nothing but those public roots.
- * A forged or altered transaction fails and never reaches applyPlacement.
- *
- * This replaces the pattern the older credit purchases used, a web route that
- * signed an HMAC grant for a public mutation. The web server is gone, and an
- * internal mutation needs no grant: no client can call it at all.
- *
- * Environment variables on the Convex deployment:
- *
- *   APPLE_ROOT_CERTS       Apple's root CA certificates, base64 DER, joined
- *                          with "|". Without them every purchase is refused.
- *   APPLE_IAP_ENVIRONMENT  "production" or "sandbox" (the default). "xcode"
- *                          accepts purchases made against a local StoreKit
- *                          configuration file, and those are NOT signed by
- *                          Apple — the library skips verification for them —
- *                          so it must only ever be set on a development
- *                          deployment, never on production.
- */
+/** Turns an App Store purchase into time on Home, if Apple really signed it. */
 
 export const ARTICLE_PRODUCT_ID = "os.personal.article.30days"
 const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
@@ -57,8 +36,8 @@ export const confirmPlacement = action({
     const env = environment()
     const roots = appleRoots()
     if (env !== Environment.XCODE && roots.length === 0) {
-      // Refusing is the only safe answer: granting unverified would make
-      // placement free to anyone who can send a request.
+      // Refusing is the only safe answer: granting unverified would make placement free to anyone
+      // who can send a request.
       throw new Error("Purchase verification is not configured yet")
     }
 

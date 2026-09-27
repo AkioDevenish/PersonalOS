@@ -1,11 +1,6 @@
 import SwiftUI
 
-/// Where you are in the cycle, and the one thing you might have opened the app
-/// to write down.
-///
-/// A ring rather than a calendar grid. A cycle is the one thing this app
-/// measures that genuinely is a circle, and thirty coloured squares answer
-/// "which dates" when the question people actually have is "where am I".
+/// Where you are in the cycle, and the one thing you might have opened the app to write down.
 struct CycleView: View {
     @StateObject private var store = CycleStore()
     @State private var logging = false
@@ -164,8 +159,8 @@ struct CycleView: View {
         .padding(.top, 20)
     }
 
-    /// Said on the page rather than buried in a policy, because it is the
-    /// reason to use this one rather than a better-funded one.
+    /// Said on the page rather than buried in a policy, because it is the reason to use this one
+    /// rather than a better-funded one.
     private var privacy: some View {
         VStack(alignment: .leading, spacing: 8) {
             Kicker(text: "Where this lives", size: 9)
@@ -179,11 +174,6 @@ struct CycleView: View {
 }
 
 /// The four phases, one to a page, opening on the one you are in.
-///
-/// Each is a single picture — a drop, the day rising, its height, the moon —
-/// with its name, which days it covers in your cycle, and what it tends to
-/// feel like. Swiping moves through them in order; the row of small icons
-/// underneath shows where you are and takes you straight to any of them.
 private struct PhaseCarousel: View {
     let reading: Cycle.Reading
 
@@ -234,8 +224,7 @@ private struct PhaseCarousel: View {
         .onAppear { shown = current }
     }
 
-    /// Where to open: the phase you are in, or the start of a cycle when that
-    /// is not known yet.
+    /// Where to open: the phase you are in, or the start of a cycle when that is not known yet.
     private var current: Cycle.Phase { reading.phase ?? .menstrual }
 
     private func card(_ phase: Cycle.Phase) -> some View {

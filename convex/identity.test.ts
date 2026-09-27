@@ -7,11 +7,7 @@ import { userIdOf } from "./lib/me"
 
 const modules = import.meta.glob("./**/*.ts")
 
-/**
- * Under Convex Auth a subject is `userId|sessionId`, a new value at every
- * sign-in. If anything keyed data on the whole string, signing in again would
- * make somebody a stranger to their own records.
- */
+/** Under Convex Auth a subject is `userId|sessionId`, a new value at every sign-in. */
 describe("one person across sign-ins", () => {
   const first = { subject: "user_42|session_a", tokenIdentifier: "https://x|user_42|session_a" }
   const again = { subject: "user_42|session_b", tokenIdentifier: "https://x|user_42|session_b" }

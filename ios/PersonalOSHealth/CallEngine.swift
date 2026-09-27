@@ -4,14 +4,6 @@ import Combine
 import WebRTC
 
 /// The call itself, run by this app rather than rented from anybody.
-///
-/// WebRTC connects the two phones directly. What this class does is the work
-/// around that: ask the server which relays exist, describe what this device
-/// can do, carry those descriptions to the other side through our own
-/// signalling, and hand back the two video tracks once they meet.
-///
-/// The media never touches our servers when a direct path exists, which for
-/// two people on ordinary connections is most of the time.
 @MainActor
 final class CallEngine: NSObject, ObservableObject {
     enum State: Equatable {
@@ -28,11 +20,9 @@ final class CallEngine: NSObject, ObservableObject {
     @Published private(set) var localTrack: RTCVideoTrack?
     @Published private(set) var micOn = true
     @Published private(set) var cameraOn = true
-    /// Which way the camera is pointing. Front to begin with, because a
-    /// consultation is a conversation before it is anything else.
+    /// Which way the camera is pointing.
     @Published private(set) var usingFront = true
-    /// Whether a relay is configured. Without one, a fifth of calls cannot
-    /// connect and it is better to say so than to let them fail mysteriously.
+    /// Whether a relay is configured.
     @Published private(set) var relayAvailable = true
 
     private let sessionId: String
@@ -44,13 +34,11 @@ final class CallEngine: NSObject, ObservableObject {
     private var poller: Task<Void, Never>?
     /// Signals older than this have already been applied.
     private var seen: Double = 0
-    /// Candidates that arrived before the remote description did. Applying one
-    /// early is an error, and dropping it can lose the only route that works.
+    /// Candidates that arrived before the remote description did.
     private var early: [RTCIceCandidate] = []
     private var hasRemote = false
 
-    /// One factory for the process. Making several is a documented way to
-    /// exhaust the encoder pool.
+    /// One factory for the process.
     private static let factory: RTCPeerConnectionFactory = {
         RTCInitializeSSL()
         return RTCPeerConnectionFactory(
@@ -76,9 +64,7 @@ final class CallEngine: NSObject, ObservableObject {
             try openPeer(with: ice.servers)
             try await attachCamera()
 
-            // Whoever arrives second answers. Checking for an existing offer
-            // rather than assigning roles in advance means either side can
-            // dial first, which is what actually happens.
+            // Whoever arrives second answers.
             let waiting = try await client.signals(id: sessionId, after: 0)
             if let offer = waiting.first(where: { $0.kind == "offer" }) {
                 try await answer(offer.payload)
@@ -99,8 +85,8 @@ final class CallEngine: NSObject, ObservableObject {
             }
             return RTCIceServer(urlStrings: [$0.urls])
         }
-        // Unified Plan is the only semantics current browsers and stacks
-        // agree on; Plan B is long deprecated.
+        // Unified Plan is the only semantics current browsers and stacks agree on; Plan B is long
+        // deprecated.
         config.sdpSemantics = .unifiedPlan
         config.continualGatheringPolicy = .gatherContinually
 
@@ -132,10 +118,6 @@ final class CallEngine: NSObject, ObservableObject {
     }
 
     /// Points the capturer at one camera and starts it.
-    ///
-    /// 640 by 480 at 30fps: enough for a face on a phone, and cheap enough
-    /// that a weak connection is not fighting the encoder as well as the
-    /// network.
     private func point(_ capturer: RTCCameraVideoCapturer, front: Bool) async throws {
         let position: AVCaptureDevice.Position = front ? .front : .back
         guard let device = RTCCameraVideoCapturer.captureDevices()
@@ -154,10 +136,6 @@ final class CallEngine: NSObject, ObservableObject {
     }
 
     /// Turns the camera round.
-    ///
-    /// The capture has to stop before it can start on the other device — the
-    /// same session cannot hold two cameras — so there is a visible blink.
-    /// That is the hardware, not a bug worth hiding behind a fade.
     func flipCamera() async {
         guard let capturer, state != .ended else { return }
         let wanted = !usingFront
@@ -198,9 +176,7 @@ final class CallEngine: NSObject, ObservableObject {
         )
     }
 
-    /// Polls for what the other side has said. A second apart: this is the
-    /// handshake, not the media, so a second of latency delays the start of
-    /// the call rather than degrading it.
+    /// Polls for what the other side has said.
     private func listen() {
         poller?.cancel()
         poller = Task { [weak self] in
@@ -236,8 +212,7 @@ final class CallEngine: NSObject, ObservableObject {
                 if hasRemote {
                     try? await peer.add(candidate)
                 } else {
-                    // Arrived before the description it belongs to. Held
-                    // rather than dropped: it may be the only route that works.
+                    // Arrived before the description it belongs to.
                     early.append(candidate)
                 }
 
@@ -280,8 +255,8 @@ final class CallEngine: NSObject, ObservableObject {
         if notify {
             Task {
                 try? await client.postSignal(id: sessionId, kind: "bye", payload: "")
-                // Cleared so the next attempt is not confused by candidates
-                // for addresses that stopped being valid when this ended.
+                // Cleared so the next attempt is not confused by candidates for addresses that
+                // stopped being valid when this ended.
                 try? await client.clearSignals(id: sessionId)
             }
         }

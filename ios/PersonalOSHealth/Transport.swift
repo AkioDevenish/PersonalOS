@@ -1,18 +1,12 @@
 import Foundation
 
 /// One way of talking to Convex.
-///
-/// Every client in the app goes through here: the same bearer token, the same
-/// envelope, the same mapping from a failure to a sentence somebody can act
-/// on. It used to also carry a REST half, for a web app of ours that the phone
-/// needed awake. Nothing calls that any more, so it is gone, and with it the
-/// only reason this app knew any address but the database's.
 struct Transport {
     private let auth: AuthProvider
     private let timeout: TimeInterval
 
-    /// Local model inference is not fast, which is the only reason any caller
-    /// needs a different number here.
+    /// Local model inference is not fast, which is the only reason any caller needs a different
+    /// number here.
     init(auth: AuthProvider = Auth.provider, timeout: TimeInterval = 30) {
         self.auth = auth
         self.timeout = timeout
@@ -21,15 +15,6 @@ struct Transport {
     // MARK: Convex, directly
 
     /// Calls a Convex function without anything in between.
-    ///
-    /// Convex takes the same bearer token the routes did, so the phone can ask
-    /// the database itself rather than asking a server to ask it. That removes
-    /// the whole middle: no host to stamp into the build, no Mac that has to
-    /// be awake, no plaintext exception, and one place to deploy instead of
-    /// two.
-    ///
-    /// `path` is Convex's own naming — "finance:ledger", or
-    /// "health/consult:directory" for a function in a folder.
     func query(_ path: String, _ args: [String: Any] = [:]) async throws -> Data {
         try await call("query", path, args)
     }
@@ -38,15 +23,14 @@ struct Transport {
         try await call("mutation", path, args)
     }
 
-    /// An action, for the functions that reach outside Convex — minting a
-    /// video room, taking a payment. They live there rather than here because
-    /// they hold keys, and a key in an app is a key anybody can read out of it.
+    /// An action, for the functions that reach outside Convex — minting a video room, taking a
+    /// payment.
     func action(_ path: String, _ args: [String: Any] = [:]) async throws -> Data {
         try await call("action", path, args)
     }
 
-    /// A call made before anybody has signed in: signing up, signing in, and
-    /// asking which providers exist. Everything else carries a token.
+    /// A call made before anybody has signed in: signing up, signing in, and asking which providers
+    /// exist.
     func anonymous(_ kind: String, _ path: String, _ args: [String: Any] = [:]) async throws -> Data {
         try await call(kind, path, args, token: nil)
     }
@@ -75,9 +59,7 @@ struct Transport {
             throw TransportError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
         }
 
-        // Convex answers 200 even when the function threw, with the failure in
-        // the envelope. Treating that as success is how an error becomes a
-        // blank screen instead of a sentence.
+        // Convex answers 200 even when the function threw, with the failure in the envelope.
         struct Envelope: Decodable {
             let status: String
             let errorMessage: String?
@@ -98,9 +80,6 @@ struct Transport {
 }
 
 /// What went wrong, in words a person can act on.
-///
-/// Written once. The 500 explains the Mac because that is where the local model
-/// lives, which is the single most common cause of one in this app.
 enum TransportError: LocalizedError {
     case badURL, badResponse, notSignedIn
     case http(Int, String)
@@ -121,13 +100,6 @@ enum TransportError: LocalizedError {
 
 extension Error {
     /// Whether this is the request being called off rather than failing.
-    ///
-    /// SwiftUI cancels a `.task` every time it rebuilds the view that owns it,
-    /// which happens on the way in from the drawer and on any parent redraw.
-    /// The URL loading system reports that as an error, and its description is
-    /// the single word "cancelled" — which reads, to somebody looking at a
-    /// screen, as though the server refused them. Nothing was refused and
-    /// there is nothing to act on, so it is never shown.
     var isCancellation: Bool {
         if self is CancellationError { return true }
         if let url = self as? URLError { return url.code == .cancelled }

@@ -1,11 +1,6 @@
 import SwiftUI
 
 /// Creating an account, or signing back in.
-///
-/// One sheet for both, because the fields are nearly the same and somebody
-/// who picked the wrong one should be one tap from the other rather than back
-/// at the welcome page. Google, Facebook and Apple appear only once they are
-/// set up on the server, so nothing here is a button that cannot work.
 struct AuthSheet: View {
     enum Mode: String, Identifiable {
         case signUp, signIn
@@ -106,9 +101,9 @@ struct AuthSheet: View {
                         VStack(spacing: 10) {
                             if providers.apple {
                                 social("Continue with Apple", .apple) {
-                                    // Apple's mark ships with the system, and is
-                                    // the one logo here that should take the
-                                    // text colour: black on white, white on black.
+                                    // Apple's mark ships with the system, and is the one logo here
+                                    // that should take the text colour: black on white, white on
+                                    // black.
                                     Image(systemName: "apple.logo")
                                         .font(.system(size: 19))
                                         .foregroundStyle(Theme.text)
@@ -155,11 +150,6 @@ struct AuthSheet: View {
     }
 
     /// A provider's own logo, drawn from the vector in the asset catalogue.
-    ///
-    /// These used to be SF Symbols — a grey letter in a grey circle — which
-    /// read as a placeholder rather than as Google or Facebook. Both companies
-    /// ask that their real mark is used on a sign-in button, and it is also
-    /// simply what people recognise at a glance.
     private func mark(_ name: String) -> some View {
         Image(name)
             .resizable()
@@ -196,9 +186,7 @@ struct AuthSheet: View {
             .foregroundStyle(Theme.text)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            // The same corner as the fields above, so the sheet reads as one
-            // set of controls. The capsule is kept for the primary action,
-            // which is the one thing here that should not look like the rest.
+            // The same corner as the fields above, so the sheet reads as one set of controls.
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)

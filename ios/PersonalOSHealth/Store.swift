@@ -2,24 +2,6 @@ import Foundation
 import StoreKit
 
 /// Purchases, and what they entitle you to.
-///
-/// Two rules shape this file.
-///
-/// First, the phone never decides what someone has paid for. StoreKit will
-/// happily tell the app a transaction is verified, and that answer is worth
-/// having — but it is an answer from a device an attacker may control. Every
-/// transaction is forwarded to the server, which checks Apple's signature on
-/// it before granting anything, and the entitlement the app displays is read
-/// back from the server. `Transaction.currentEntitlements` is used to know
-/// what to *send*, never to unlock.
-///
-/// Second, transactions can arrive at any time — a renewal, a purchase made on
-/// another device, an interrupted flow that completes later, an Ask-to-Buy
-/// approval days after the fact. That's what the listener is for, and why it
-/// starts at launch rather than when a paywall opens.
-/// `@Observable` rather than `ObservableObject`: the synthesized
-/// `objectWillChange` cannot be produced for a `@MainActor`-isolated class, and
-/// Observation is the right tool on this deployment target anyway.
 @Observable
 @MainActor
 final class Store {
@@ -29,8 +11,7 @@ final class Store {
     var lastError: String?
 
     static let subscriptionIDs = ["os.personal.sub.monthly", "os.personal.sub.yearly"]
-    /// Credit packs are gone. They bought readings that ran on a server, and
-    /// those are written on the phone now, for nothing.
+    /// Credit packs are gone.
 
     struct Entitlement: Decodable, Equatable {
         let subscription_status: String
@@ -45,21 +26,18 @@ final class Store {
         var isSubscribed: Bool { subscription_status == "active" }
     }
 
-    /// `deinit` is nonisolated, so the handle it cancels has to be reachable
-    /// from outside the actor. Only ever assigned once, in init.
+    /// `deinit` is nonisolated, so the handle it cancels has to be reachable from outside the
+    /// actor.
     private nonisolated(unsafe) var listener: Task<Void, Never>?
 
     init() {
         listener = Task.detached { [weak self] in
-            // Unfinished transactions land here, including ones that completed
-            // while the app was closed.
+            // Unfinished transactions land here, including ones that completed while the app was
+            // closed.
             for await update in Transaction.updates {
                 guard let self else { return }
                 if case .verified(let transaction) = update {
-                    // Article placement is paid per article and applied by
-                    // the article server. It is finished only once applied,
-                    // so a failure here means StoreKit offers it again later
-                    // rather than the purchase being lost.
+                    // Article placement is paid per article and applied by the article server.
                     if transaction.productID == ArticlePlacement.productID {
                         if await ArticlePlacement.confirm(update) { await transaction.finish() }
                         continue
@@ -100,9 +78,7 @@ final class Store {
             switch try await product.purchase() {
             case .success(let verification):
                 guard case .verified = verification else {
-                    // StoreKit itself couldn't verify the signature. Nothing
-                    // to do but refuse; sending it on would only fail again
-                    // server-side, more slowly.
+                    // StoreKit itself couldn't verify the signature.
                     lastError = "That purchase couldn't be verified."
                     return
                 }
@@ -113,8 +89,8 @@ final class Store {
                 break
 
             case .pending:
-                // Ask-to-Buy and similar: approval may come days later, and
-                // the listener will catch it.
+                // Ask-to-Buy and similar: approval may come days later, and the listener will catch
+                // it.
                 lastError = "Waiting for approval. It'll unlock once that's done."
 
             @unknown default:
@@ -137,8 +113,8 @@ final class Store {
 
     // MARK: Server
 
-    /// Hands a transaction to the server, which verifies Apple's signature on
-    /// it and returns the entitlement that follows.
+    /// Hands a transaction to the server, which verifies Apple's signature on it and returns the
+    /// entitlement that follows.
     private func submit(_ verification: VerificationResult<Transaction>) async {
         do {
             _ = try await BillingClient().verify(signedJWS: verification.jwsRepresentation)
@@ -148,14 +124,13 @@ final class Store {
         }
     }
 
-    /// The entitlement shown anywhere in the app comes from here, never from
-    /// StoreKit directly.
+    /// The entitlement shown anywhere in the app comes from here, never from StoreKit directly.
     func refresh() async {
         do {
             entitlement = try await BillingClient().entitlement()
         } catch {
-            // Leave the last known state rather than silently revoking access
-            // because the network dropped.
+            // Leave the last known state rather than silently revoking access because the network
+            // dropped.
             lastError = error.localizedDescription
         }
     }
@@ -167,11 +142,8 @@ struct BillingClient {
 
     init(auth: AuthProvider = Auth.provider) { self.auth = auth }
 
-    /// Hands Apple's signed transaction to Convex, which checks the signature
-    /// against Apple's roots and grants what the product is worth.
-    ///
-    /// `jsonRepresentation` was being sent to a route that wanted the JWS
-    /// inside it; the action wants the JWS, so the JWS is what goes.
+    /// Hands Apple's signed transaction to Convex, which checks the signature against Apple's roots
+    /// and grants what the product is worth.
     func verify(signedJWS: String) async throws -> Bool {
         _ = try await Transport(auth: auth).action(
             "billing/receipts:verify", ["signedTransaction": signedJWS]

@@ -4,14 +4,7 @@ import { mutation, query, internalMutation } from "../_generated/server"
 import type { MutationCtx } from "../_generated/server"
 import { METRICS, isMetricKey, isProvider, type MetricKey } from "./metrics"
 
-/**
- * Ingest + housekeeping for provider-agnostic health samples.
- *
- * Identity always comes from the Convex auth context (`userIdOf(identity)`, the
- * Clerk user id) for anything a client can call. Server-to-server ingest —
- * aggregator webhooks, the mobile bridge — uses the internal mutation, where
- * the caller has already verified who the payload belongs to.
- */
+/** Ingest + housekeeping for provider-agnostic health samples. */
 
 const sampleInput = v.object({
   metric: v.string(),
@@ -46,14 +39,7 @@ export function dayKey(epochMs: number, timeZone: string): string {
 
 type Rejection = { index: number; reason: string }
 
-/**
- * Upsert keyed on (user, provider, metric, recorded_at).
- *
- * Providers re-send the same window constantly — Apple on every foreground,
- * webhooks on every partial-day update — so ingest has to be idempotent or a
- * day's steps would multiply on each sync. Re-sending a sample overwrites it
- * rather than adding a row.
- */
+/** Upsert keyed on (user, provider, metric, recorded_at). */
 async function writeSamples(
   ctx: MutationCtx,
   {
@@ -81,8 +67,8 @@ async function writeSamples(
     const metric = s.metric as MetricKey
     const expectedUnit = METRICS[metric].unit
 
-    // An adapter sending the wrong unit is a silent 1000x error otherwise —
-    // reject rather than guess at a conversion.
+    // An adapter sending the wrong unit is a silent 1000x error otherwise — reject rather than
+    // guess at a conversion.
     if (s.unit !== expectedUnit) {
       rejected.push({
         index: i,
@@ -161,11 +147,7 @@ export const ingest = mutation({
   },
 })
 
-/**
- * Server-to-server ingest for aggregator webhooks. The caller MUST have
- * mapped the provider's account id to a Personal OS user before calling —
- * see health_connections.by_external_user.
- */
+/** Server-to-server ingest for aggregator webhooks. */
 export const ingestForUser = internalMutation({
   args: {
     userId: v.string(),
@@ -187,11 +169,7 @@ export const ingestForUser = internalMutation({
   },
 })
 
-/**
- * Mark a successful sync. A device provider sitting in `pending` becomes
- * `connected` here — the first batch arriving is the only honest proof that
- * the phone side actually works.
- */
+/** Mark a successful sync. */
 async function touchConnection(
   ctx: MutationCtx,
   userId: string,

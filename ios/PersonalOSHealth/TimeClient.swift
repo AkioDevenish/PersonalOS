@@ -1,6 +1,6 @@
 import Foundation
 
-/// The time ledger. The money one's twin, deliberately.
+/// The time ledger.
 struct TimeClient {
     private let transport: Transport
 
@@ -66,9 +66,6 @@ struct TimeClient {
 /// Durations in words.
 enum Duration {
     /// "1h 25m", "45m", "3h".
-    ///
-    /// The bare hour drops its minutes rather than reading "3h 0m", which is a
-    /// machine's way of saying three hours.
     static func text(_ minutes: Int) -> String {
         let h = minutes / 60, m = minutes % 60
         if h == 0 { return "\(m)m" }

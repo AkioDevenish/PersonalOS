@@ -1,28 +1,10 @@
 import SwiftUI
 
 /// What the tab bar shows.
-///
-/// `AppTab` rather than `Tab` because SwiftUI's own `Tab` builds the bar now,
-/// and two types of that name in one file is a coin toss over which one the
-/// compiler reaches for.
-///
-/// Business, Creative and Data were here and are pulled for now. Their screens
-/// and the route behind them are untouched in PillarViews.swift,
-/// PillarClient.swift and /api/pillars — bringing them back is adding the
-/// cases below and the matching lines in the switch, nothing more. They were
-/// removed from view rather than deleted because they work and are wired to
-/// live Convex modules.
-///
-/// Finance and Time are parked the same way. FinanceView.swift, TimeView.swift
-/// and the Convex ledgers behind them are untouched and still deployed; only
-/// the two cases here, their two `Tab`s and their two lines in the switch came
-/// out. Home lost the tiles that pointed at them in the same breath.
 enum AppTab: CaseIterable, Hashable {
     case home, health
 
-    /// The system fills the selected one and tints it, so only the outline is
-    /// named here. The hand-rolled bar used to keep a `.fill` twin for that
-    /// job; it is the platform's now.
+    /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
         switch self {
         case .home: return "house"
@@ -30,8 +12,7 @@ enum AppTab: CaseIterable, Hashable {
         }
     }
 
-    /// Single words, as the guidelines ask, and the label a screen reader
-    /// announces either way.
+    /// Single words, as the guidelines ask, and the label a screen reader announces either way.
     var title: String {
         switch self {
         case .home: return "Home"
@@ -41,25 +22,13 @@ enum AppTab: CaseIterable, Hashable {
 }
 
 /// Everywhere you can go from a tab's root.
-///
-/// The pushes used to be view-based — `NavigationLink { TrendsView() }` — which
-/// works until something other than a back button needs to move you. A stack
-/// driven by a path can be emptied from anywhere, which is what makes tapping
-/// the tab you're already on take you home.
 enum Route: Hashable {
     case briefing, history, nutrition, specialists, professionals, paywall, goals, cycle
     /// One practitioner's page.
-    ///
-    /// Carries the whole record rather than an id, because the directory has
-    /// already fetched it and the page would otherwise fetch it a second time
-    /// to draw the same thing. A value-carrying case rather than a view-based
-    /// link keeps every push in this app inside the one path the tab owns,
-    /// which is what lets tapping the tab again empty it.
     case practitioner(SpecialistsClient.Specialist)
     /// The other side of the desk, for somebody who is listed.
     case practice
-    /// Profile, pushed from the picture at the top right of Home. It was a
-    /// tab as well, and one way in is enough.
+    /// Profile, pushed from the picture at the top right of Home.
     case profile
     /// An author's own articles, and the way to write one.
     case myArticles
@@ -79,12 +48,6 @@ struct RootView: View {
     @EnvironmentObject private var notifier: Notifier
     @State private var tab: AppTab = .home
     /// A stack per tab rather than one shared between them.
-    ///
-    /// The single stack was there to stop a drill-down in Health showing up
-    /// under Settings. Giving each tab its own solves that properly and buys
-    /// the behaviour the guidelines actually ask for: moving between sections
-    /// keeps your place in each, so a glance at Finance doesn't cost you the
-    /// specialist you were three screens into.
     @State private var paths: [AppTab: [Route]] = [:]
     @State private var bar = TabBarState()
 
@@ -92,8 +55,8 @@ struct RootView: View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Theme.background)
-            // Laid over the pages rather than beneath them, so content scrolls
-            // under the glass the way it does under the system's own bar.
+            // Laid over the pages rather than beneath them, so content scrolls under the glass the
+            // way it does under the system's own bar.
             .overlay(alignment: .bottom) {
                 AppTabBar(selected: tab) { selection.wrappedValue = $0 }
             }
@@ -101,24 +64,17 @@ struct RootView: View {
     }
 
     /// The pages, in a TabView whose own bar is hidden.
-    ///
-    /// The TabView stays for what it is good at — keeping each tab's stack
-    /// alive while another is showing — and gives up only the bar, which is
-    /// drawn by `AppTabBar` so that it can shrink rather than collapse to one
-    /// icon. The iPad sidebar went with the system bar; this app has not been
-    /// laid out for iPad, and a sidebar over phone-width pages was not a
-    /// feature anybody was using.
     private var page: some View {
         TabView(selection: selection) {
             Tab(value: AppTab.home) { stack(for: .home) }
             Tab(value: AppTab.health) { stack(for: .health) }
         }
         .tint(Theme.accent)
-        // A new tab starts with the bar at full size: the shrink belonged to
-        // how far down the last page you had read, not to this one.
+        // A new tab starts with the bar at full size: the shrink belonged to how far down the last
+        // page you had read, not to this one.
         .onChange(of: tab) { _, _ in bar.set(compact: false) }
-        // A tapped notification should land on the thing it announced, not on
-        // whatever screen the app was last showing.
+        // A tapped notification should land on the thing it announced, not on whatever screen the
+        // app was last showing.
         .onChange(of: notifier.opened) { _, route in
             guard let route else { return }
             withAnimation(Theme.Motion.flow) {
@@ -156,9 +112,7 @@ struct RootView: View {
                     case .articles(let category): ArticleListView(category: category)
                     }
                     }
-                    // Set on every pushed page too. Visibility belongs to the
-                    // page showing, so a destination without it would bring
-                    // the system bar back on top of ours.
+                    // Set on every pushed page too.
                     .hidesSystemTabBar()
                 }
                 .toolbarBackground(Theme.background, for: .navigationBar)
@@ -168,8 +122,8 @@ struct RootView: View {
     @ViewBuilder
     private func root(for t: AppTab) -> some View {
         switch t {
-        // The rows on Home send you to a tab, which only the bar's selection
-        // can do, so it is handed the way to ask.
+        // The rows on Home send you to a tab, which only the bar's selection can do, so it is
+        // handed the way to ask.
         case .home:     HomeView { tab = $0 }
         case .health:   HealthView()
         }
@@ -184,12 +138,6 @@ struct RootView: View {
     }
 
     /// Selection, with the re-tap gesture kept.
-    ///
-    /// The bar writes the tapped tab back even when it is the one already
-    /// showing, and that second case is "take me home" — the gesture every iOS
-    /// app has, and the only way out of a drill-down that doesn't involve
-    /// reaching for the top-left corner. Emptying an already-empty stack would
-    /// buzz for nothing, so it doesn't.
     private var selection: Binding<AppTab> {
         Binding(
             get: { tab },

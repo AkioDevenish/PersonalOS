@@ -2,18 +2,9 @@ import SwiftUI
 import StoreKit
 
 /// The subscription and credit surface.
-///
-/// Written to be honest about what the free tier already does, because it does
-/// a lot: on-device Apple Intelligence, every HealthKit chart, correlations,
-/// and bring-your-own-key. Someone who never pays still has a working app.
-/// What money buys is not having to think about any of that — hosted models
-/// without a key of your own, plus sync and the wearables.
-///
-/// Overstating the wall would be both dishonest and a review risk: App Review
-/// looks unkindly on a paywall that hides what the screenshots promised.
 struct PaywallView: View {
-    /// Completes "A subscription lets Personal OS…", when somebody arrived
-    /// here by reaching for something rather than by opening Settings.
+    /// Completes "A subscription lets Personal OS…", when somebody arrived here by reaching for
+    /// something rather than by opening Settings.
     var reason: String? = nil
 
     @Environment(Store.self) private var store
@@ -99,8 +90,8 @@ struct PaywallView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 40)
             }
-            // What you own changes what this screen offers; a purchase or a
-            // restore should redraw it in one movement rather than three.
+            // What you own changes what this screen offers; a purchase or a restore should redraw
+            // it in one movement rather than three.
             .animation(Theme.Motion.flow, value: store.lastError)
             .animation(Theme.Motion.flow, value: store.entitlement.isSubscribed)
             .padding(.horizontal, 24)
@@ -188,9 +179,6 @@ struct PaywallView: View {
 }
 
 /// Says what a subscription is for, at the moment somebody reaches for it.
-///
-/// A sheet rather than a screen: the thing they were doing is still behind it,
-/// and they came here to do that rather than to read about plans.
 struct SubscriptionNeeded: ViewModifier {
     @Binding var showing: Bool
     /// "write you a reading" — completes "A subscription lets Personal OS…".

@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// The meal engine, in the app.
-///
-/// Same server route the web dashboard used: it reads your recent metabolic
-/// signals and asks Gemma for three suggestions for the moment you pick.
 struct NutritionView: View {
     @EnvironmentObject var health: HealthKitManager
     @Environment(Store.self) private var store
@@ -12,11 +9,6 @@ struct NutritionView: View {
     @State private var status = ""
     @State private var isBusy = false
     /// Breakfast, not "next meal".
-    ///
-    /// The default used to be a fifth value that wasn't in the pills, so the
-    /// row of choices showed nothing selected while the button quietly asked
-    /// for something else — you could generate a meal you had never chosen.
-    /// Every state the screen can be in is now one you can see.
     @State private var context = "breakfast"
 
     private let contexts = ["breakfast", "lunch", "dinner", "snack"]
@@ -25,8 +17,7 @@ struct NutritionView: View {
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
     @State private var choosingCountry = false
 
-    /// What people say they eat here. The reason the model stops inventing
-    /// dish names: it chooses from this rather than recalling from nothing.
+    /// What people say they eat here.
     @State private var book = CuisineClient.Book.empty
     @State private var newDish = ""
     @State private var locked = false
@@ -34,9 +25,8 @@ struct NutritionView: View {
     /// Today's snapshot, held only so the screen can show what it's reading.
     @State private var today: HealthSnapshot?
 
-    /// The metabolic and activity signals the suggestion is built from — the
-    /// same metric ids the prompt uses, so this can't drift from what the
-    /// model was actually handed.
+    /// The metabolic and activity signals the suggestion is built from — the same metric ids the
+    /// prompt uses, so this can't drift from what the model was actually handed.
     private var signals: [(label: String, value: String, symbol: String)] {
         guard let today else { return [] }
         return ["glucose", "carbs", "sleep", "active_energy", "steps"]
@@ -70,10 +60,7 @@ struct NutritionView: View {
                     .padding(.top, 10)
                     .flowIn(2)
 
-                // The claim above is that this reads your data. Showing the
-                // readings it is holding is the cheapest way to make that
-                // checkable, and it's the difference between a suggestion you
-                // trust and one that could have come from anywhere.
+                // The claim above is that this reads your data.
                 if !signals.isEmpty {
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
@@ -138,8 +125,8 @@ struct NutritionView: View {
                         .padding(.vertical, 15)
                         .background(Theme.text)
                         .clipShape(Capsule())
-                        // The label changes under you while it works; the
-                        // words should cross-fade rather than jump.
+                        // The label changes under you while it works; the words should cross-fade
+                        // rather than jump.
                         .contentTransition(.opacity)
                         .animation(Theme.Motion.flow, value: isBusy)
                 }
@@ -200,10 +187,7 @@ struct NutritionView: View {
                             }
                             .buttonStyle(.pressRow)
                             .contextMenu {
-                                // Only offered for dishes nobody has vouched
-                                // for. What is written down for a country, or
-                                // what enough people have named, is not
-                                // something one passer-by removes.
+                                // Only offered for dishes nobody has vouched for.
                                 if d.canBeRejected(threshold: book.threshold) {
                                     Button("Not eaten here", systemImage: "xmark.circle", role: .destructive) {
                                         Task { await reject(d.dish) }
@@ -251,8 +235,8 @@ struct NutritionView: View {
 
                 Spacer(minLength: 40)
             }
-            // A suggestion arriving pushes the history down the page; it
-            // should slide rather than jump.
+            // A suggestion arriving pushes the history down the page; it should slide rather than
+            // jump.
             .animation(Theme.Motion.flow, value: latest)
             .animation(Theme.Motion.flow, value: isBusy)
             .animation(Theme.Motion.flow, value: status)
@@ -309,18 +293,14 @@ struct NutritionView: View {
     }
 
     private func generate() async {
-        // The reading is written on this phone and costs nothing to serve, so
-        // this is a price on the feature rather than on a bill we pay. It is
-        // still the thing being sold, so it is checked before the work starts
-        // rather than after somebody has waited for it.
+        // The reading is written on this phone and costs nothing to serve, so this is a price on
+        // the feature rather than on a bill we pay.
         guard store.entitlement.isSubscribed else { locked = true; return }
         isBusy = true
         status = ""
         defer { isBusy = false }
         do {
             // Written on this iPhone, from HealthKit, and never leaving it.
-            // There used to be a second path through a web server holding an
-            // API key; it needed a machine of ours awake to answer.
             let snaps = try await health.fetchHistoricalSnapshots(days: 7)
             latest = try await OnDeviceInsights.generate(
                 instructions: InsightPrompts.mealInstructions,
@@ -345,22 +325,16 @@ struct ExpertsView: View {
     @Environment(Store.self) private var store
     @EnvironmentObject private var notifier: Notifier
     @State private var expert = InsightPrompts.experts[0].key
-    /// Hourly, not daily. The daily report reads the *previous* completed day,
-    /// so opening this screen at nine in the morning offered you a reading of
-    /// yesterday as the default — the least current thing on the list. Hourly
-    /// reads the last thirty hours, which is the day you are actually in.
+    /// Hourly, not daily.
     @State private var period = "hourly"
     @ObservedObject private var readings = Readings.shared
     @State private var status = ""
     @State private var isBusy = false
-    /// On-device reports aren't stored on a server, so they live here for the
-    /// session. Persisting them is a separate job from generating them.
+    /// On-device reports aren't stored on a server, so they live here for the session.
     @State private var localReport = ""
     @State private var locked = false
 
-    /// One list, in InsightPrompts, shared by the screen and by the on-device
-    /// prompts. It was duplicated here, which is how the retired "Health
-    /// architect" survived in the picker after the server stopped writing it.
+    /// One list, in InsightPrompts, shared by the screen and by the on-device prompts.
     private var experts: [InsightPrompts.Expert] { InsightPrompts.experts }
 
     var body: some View {
@@ -417,10 +391,8 @@ struct ExpertsView: View {
                 ) { $0 }
                     .padding(.top, 20)
 
-                // The button used to say only "Ask for a new reading", which
-                // left you guessing which specialist and which window you were
-                // about to spend a minute on. Both choices are above it; the
-                // request should say what it heard.
+                // The button used to say only "Ask for a new reading", which left you guessing
+                // which specialist and which window you were about to spend a minute on.
                 Button {
                     Task { await generate() }
                 } label: {
@@ -433,9 +405,8 @@ struct ExpertsView: View {
                         .padding(.vertical, 15)
                         .background(Theme.text)
                         .clipShape(Capsule())
-                        // The label restates the two choices above it, so it
-                        // rewrites itself on every tap up there — a cross-fade
-                        // rather than a snap.
+                        // The label restates the two choices above it, so it rewrites itself on
+                        // every tap up there — a cross-fade rather than a snap.
                         .contentTransition(.opacity)
                         .animation(Theme.Motion.flow, value: isBusy)
                 }
@@ -502,8 +473,8 @@ struct ExpertsView: View {
 
                 Spacer(minLength: 40)
             }
-            // The writing state and the finished reading swap in place, so the
-            // page settles rather than jumping when a report lands.
+            // The writing state and the finished reading swap in place, so the page settles rather
+            // than jumping when a report lands.
             .animation(Theme.Motion.flow, value: isBusy)
             .animation(Theme.Motion.flow, value: status)
             .animation(Theme.Motion.flow, value: localReport)
@@ -518,8 +489,7 @@ struct ExpertsView: View {
         experts.first { $0.key == expert }?.label ?? "specialist"
     }
 
-    /// How far back this period reaches, in words. Pulled out of the summary
-    /// so the notification can say the same thing the screen does.
+    /// How far back this period reaches, in words.
     private var requestWindow: String {
         switch period {
         case "hourly": return "the last thirty hours"
@@ -549,9 +519,7 @@ struct ExpertsView: View {
         isBusy = true
         defer { isBusy = false }
 
-        // Asked here, at the one moment it is about to be useful, rather than
-        // at launch. A minute of waiting is the reason the permission exists,
-        // so the prompt arrives with that minute rather than before it.
+        // Asked here, at the one moment it is about to be useful, rather than at launch.
         guard store.entitlement.isSubscribed else { locked = true; return }
 
         let mayNotify = await notifier.permitted()
@@ -579,9 +547,7 @@ struct ExpertsView: View {
         }
     }
 
-    /// Says the reading is ready. Only ever after one you asked for, and only
-    /// with something in it — a notification announcing an empty report is a
-    /// worse outcome than no notification.
+    /// Says the reading is ready.
     private func announce(_ report: String, if permitted: Bool) {
         guard permitted, !report.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         notifier.readingReady(

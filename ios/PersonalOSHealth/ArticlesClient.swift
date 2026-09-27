@@ -2,12 +2,8 @@ import Foundation
 import Combine
 import StoreKit
 
-/// Articles on the server: what is published, what an author has written, and
-/// what is waiting for a reviewer.
-///
-/// Every rule that matters — who may write, what passes the checks, who may
-/// approve — is enforced in convex/articles.ts. This only carries requests,
-/// because a rule the app enforces is a rule an edited request skips.
+/// Articles on the server: what is published, what an author has written, and what is waiting for a
+/// reviewer.
 struct ArticlesClient {
     private let transport = Transport()
 
@@ -80,8 +76,7 @@ struct ArticlesClient {
         return try JSONDecoder().decode([Article].self, from: data)
     }
 
-    /// The back catalogue. `now` travels with the request because a Convex
-    /// query is not rerun as time passes, so it cannot read the clock itself.
+    /// The back catalogue.
     func archive() async throws -> [Article] {
         let data = try await transport.query(
             "articles:archive", ["now": Date().timeIntervalSince1970 * 1000]
@@ -129,9 +124,8 @@ struct ArticlesClient {
         return uuid
     }
 
-    /// Hands Apple's signed transaction to the server, which checks the
-    /// signature and applies the time on Home. Nothing is applied on the
-    /// strength of the phone saying a purchase happened.
+    /// Hands Apple's signed transaction to the server, which checks the signature and applies the
+    /// time on Home.
     func confirmPlacement(signedTransaction: String) async throws {
         _ = try await transport.action(
             "articlePayments:confirmPlacement", ["signedTransaction": signedTransaction]
@@ -149,18 +143,14 @@ struct ArticlesClient {
     }
 }
 
-/// Every article the app can show: what practitioners have had approved, then
-/// the ones bundled with the app.
-///
-/// Shared so Home, a See all list and search all read the same shelf, and one
-/// fetch serves them. If the server cannot be reached the bundled articles are
-/// still there, so Home is never an empty page because of a network.
+/// Every article the app can show: what practitioners have had approved, then the ones bundled with
+/// the app.
 @MainActor
 final class ArticleLibrary: ObservableObject {
     static let shared = ArticleLibrary()
 
     @Published private(set) var all: [Article] = Articles.bundled
-    /// Articles whose time on Home has run out. Locked without a subscription.
+    /// Articles whose time on Home has run out.
     @Published private(set) var archive: [Article] = []
 
     func refresh() async {
@@ -183,15 +173,6 @@ final class ArticleLibrary: ObservableObject {
 }
 
 /// Buying thirty days on Home for one article.
-///
-/// An App Store purchase, because Apple requires one for placement inside the
-/// app (guideline 2.5.18). The purchase carries the article's token as its
-/// appAccountToken, which is how the server knows which article it paid for
-/// and that the person who bought it wrote it.
-///
-/// A transaction is finished only after the server has applied it. If the
-/// app is closed in between, StoreKit redelivers it through
-/// `Transaction.updates`, and `Store` hands it back here.
 @MainActor
 enum ArticlePlacement {
     static let productID = "os.personal.article.30days"
@@ -223,7 +204,7 @@ enum ArticlePlacement {
         }
     }
 
-    /// For a transaction StoreKit redelivered. True once the server applied it.
+    /// For a transaction StoreKit redelivered.
     static func confirm(_ verification: VerificationResult<Transaction>) async -> Bool {
         do {
             try await ArticlesClient().confirmPlacement(signedTransaction: verification.jwsRepresentation)

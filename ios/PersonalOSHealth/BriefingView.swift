@@ -3,9 +3,7 @@ import SwiftUI
 struct BriefingView: View {
     @EnvironmentObject var health: HealthKitManager
     @State private var period: BriefingPeriod = .daily
-    /// The window's completed days. For a daily briefing this is still the
-    /// trailing week, because "8,431 steps" means nothing without knowing
-    /// whether that is a lot for you.
+    /// The window's completed days.
     @State private var snapshots: [HealthSnapshot] = []
     @State private var today: HealthSnapshot?
     @State private var loading = true
@@ -21,13 +19,6 @@ struct BriefingView: View {
     }
 
     /// How the day felt, in your own words rather than the app's.
-    ///
-    /// It was on the health page and not here, which had it backwards: the
-    /// summary carried the state of mind and the long read, where there is
-    /// room to sit with it, did not. Over a week or a month it becomes the
-    /// distinct moods recorded across the window, because "excited and
-    /// grateful" is a true thing about a Tuesday and a false one about thirty
-    /// days.
     private var mood: String? {
         if period == .daily {
             guard let labels = today?.stateOfMindLabels, !labels.isEmpty else { return nil }
@@ -47,8 +38,7 @@ struct BriefingView: View {
         return seen.prefix(6).joined(separator: ", ")
     }
 
-    /// Every metric with a reading, as a paragraph per group. The composing
-    /// lives in Briefing beside the rest of the prose.
+    /// Every metric with a reading, as a paragraph per group.
     private var breakdown: [(group: MetricSpec.Group, lines: [String])] {
         Briefing.breakdown(period: period, today: today, history: snapshots)
     }
@@ -57,11 +47,8 @@ struct BriefingView: View {
         let b = Briefing.compose(period: period, snapshots: period == .daily ? [today].compactMap { $0 } : snapshots)
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // The briefing is the one screen that is purely something to
-                // read, so it's written onto the page a line at a time rather
-                // than handed over whole. The stagger is the same 50ms step
-                // the metric grid uses; the paragraphs continue the count so
-                // the whole page reads as one movement down.
+                // The briefing is the one screen that is purely something to read, so it's written
+                // onto the page a line at a time rather than handed over whole.
                 Kicker(text: kicker, color: Theme.accent)
                     .padding(.top, 12)
                     .flowIn(0)
@@ -153,8 +140,7 @@ struct BriefingView: View {
 
                 Spacer(minLength: 40)
             }
-            // Switching period rewrites the whole page. Animating on the value
-            // rather than at the tap keeps the paragraphs moving as one.
+            // Switching period rewrites the whole page.
             .animation(Theme.Motion.flow, value: period)
             .padding(.horizontal, 24)
         }
@@ -170,11 +156,7 @@ struct BriefingView: View {
         defer { loading = false }
         do {
             try await health.requestAuthorization()
-            // Both, always. A day reads from today's live snapshot rather than
-            // yesterday's stored one — the morning briefing is about a day in
-            // progress, and the history read only holds completed days — but
-            // the breakdown needs the days behind it either way, to say
-            // whether today's figure is a lot for you or not.
+            // Both, always.
             today = try await health.fetchTodaySnapshot()
             snapshots = try await health.fetchHistoricalSnapshots(
                 days: max(period.days, 7)

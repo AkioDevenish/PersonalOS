@@ -3,16 +3,7 @@ import { httpAction } from "./_generated/server"
 import { auth } from "./auth"
 import { privacy, terms } from "./legal"
 
-/**
- * The one page this system still needs to be a web page.
- *
- * A card checkout has to send the payer back to an http address when it is
- * done, and that address used to be a Next app of ours. Served from Convex
- * instead, so nothing about taking a payment depends on another server.
- *
- * It says nothing about the payment. Whether it succeeded is decided by asking
- * the processor, not by which URL somebody landed on.
- */
+/** The one page this system still needs to be a web page. */
 const http = httpRouter()
 
 // Token verification keys, and the return leg of Google, Facebook and Apple.
@@ -70,8 +61,8 @@ http.route({
   }),
 })
 
-// Asked for by Google's consent screen, Meta's app review and the App Store,
-// and by anyone who wants to know what the app does with their health data.
+// Asked for by Google's consent screen, Meta's app review and the App Store, and by anyone who
+// wants to know what the app does with their health data.
 http.route({ path: "/privacy", method: "GET", handler: httpAction(async () => privacy()) })
 http.route({ path: "/terms", method: "GET", handler: httpAction(async () => terms()) })
 

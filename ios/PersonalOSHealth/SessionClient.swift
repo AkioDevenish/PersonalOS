@@ -1,11 +1,6 @@
 import Foundation
 
 /// One conversation with one specialist, written or on a call.
-///
-/// A call and a written exchange are the same relationship with the same
-/// history, so they are one thing here with a `kind`, rather than two systems
-/// that would each have to be consulted to show somebody what they have
-/// already asked.
 struct SessionClient {
     private let transport: Transport
 
@@ -16,8 +11,8 @@ struct SessionClient {
     struct Opened: Decodable {
         let id: String
         let kind: String
-        /// The agreed price in whole minor units, fixed at the moment of
-        /// opening so a later change to the rate cannot rewrite what is owed.
+        /// The agreed price in whole minor units, fixed at the moment of opening so a later change
+        /// to the rate cannot rewrite what is owed.
         let price_minor: Int
         let currency: String
         /// "free", "pending" or "paid".
@@ -61,13 +56,6 @@ struct SessionClient {
     }
 
     /// Raises a checkout and hands back the page to send the payer to.
-    ///
-    /// A Convex action now, not a web route: the processor keys live on the
-    /// deployment, and nothing of ours has to be awake for somebody to pay.
-    ///
-    /// Throws `PaymentUnavailable` when no processor is connected, which is a
-    /// different thing from a payment being refused and reads differently on
-    /// screen.
     func startPayment(id: String) async throws -> URL {
         struct Raised: Decodable {
             let url: String?
@@ -84,8 +72,7 @@ struct SessionClient {
         return url
     }
 
-    /// Asks the server, which asks the processor. The redirect back from a
-    /// checkout page is not evidence and is never treated as any.
+    /// Asks the server, which asks the processor.
     func isPaid(id: String) async -> Bool {
         struct Settled: Decodable { let paid: Bool }
         guard let data = try? await transport.action("consultPayments:settled", ["id": id]) else {
@@ -104,8 +91,8 @@ struct SessionClient {
 
     struct IceConfig: Decodable {
         let servers: [IceServer]
-        /// False when no relay is configured, which is worth surfacing: a
-        /// fifth of calls need one and will otherwise fail without saying why.
+        /// False when no relay is configured, which is worth surfacing: a fifth of calls need one
+        /// and will otherwise fail without saying why.
         let relayAvailable: Bool
     }
 

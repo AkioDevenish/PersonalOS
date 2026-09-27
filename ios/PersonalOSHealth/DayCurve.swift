@@ -1,11 +1,6 @@
 import Foundation
 
 /// Today's steps as they accumulated, against the way this weekday usually goes.
-///
-/// The written comparison in `Baseline` answers "was today busier than usual".
-/// This answers the more useful question earlier in the day: *by now*, am I
-/// ahead or behind? A day that ends level can still have been two hours late
-/// all afternoon, and a total at bedtime cannot show that.
 struct DayCurve {
     /// Cumulative steps at the end of each hour that has already passed today.
     let today: [Double]
@@ -18,9 +13,7 @@ struct DayCurve {
     var todayTotal: Double { today.last ?? 0 }
     var typicalTotal: Double { typical.last ?? 0 }
 
-    /// What a usual day of this weekday had reached by the hour today has got
-    /// to. This is the honest comparison: today's half-finished total against
-    /// a usual day's total is not a comparison at all.
+    /// What a usual day of this weekday had reached by the hour today has got to.
     var typicalByNow: Double {
         guard !today.isEmpty, typical.count >= today.count else { return 0 }
         return typical[today.count - 1]
@@ -45,8 +38,7 @@ struct DayCurve {
             byDay[day, default: [:]][hour, default: 0] += value
         }
 
-        /// Running total across the hours, so hour 9 holds everything up to
-        /// and including hour 9.
+        /// Running total across the hours, so hour 9 holds everything up to and including hour 9.
         func cumulative(_ hours: [Int: Double], through last: Int) -> [Double] {
             var running = 0.0
             return (0...last).map { h in
@@ -65,12 +57,11 @@ struct DayCurve {
             }
             .map { cumulative($0.value, through: 23) }
 
-        // Two is the least that can be called usual. One previous Tuesday is
-        // an anecdote drawn as if it were a pattern.
+        // Two is the least that can be called usual.
         guard pastCurves.count >= 2 else { return nil }
 
-        // Median hour by hour rather than mean: a single enormous day should
-        // not bend the whole curve upward.
+        // Median hour by hour rather than mean: a single enormous day should not bend the whole
+        // curve upward.
         let typicalCurve = (0...23).map { hour -> Double in
             let values = pastCurves.compactMap { $0.indices.contains(hour) ? $0[hour] : nil }.sorted()
             guard !values.isEmpty else { return 0 }

@@ -7,24 +7,8 @@ import { internal } from "./_generated/api"
 import { check, LIMITS, paragraphsOf } from "./articleRules"
 
 /**
- * Practitioners writing for the app, the team that verifies it, and the
- * payment that puts it on Home.
- *
- *   draft ──submit──▶ submitted ──team approves──▶ approved ──pays──▶ published
- *     ▲                   │                                            │
- *     └──── edit ◀── changes_requested                30 days later    ▼
- *                                                           expired ──pays──▶ published
- *
- * Writing is limited to approved practitioners: their identity and
- * credentials were checked when they applied. Verifying an article is a
- * separate team, ARTICLE_REVIEWER_IDS, so an editor can be added without
- * also being able to approve who is listed as a practitioner.
- *
- * Payment comes after approval, so nobody pays for an article that is turned
- * down. It is an App Store purchase because Apple requires one for buying
- * placement inside the app (guideline 2.5.18); it is verified in
- * articlePayments.ts and applied by the internal applyPlacement below, which
- * no client can call.
+ * Practitioners writing for the app, the team that verifies it, and the payment that puts it on
+ * Home.
  */
 
 /** Paid time on Home per purchase. */
@@ -96,12 +80,7 @@ const articleFields = {
 
 // MARK: Reading
 
-/**
- * Whether this reader has a subscription.
- *
- * Read inline rather than through the entitlements query, because a query
- * calling a query is two transactions where one will do.
- */
+/** Whether this reader has a subscription. */
 async function subscribes(ctx: QueryCtx, now: number): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) return false
@@ -113,17 +92,7 @@ async function subscribes(ctx: QueryCtx, now: number): Promise<boolean> {
   return typeof row.expires_at !== "number" || row.expires_at > now
 }
 
-/**
- * Everything on Home, newest first.
- *
- * Titles and summaries are open to everyone; the writing itself is what a
- * subscription buys. A practitioner still pays for placement because placement
- * is what puts them in front of people at all — but the readers who can open
- * them are subscribers, which is worth saying plainly to anyone buying it.
- *
- * `now` comes from the caller: a query is not rerun as time passes, so an
- * expiry decided inside one would go stale.
- */
+/** Everything on Home, newest first. */
 export const published = query({
   args: { now: v.number() },
   handler: async (ctx, args) => {
@@ -142,21 +111,7 @@ export const published = query({
   },
 })
 
-/**
- * The archive: articles whose paid time on Home has run out.
- *
- * This is what a subscription buys, and the split is deliberate. A
- * practitioner pays for thirty days on Home so that people read them, so
- * charging readers for those same days would be selling the practitioner's
- * own placement back to them. What is behind the subscription is the back
- * catalogue, which nobody is paying to promote any more.
- *
- * A locked article still carries its title and summary. A shelf of blank
- * cards is not a reason to subscribe; knowing what is behind them is.
- *
- * `now` comes from the caller because a query is not rerun as time passes,
- * so an expiry decided inside one would go stale.
- */
+/** The archive: articles whose paid time on Home has run out. */
 export const archive = query({
   args: { now: v.number() },
   handler: async (ctx, args) => {
@@ -216,14 +171,7 @@ export const mine = query({
 
 // MARK: Writing
 
-/**
- * Creates or updates a draft.
- *
- * A draft may be unfinished, so the check's errors are returned rather than
- * thrown; they block `submit`, not saving. Editing a published article takes
- * it off Home and back to draft: what readers see is always what a reviewer
- * approved, never an edit made afterwards.
- */
+/** Creates or updates a draft. */
 export const save = mutation({
   args: { id: v.optional(v.id("articles")), ...articleFields },
   handler: async (ctx, args) => {
@@ -354,18 +302,7 @@ export const queue = query({
   },
 })
 
-/**
- * Verifies, or sends back with a note.
- *
- * Verifying does not publish: it moves the article to approved, where the
- * author pays for its time on Home. The one exception is an article that was
- * edited while it still had paid time left, which goes straight back up for
- * the rest of that time rather than charging twice for the same days.
- *
- * The checks run again here rather than being trusted from submission, so a
- * rule tightened while an article waited applies to it too. A send-back needs
- * a note: "no" with no reason is not something an author can act on.
- */
+/** Verifies, or sends back with a note. */
 export const review = mutation({
   args: { id: v.id("articles"), approve: v.boolean(), note: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -388,9 +325,8 @@ export const review = mutation({
         review_note: args.note?.trim() || undefined,
         updated_at: now,
       })
-      // The expiry job for that time may already have run while the article
-      // was a draft, and found nothing to do. Schedule it again; a duplicate
-      // is harmless.
+      // The expiry job for that time may already have run while the article was a draft, and found
+      // nothing to do.
       if (stillPaid) await ctx.scheduler.runAt(row.live_until!, internal.articles.expire, { id: args.id })
       await ctx.scheduler.runAfter(0, internal.push.send, {
         userId: row.authorId,
@@ -419,12 +355,7 @@ export const review = mutation({
 
 // MARK: Paying
 
-/**
- * The token a purchase must carry to count for this article.
- *
- * Only for an article the team has verified. The token is kept once made, so
- * a purchase that is interrupted and redelivered later still matches.
- */
+/** The token a purchase must carry to count for this article. */
 export const startPayment = mutation({
   args: { id: v.id("articles") },
   handler: async (ctx, args) => {
@@ -439,16 +370,7 @@ export const startPayment = mutation({
   },
 })
 
-/**
- * Applies a purchase that articlePayments.ts has verified against Apple.
- *
- * Internal, so the only way in is through that verification. Found by the
- * token the purchase carried, owned by whoever signed in to buy it, and
- * applied once per transaction.
- *
- * Paying while already live adds thirty days to the end of the current time
- * rather than starting again from today, so renewing early loses nothing.
- */
+/** Applies a purchase that articlePayments.ts has verified against Apple. */
 export const applyPlacement = internalMutation({
   args: {
     authorToken: v.string(),
@@ -490,8 +412,7 @@ export const applyPlacement = internalMutation({
       live_until: liveUntil,
       created_at: now,
     })
-    // Taken down when the time runs out. A job left over from before a
-    // renewal finds the later live_until and does nothing.
+    // Taken down when the time runs out.
     await ctx.scheduler.runAt(liveUntil, internal.articles.expire, { id: row._id })
     return { applied: true, live_until: liveUntil }
   },

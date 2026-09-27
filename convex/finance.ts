@@ -2,18 +2,7 @@ import { userIdOf } from "./lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 
-/**
- * The money ledger.
- *
- * Same idea as the health one: a written record rather than a dashboard. Rows
- * are movements of money, signed, in integer minor units, and the reading is
- * derived at read time rather than stored — so correcting a row corrects every
- * total that quotes it, with no recomputation step to forget to run.
- *
- * Nothing here knows where a row came from. Typed in by hand and imported from
- * a bank feed are the same shape, which is what will let a feed be added later
- * without touching this file or the screens that read it.
- */
+/** The money ledger. */
 
 /** Anything longer than this is a note, not a category. */
 const MAX_CATEGORY = 40
@@ -29,13 +18,7 @@ function cleanCategory(raw: string): string {
   return c
 }
 
-/**
- * The ledger over a window, with its totals already worked out.
- *
- * Totals are grouped by currency and never summed across them. Adding dollars
- * to euros produces a number that looks authoritative and means nothing, and
- * the screen would have no way to know it was nonsense.
- */
+/** The ledger over a window, with its totals already worked out. */
 export const ledger = query({
   args: {
     from: v.number(),
@@ -73,9 +56,7 @@ export const ledger = query({
       t.net += row.minor
       totals.set(row.currency, t)
 
-      // Only spending is worth grouping by category. Income categorised the
-      // same way would sit in the same list with the opposite sign and make
-      // the biggest category ambiguous.
+      // Only spending is worth grouping by category.
       if (row.minor < 0) {
         const key = `${row.currency}:${row.category}`
         const c = categories.get(key) ?? {
@@ -104,14 +85,7 @@ export const ledger = query({
   },
 })
 
-/**
- * Writes one movement.
- *
- * The sign is the caller's to set, because only the caller knows whether this
- * was a wage or a bill. Zero is refused: a movement of nothing is a typing
- * mistake, and letting it through puts a row in the ledger that says nothing
- * happened.
- */
+/** Writes one movement. */
 export const add = mutation({
   args: {
     date: v.number(),
@@ -152,8 +126,8 @@ export const remove = mutation({
     const userId = requireIdentity((identity ? userIdOf(identity) : undefined))
 
     const row = await ctx.db.get(args.id)
-    // Same answer for "does not exist" and "is not yours": otherwise the error
-    // tells a stranger which ids are real.
+    // Same answer for "does not exist" and "is not yours": otherwise the error tells a stranger
+    // which ids are real.
     if (!row || row.userId !== userId) throw new Error("No such entry")
 
     await ctx.db.delete(args.id)

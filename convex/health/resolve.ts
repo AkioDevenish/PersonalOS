@@ -10,19 +10,7 @@ import {
   type MetricKey,
 } from "./metrics"
 
-/**
- * Source resolution.
- *
- * A user wearing a watch, a ring and carrying a phone reports the same day
- * three times. Summing everything triple-counts; averaging invents a number
- * nobody's device ever showed. Instead, for each (day, metric) we pick the
- * single highest-trust provider that actually reported, aggregate only its
- * samples, and report which provider won so the UI can say "Sleep — Oura".
- *
- * Resolution happens at read time, never at write time. Raw rows from every
- * provider stay in health_samples, so changing the trust order re-resolves
- * history rather than needing a backfill.
- */
+/** Source resolution. */
 
 async function priorityOverride(
   ctx: QueryCtx,
@@ -36,13 +24,7 @@ async function priorityOverride(
   return row?.priority ?? null
 }
 
-/**
- * Every metric, every day in a range, resolved — one query.
- *
- * The charts need ~19 metrics at once, and one query per metric would be 19
- * round trips over the same rows. This reads the window once and resolves
- * each (day, metric) group in a single pass.
- */
+/** Every metric, every day in a range, resolved — one query. */
 export const dailyMatrix = query({
   args: {
     from: v.string(), // YYYY-MM-DD inclusive

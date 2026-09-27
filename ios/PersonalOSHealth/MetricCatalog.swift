@@ -1,11 +1,6 @@
 import Foundation
 
 /// The five ways a glyph can move.
-///
-/// Kept deliberately small. Five is enough for every metric in the catalogue to
-/// move like the thing it measures, and few enough that the screen reads as one
-/// design rather than nineteen ideas.
-/// Whether a goal on a metric is a floor, a ceiling, or meaningless.
 enum GoalDirection {
     case atLeast    // steps, sleep, daylight: a floor to reach
     case atMost     // resting heart rate, glucose, audio: a ceiling to stay under
@@ -25,11 +20,6 @@ enum GlyphMotion {
 }
 
 /// Every metric the app reads, described once.
-///
-/// The old dashboard hardcoded each tile and each chart series separately,
-/// which is why it drifted — a metric could exist in HealthKit, be synced, and
-/// still never appear anywhere. Here a metric is one entry, and the grid, the
-/// trends and the correlation view all read from it.
 struct MetricSpec: Identifiable, Hashable {
     enum Group: String, CaseIterable {
         case activity = "Physical activity"
@@ -42,40 +32,19 @@ struct MetricSpec: Identifiable, Hashable {
     let label: String
     let group: Group
     let unit: String
-    /// Decimal places when shown. Steps want none, walking speed wants two.
+    /// Decimal places when shown.
     let precision: Int
-    /// Whether the number is a total that accumulates over a day (steps,
-    /// energy) rather than a level that is true at a moment (heart rate,
-    /// walking speed). A total reads as a bar and a level reads as a line, and
-    /// getting that backwards makes a chart lie about what it is showing.
+    /// Whether the number is a total that accumulates over a day (steps, energy) rather than a
+    /// level that is true at a moment (heart rate, walking speed).
     var cumulative: Bool = false
-    /// What this metric is called inside a sentence, when the tile label is
-    /// too clipped to read as English. "Resting HR" is right on a tile 150
-    /// points wide and wrong in a paragraph, where it is a resting heart rate.
+    /// What this metric is called inside a sentence, when the tile label is too clipped to read as
+    /// English.
     var phrase: String? = nil
     /// Which way is better, and therefore what a goal on it means.
-    ///
-    /// Without this a target is just a number: 8,000 steps is a floor and 100
-    /// mg/dL is a ceiling, and an app that can't tell the difference will
-    /// congratulate you for a resting heart rate of 90. `none` is for the
-    /// measures where more is not better and less is not better either.
     var goal: GoalDirection = .none
     /// How this metric's glyph moves.
-    ///
-    /// Every glyph moves now. It used to be four — a heart, a flame, a drop, a
-    /// moon — on the reasoning that a step count which throbs is decoration
-    /// rather than information, and fifteen pulsing icons is a light show. The
-    /// second half of that is right and the first half wasn't: the fix is to
-    /// give each glyph the motion its own measurement has, not to hold most of
-    /// them still. A heart beats, a sun turns, a footprint wiggles, a ruler
-    /// doesn't do much of anything and shouldn't pretend to.
-    ///
-    /// What keeps it off the disco floor is timing: the continuous effects go
-    /// to the four things that genuinely never stop, and everything else moves
-    /// on a long period, offset per tile, so no two glyphs ever move together.
     var motion: GlyphMotion = .periodicBounce
-    /// SF Symbol for the tile. Kept here rather than in the view so a metric
-    /// stays one entry — the grid, the charts and the picker all read from it.
+    /// SF Symbol for the tile.
     let symbol: String
     let value: (HealthSnapshot) -> Double?
 
@@ -85,9 +54,7 @@ struct MetricSpec: Identifiable, Hashable {
     /// The name to use in a sentence.
     var spoken: String { phrase ?? label.lowercased() }
 
-    /// Formats a figure to this metric's own precision. Takes a bare number
-    /// rather than a snapshot, because averages and totals over a window are
-    /// figures nobody's day actually held.
+    /// Formats a figure to this metric's own precision.
     func format(_ v: Double) -> String {
         guard v.isFinite else { return "·" }
         if precision == 0 {

@@ -3,10 +3,7 @@ import { v } from "convex/values"
 import { internalMutation, internalQuery, query } from "./_generated/server"
 import { feePercent } from "./fees"
 
-/**
- * The database half of payouts. The Stripe half is in payouts.ts, which is a
- * Node action and so cannot touch the database itself.
- */
+/** The database half of payouts. */
 
 export const profileFor = internalQuery({
   args: { userId: v.string() },

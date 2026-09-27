@@ -1,10 +1,6 @@
 import Foundation
 
 /// One measurement in the server's vocabulary.
-///
-/// The old payload was one fat object with a column per metric, so adding a
-/// metric meant changing the app, the API and the database together. This is
-/// flat and self-describing: metric name, value, unit, when.
 struct CanonicalSample: Encodable {
     let metric: String
     let value: Double
@@ -15,16 +11,6 @@ struct CanonicalSample: Encodable {
 }
 
 /// Translates a HealthSnapshot into canonical samples.
-///
-/// Every conversion here is deliberate and must match METRICS in
-/// convex/health/metrics.ts exactly. The server rejects a sample whose unit
-/// doesn't match rather than guessing, so a mistake surfaces as a rejection
-/// with a reason instead of a plausible-looking number that is wrong by a
-/// factor of a thousand.
-///
-/// Note the round trip: HealthKit reads metres and m/s, HealthSnapshot stores
-/// km and km/h for display, and the canonical form is back in metres and m/s.
-/// Those factors below are undoing conversions done upstream.
 enum CanonicalMapper {
 
     static func samples(from snapshot: HealthSnapshot, device: String?) -> [CanonicalSample] {
@@ -68,7 +54,6 @@ enum CanonicalMapper {
         add("insulin_delivery", snapshot.insulinDeliveryIu, "IU")
 
         // HKUnit.percent() yields a fraction where 1.0 == 100%.
-        // Canonical "pct" is 0–100, so these scale up.
         add("walking_steadiness", snapshot.walkingSteadiness, "pct", scale: 100)
         add("walking_asymmetry", snapshot.walkingAsymmetryPct, "pct", scale: 100)
         add("walking_double_support", snapshot.walkingDoubleSupportPct, "pct", scale: 100)
@@ -77,9 +62,8 @@ enum CanonicalMapper {
         add("stair_ascent_speed", snapshot.stairAscentSpeed, "m/s")
         add("headphone_audio_exposure", snapshot.headphoneAudioExposure, "dB")
 
-        // Deliberately not mapped: stateOfMindLabels is text and
-        // stateOfMindValence has no canonical metric yet. The samples table is
-        // numeric-only; state of mind needs its own shape.
+        // Deliberately not mapped: stateOfMindLabels is text and stateOfMindValence has no
+        // canonical metric yet.
 
         return out
     }

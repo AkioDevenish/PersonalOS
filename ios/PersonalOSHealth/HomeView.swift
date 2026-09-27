@@ -1,18 +1,8 @@
 import SwiftUI
 
 /// The landing page, laid out as a reading catalogue.
-///
-/// A search at the top, the most read articles on a band of their own with a
-/// page indicator beneath, the places you can go, and then a shelf per
-/// subject. Every row runs to the edge of the screen and lets the next card
-/// show, which is the cue that there is more to the side.
-///
-/// Cards are one size throughout — a picture band over the title, wide enough
-/// that a title reads as one — so Explore and the articles look like parts of
-/// the same page rather than two designs next to each other.
 struct HomeView: View {
-    /// Sends you to another tab. The bar's selection lives in RootView, so
-    /// the page asks rather than reaches.
+    /// Sends you to another tab.
     var go: (AppTab) -> Void
 
     @EnvironmentObject private var health: HealthKitManager
@@ -105,9 +95,6 @@ struct HomeView: View {
     // MARK: Search
 
     /// A large title with your face on the right, and a search field under it.
-    ///
-    /// The face is the way to Profile from the top of the page, where people
-    /// look for it, as well as from the bar.
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center) {
@@ -157,8 +144,8 @@ struct HomeView: View {
         !query.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    /// Articles first, because that is what the field says it finds, then the
-    /// places and the measurements.
+    /// Articles first, because that is what the field says it finds, then the places and the
+    /// measurements.
     @ViewBuilder
     private var results: some View {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -315,8 +302,8 @@ struct HomeView: View {
         let title: String
         let note: String
         let symbol: String
-        /// Saturated mid-tones that carry white type and hold their own on a
-        /// black page, so one set serves both appearances.
+        /// Saturated mid-tones that carry white type and hold their own on a black page, so one set
+        /// serves both appearances.
         let colour: Color
     }
 

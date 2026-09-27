@@ -2,13 +2,7 @@ import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
-/**
- * Which platform and model a user's insights run on.
- *
- * A model name is not a secret, so unlike the keys these values are readable
- * as themselves. Everything is still scoped to the calling identity — the
- * generator reads this with the same user token the phone sent it.
- */
+/** Which platform and model a user's insights run on. */
 
 export const get = query({
   args: {},

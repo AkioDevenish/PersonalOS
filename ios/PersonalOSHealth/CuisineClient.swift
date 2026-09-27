@@ -1,11 +1,6 @@
 import Foundation
 
 /// The shared list of what a country eats.
-///
-/// One vote each, and a dish becomes part of what the model is told to cook
-/// from once enough people have named it. Your own suggestions count for you
-/// straight away — waiting for strangers to agree before the app will cook
-/// something you said you eat would be absurd.
 struct CuisineClient {
     private let transport: Transport
 
@@ -36,8 +31,7 @@ struct CuisineClient {
         static let empty = Book(threshold: 3, all: [], canon: [])
     }
 
-    /// Straight to Convex. The route this replaced held no logic of its own:
-    /// it read the query string and called the same three functions.
+    /// Straight to Convex.
     func book(country: String) async throws -> Book {
         let data = try await transport.query("health/cuisine:forCountry", ["country": country])
         return try JSONDecoder().decode(Book.self, from: data)
@@ -54,9 +48,6 @@ struct CuisineClient {
     }
 
     /// Says a dish is not eaten in a country, or takes that back.
-    ///
-    /// Only works on what nobody vouched for — a model's guess, or one
-    /// person's suggestion. The server refuses the rest.
     @discardableResult
     func reject(country: String, dish: String) async throws -> Bool {
         struct Result: Decodable { let rejected: Bool }

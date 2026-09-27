@@ -6,26 +6,7 @@ import jwt from "jsonwebtoken"
 import { internalAction } from "./_generated/server"
 import { internal } from "./_generated/api"
 
-/**
- * Sending a notification to somebody's lock screen.
- *
- * A real push, delivered by Apple, so it arrives whether or not the app is
- * running. The app's own notifications were local: they could only appear
- * while it was open, which is no use for the thing worth telling somebody —
- * that a practitioner has replied while they were elsewhere.
- *
- * Apple requires HTTP/2 for this, which `fetch` does not speak, so it goes
- * through node:http2 directly.
- *
- * Environment variables on the Convex deployment, all from the paid developer
- * account. Without them nothing is sent and nothing fails loudly: a push that
- * cannot be delivered must never take down the reply that triggered it.
- *
- *   APNS_KEY_ID      the key's 10-character id
- *   APNS_TEAM_ID     the 10-character team id
- *   APNS_P8          the .p8 private key, PEM, newlines as \n
- *   APNS_ENVIRONMENT "production", or "sandbox" for development builds
- */
+/** Sending a notification to somebody's lock screen. */
 
 const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
 const HOSTS = {
@@ -94,8 +75,8 @@ export const send = internalAction({
               request.on("error", () => resolve())
               request.on("end", () => {
                 if (status === 200) delivered += 1
-                // 410 is Apple saying the app is gone from that device; 400
-                // with BadDeviceToken is the same thing said differently.
+                // 410 is Apple saying the app is gone from that device; 400 with BadDeviceToken is
+                // the same thing said differently.
                 else if (status === 410 || status === 400) dead.push(token)
                 resolve()
               })

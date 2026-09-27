@@ -27,18 +27,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllEnvs())
 
-/**
- * Deleting an account has to delete the account's data.
- *
- * It used to delete the login and stop there, which left every measurement,
- * reading and consultation in the database under an id nothing could reach.
- * The failure mode is silent by nature — the person sees their account
- * disappear either way — so it is worth proving rather than reading.
- *
- * These tests write rows directly instead of going through each feature's own
- * mutations. That is deliberate: the question is whether the sweep in
- * users.purge covers the table, not whether some other function works.
- */
+/** Deleting an account has to delete the account's data. */
 
 /** Signs somebody up and hands back their id and an identity to act as. */
 async function account(t: ReturnType<typeof convexTest>, email: string) {
@@ -83,8 +72,8 @@ async function remaining(t: ReturnType<typeof convexTest>, userId: string) {
         (row) => "userId" in row && (row as { userId: string }).userId === userId,
       ).length
     }
-    // Messages hang off the consultation, so they are counted by what is left
-    // at all rather than by whose they were.
+    // Messages hang off the consultation, so they are counted by what is left at all rather than by
+    // whose they were.
     counts.consult_messages = (await ctx.db.query("consult_messages").collect()).length
     return counts
   })

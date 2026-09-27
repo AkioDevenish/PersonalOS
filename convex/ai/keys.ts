@@ -2,25 +2,7 @@ import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { mutation, query } from "../_generated/server"
 
-/**
- * Storage for bring-your-own-key AI credentials.
- *
- * Convex only ever holds ciphertext. The Next layer encrypts with
- * TOKEN_ENCRYPTION_KEY — which exists only in that environment — before any
- * value arrives here, so a query that returned every row would leak envelopes
- * nobody can open.
- *
- * These are authenticated public functions rather than internal ones, unlike
- * health/tokens.ts. That difference is deliberate. OAuth tokens are written
- * during a provider redirect, which carries no user session, so that path has
- * no identity to check and must run with admin credentials. A user typing
- * their own API key is always signed in, so the identity check can happen here
- * — and scoping every read and write to `userIdOf(identity)` is a stronger
- * guarantee than handing the web layer a deploy key that can touch any row.
- *
- * `last4` is stored in the clear so the app can render "which key is saved"
- * without anything having to decrypt to draw a list.
- */
+/** Storage for bring-your-own-key AI credentials. */
 
 /** Rows belong to whoever is asking, always. */
 async function requireUser(ctx: any): Promise<string> {
@@ -55,9 +37,8 @@ export const store = mutation({
 })
 
 /**
- * Returns the caller's own encrypted envelope, for the server to decrypt when
- * it needs to call the provider on their behalf. Not a leak: the envelope is
- * inert without the key, and that key never leaves the Next environment.
+ * Returns the caller's own encrypted envelope, for the server to decrypt when it needs to call the
+ * provider on their behalf.
  */
 export const envelopeFor = query({
   args: { provider: v.string() },
@@ -87,7 +68,7 @@ export const remove = mutation({
   },
 })
 
-/** Which providers this user has a key for. Never includes the key itself. */
+/** Which providers this user has a key for. */
 export const summary = query({
   args: {},
   handler: async (ctx) => {

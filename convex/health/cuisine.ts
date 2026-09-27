@@ -98,7 +98,7 @@ export const reject = mutation({
   },
 })
 
-/** Puts a dish forward, or takes your vote back. One vote per person. */
+/** Puts a dish forward, or takes your vote back. */
 export const suggest = mutation({
   args: { country: v.string(), dish: v.string() },
   handler: async (ctx, args) => {

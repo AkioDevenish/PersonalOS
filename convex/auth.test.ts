@@ -10,8 +10,8 @@ const modules = import.meta.glob("./**/*.ts")
 let keys: { JWT_PRIVATE_KEY: string; JWKS: string }
 
 beforeAll(async () => {
-  // Real keys, made the way the deployment's are, so the tokens these tests
-  // get are the same kind the phone will carry.
+  // Real keys, made the way the deployment's are, so the tokens these tests get are the same kind
+  // the phone will carry.
   const pair = await generateKeyPair("RS256", { extractable: true })
   const priv = await exportPKCS8(pair.privateKey)
   const pub = await exportJWK(pair.publicKey)
