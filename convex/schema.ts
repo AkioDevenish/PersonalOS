@@ -543,6 +543,15 @@ export default defineSchema({
     userId: v.string(),         // one vote each; also lets a person take it back
     /** True for the model-written starter list, which nobody voted for. */
     seeded: v.optional(v.boolean()),
+    /**
+     * True when this row is somebody saying the dish is not eaten here.
+     *
+     * A guessed dish had no way to be taken back: it needed no votes to be
+     * offered and nothing could remove it, so bunny chow was going to be
+     * Trinidadian for as long as the row existed. A rejection is a row like
+     * any other, so one person can only cast one.
+     */
+    reject: v.optional(v.boolean()),
     created_at: v.number(),
   })
     .index("by_country", ["country"])

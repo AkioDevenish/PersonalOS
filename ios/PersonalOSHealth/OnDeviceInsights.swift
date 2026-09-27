@@ -418,6 +418,20 @@ enum InsightPrompts {
             Pick from that list. Use the name exactly as written above. Only go \
             outside it if nothing on it suits the readings, and say so if you do.
             """
+        } else if !place.isEmpty {
+            // Nobody has named anything for this country yet, so the model has
+            // only its own recall to go on — which is the thing that put bunny
+            // chow in Trinidad's list. Describing a dish is a far safer request
+            // than naming one: getting a name wrong asserts something false
+            // about a place, and people notice.
+            place += """
+
+
+            Nobody has told us what is eaten in \(country) yet. Do not name a \
+            local dish unless you are certain of it. Describe the food instead \
+            — what it is made of and how it is cooked — using ingredients sold \
+            there. A plain description is better than a name you are unsure of.
+            """
         }
 
         return """

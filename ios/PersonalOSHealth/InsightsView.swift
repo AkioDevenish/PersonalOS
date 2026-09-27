@@ -176,7 +176,7 @@ struct NutritionView: View {
                          ? (seeding
                             ? "Writing a starter list for \(Cuisine.name(for: country))…"
                             : "Nothing named yet. Add the first dish and it goes into your suggestions straight away.")
-                         : "Named by people who eat in \(Cuisine.name(for: country)). Once \(book.threshold) people name a dish it goes into everyone's suggestions here — yours count for you immediately.")
+                         : "Named by people who eat in \(Cuisine.name(for: country)). Once \(book.threshold) people name a dish it goes into everyone's suggestions — yours count for you immediately. Anything marked as a guess is waiting for someone to confirm it; hold it to say it isn't eaten here.")
                         .font(Theme.sans(11))
                         .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
@@ -202,6 +202,17 @@ struct NutritionView: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.pressRow)
+                            .contextMenu {
+                                // Only offered for dishes nobody has vouched
+                                // for. What is written down for a country, or
+                                // what enough people have named, is not
+                                // something one passer-by removes.
+                                if d.canBeRejected(threshold: book.threshold) {
+                                    Button("Not eaten here", systemImage: "xmark.circle", role: .destructive) {
+                                        Task { await reject(d.dish) }
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.top, 6)
@@ -266,11 +277,22 @@ struct NutritionView: View {
         .subscriptionNeeded($locked, toDo: "write you a suggestion")
     }
 
-    /// "NAMED BY 4" — and for a starter-list dish nobody has vouched for yet,
-    /// say so rather than showing a zero, which reads as a rejection.
+    /// "NAMED BY 4" — and for a dish nobody has vouched for yet, what kind of
+    /// nothing it is, rather than a zero, which reads as a rejection.
+    ///
+    /// A guess and a written-down dish both have no votes and are not the same
+    /// thing at all: one is in everyone's suggestions and one is waiting to be
+    /// let in. Saying "guess" out loud is the point — it is what stops someone
+    /// assuming the app knows their country.
     private func voteLine(_ d: CuisineClient.Dish) -> String {
-        if d.votes == 0 { return d.seeded ? "suggested" : "" }
+        if d.votes == 0 { return d.written ? "" : (d.seeded ? "a guess" : "") }
         return d.votes == 1 ? "named by 1" : "named by \(d.votes)"
+    }
+
+    private func reject(_ dish: String) async {
+        Haptics.tap()
+        try? await CuisineClient().reject(country: country, dish: dish)
+        book = (try? await CuisineClient().book(country: country)) ?? book
     }
 
     private func loadBook() async {
