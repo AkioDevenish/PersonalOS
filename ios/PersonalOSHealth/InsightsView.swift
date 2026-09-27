@@ -29,7 +29,6 @@ struct NutritionView: View {
     /// dish names: it chooses from this rather than recalling from nothing.
     @State private var book = CuisineClient.Book.empty
     @State private var newDish = ""
-    @State private var seeding = false
     @State private var locked = false
 
     /// Today's snapshot, held only so the screen can show what it's reading.
@@ -173,10 +172,8 @@ struct NutritionView: View {
                     SectionRule(text: "What people eat here").padding(.top, 34)
 
                     Text(book.all.isEmpty
-                         ? (seeding
-                            ? "Writing a starter list for \(Cuisine.name(for: country))…"
-                            : "Nothing named yet. Add the first dish and it goes into your suggestions straight away.")
-                         : "Named by people who eat in \(Cuisine.name(for: country)). Once \(book.threshold) people name a dish it goes into everyone's suggestions — yours count for you immediately. Anything marked as a guess is waiting for someone to confirm it; hold it to say it isn't eaten here.")
+                         ? "Nothing named yet. Add a dish you eat."
+                         : "Dishes eaten in \(Cuisine.name(for: country)). Hold one to say it isn't.")
                         .font(Theme.sans(11))
                         .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)
@@ -277,15 +274,8 @@ struct NutritionView: View {
         .subscriptionNeeded($locked, toDo: "write you a suggestion")
     }
 
-    /// "NAMED BY 4" — and for a dish nobody has vouched for yet, what kind of
-    /// nothing it is, rather than a zero, which reads as a rejection.
-    ///
-    /// A guess and a written-down dish both have no votes and are not the same
-    /// thing at all: one is in everyone's suggestions and one is waiting to be
-    /// let in. Saying "guess" out loud is the point — it is what stops someone
-    /// assuming the app knows their country.
     private func voteLine(_ d: CuisineClient.Dish) -> String {
-        if d.votes == 0 { return d.written ? "" : (d.seeded ? "a guess" : "") }
+        guard d.votes > 0 else { return "" }
         return d.votes == 1 ? "named by 1" : "named by \(d.votes)"
     }
 
@@ -297,34 +287,6 @@ struct NutritionView: View {
 
     private func loadBook() async {
         guard !country.isEmpty else { book = .empty; return }
-        book = (try? await CuisineClient().book(country: country)) ?? .empty
-        await seedIfEmpty()
-    }
-
-    /// Writes a starter list for a country nobody has named anything for.
-    ///
-    /// Written by the model on the phone. The starter list carries no votes,
-    /// so the first real person to disagree with it outranks it by saying so.
-    private func seedIfEmpty() async {
-        guard book.all.isEmpty, !country.isEmpty, !seeding else { return }
-        seeding = true
-        defer { seeding = false }
-
-        let name = Cuisine.name(for: country)
-        guard let written = try? await OnDeviceInsights.generate(
-            instructions: InsightPrompts.starterInstructions,
-            prompt: InsightPrompts.starterDishes(country: name),
-            temperature: 0.4
-        ) else { return }
-
-        let dishes = written
-            .split(separator: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .map { $0.replacingOccurrences(of: "^[-·*\\d.\\s]+", with: "", options: .regularExpression) }
-            .filter { !$0.isEmpty && $0.count <= 60 }
-        guard dishes.count >= 5 else { return }
-
-        try? await CuisineClient().seed(country: country, dishes: dishes)
         book = (try? await CuisineClient().book(country: country)) ?? .empty
     }
 

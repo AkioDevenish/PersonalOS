@@ -449,46 +449,6 @@ enum InsightPrompts {
         """
     }
 
-    /// Asks for a country's everyday food, once, so the first person to pick a
-    /// country isn't handed an empty vocabulary.
-    ///
-    /// Deliberately asks for ordinary and cheap rather than notable: the answer
-    /// wanted is what people eat on a Tuesday, not what a tourist board would
-    /// put on a poster.
-    static func starterDishes(country: String) -> String {
-        """
-        Name the dishes you are certain are ordinarily eaten at home in \
-        \(country). At most 12, and fewer if you are only sure of a few.
-
-        Everyday food, not restaurant or festival food. Breakfast, lunch, \
-        dinner and street food are all fine. Use the name people there use for \
-        it, in the local spelling.
-
-        Do not list variations of one dish as separate dishes. If you name a \
-        dish, name it once — not once for each meat that can go in it.
-
-        Do not name a dish from a neighbouring country, or from a country that \
-        shares a language, unless it is genuinely eaten in \(country) too.
-
-        One dish a line. No numbering, no description, no other words.
-        """
-    }
-
-    /// The instructions the starter list is written under.
-    ///
-    /// Asked for twenty dishes from a country it barely knew, the model
-    /// invented eighteen: for Angola it knew caldo verde and moqueca — one
-    /// Portuguese, one Brazilian — and reached twenty by pairing each with
-    /// four proteins. So the number is now a ceiling rather than a target, and
-    /// stopping early is named as the right answer, because a model asked for
-    /// a fixed count will always fill it.
-    static let starterInstructions = """
-    You list food. You answer with names only, one a line, and nothing else.
-    Leave out any dish you are not certain is genuinely eaten in that country.
-    Four dishes you are sure of is a better answer than twelve you are not, and
-    stopping early is correct, not a failure. Never pad the list by repeating
-    one dish with different ingredients.
-    """
 
     static let mealInstructions = """
     You are a Senior Nutritionist suggesting meals from someone's health measurements.

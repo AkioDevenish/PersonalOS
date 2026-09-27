@@ -15,25 +15,13 @@ struct CuisineClient {
         let key: String
         let dish: String
         let votes: Int
-        /// Vouched for by nobody: either written down for the country, or a
-        /// model's guess. `written` tells the two apart.
-        let seeded: Bool
-        /// Written down for this country, and therefore in everyone's
-        /// suggestions without needing a single vote.
+        /// On the written list for this country.
         let written: Bool
-        /// Produced by the model on somebody's phone. Not in anyone's
-        /// suggestions until people confirm it.
-        let guessed: Bool
-        /// Whether the caller is one of the people who named it.
         let mine: Bool
 
         var id: String { key }
 
-        /// Whether one person saying so should be enough to remove it.
-        ///
-        /// True only for what nobody vouched for. A written-down dish is
-        /// changed by editing the list; one enough people have named is
-        /// settled, and not something a passer-by undoes.
+        /// Only dishes nobody has vouched for can be rejected.
         func canBeRejected(threshold: Int) -> Bool {
             !written && votes < threshold
         }
@@ -77,16 +65,4 @@ struct CuisineClient {
         )
         return (try? JSONDecoder().decode(Result.self, from: data))?.rejected ?? false
     }
-
-    /// Writes the starter list for a country nobody has named anything for.
-    ///
-    /// Carries no votes: it is a first guess so the first person to choose a
-    /// country isn't handed an empty vocabulary, and a seeded dish nobody
-    /// actually eats stays at zero forever, which is the right fate for it.
-    func seed(country: String, dishes: [String]) async throws {
-        _ = try await transport.mutation(
-            "health/cuisine:seed", ["country": country, "dishes": dishes]
-        )
-    }
-
 }

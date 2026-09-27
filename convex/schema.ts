@@ -539,19 +539,9 @@ export default defineSchema({
   cuisine_dishes: defineTable({
     country: v.string(),        // ISO region code, e.g. "TT"
     dish: v.string(),           // as typed, for display
-    key: v.string(),            // normalised, for counting: lowercased, trimmed
-    userId: v.string(),         // one vote each; also lets a person take it back
-    /** True for the model-written starter list, which nobody voted for. */
-    seeded: v.optional(v.boolean()),
-    /**
-     * True when this row is somebody saying the dish is not eaten here.
-     *
-     * A guessed dish had no way to be taken back: it needed no votes to be
-     * offered and nothing could remove it, so bunny chow was going to be
-     * Trinidadian for as long as the row existed. A rejection is a row like
-     * any other, so one person can only cast one.
-     */
-    reject: v.optional(v.boolean()),
+    key: v.string(),            // normalised, for counting
+    userId: v.string(),         // one vote each
+    reject: v.optional(v.boolean()), // "not eaten here" rather than a vote
     created_at: v.number(),
   })
     .index("by_country", ["country"])
