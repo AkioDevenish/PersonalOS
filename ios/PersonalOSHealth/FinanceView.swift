@@ -179,7 +179,7 @@ struct FinanceView: View {
             Text("Nothing written yet")
                 .font(Theme.serif(24))
                 .foregroundStyle(Theme.text)
-            Text("Record what you spend and what you earn, and the reading builds itself.")
+            Text("Record what you spend and earn.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)

@@ -76,7 +76,7 @@ struct CycleView: View {
                 .padding(.top, 14)
                 .flowIn(1)
 
-            Text("Record the first day of a period and this page starts counting. After two cycles it can say when to expect the next one; before that it would only be repeating the one month it has seen.")
+            Text("Log the first day of your period to start. After two cycles it can predict the next one.")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(6)
@@ -111,7 +111,7 @@ struct CycleView: View {
     /// What the counting can and cannot say.
     private func expectation(_ reading: Cycle.Reading) -> String {
         guard reading.canPredict, let length = reading.typicalLength else {
-            return "One more cycle and this can start expecting the next one. Counting from a single previous cycle is a guess wearing a date."
+            return "One more cycle and this can predict the next one."
         }
         guard let away = reading.daysAway else { return "" }
         let cycle = "Your cycles have been running about \(length) days."
@@ -155,7 +155,7 @@ struct CycleView: View {
             Text("Health access is needed.")
                 .font(Theme.serif(30))
                 .foregroundStyle(Theme.text)
-            Text("This page reads and writes only one thing, your period, and it asks separately from the rest of the app so that permission is its own decision. Open Settings, then Health, then Data Access, to change it.")
+            Text("This page needs access to your period data. Change it in Settings → Health → Data Access.")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(6)
@@ -169,7 +169,7 @@ struct CycleView: View {
     private var privacy: some View {
         VStack(alignment: .leading, spacing: 8) {
             Kicker(text: "Where this lives", size: 9)
-            Text("On this phone, in Apple Health, and nowhere else. Cycle records are never sent to Personal OS's servers and are never included in the readings you can hand to a practitioner — not by policy, but because the sync and the sharing sheet are both built from a daily snapshot this data is deliberately kept out of.")
+            Text("On this phone, in Apple Health, and nowhere else. Never sent to our servers or shared with practitioners.")
                 .font(Theme.sans(11.5))
                 .foregroundStyle(Theme.tertiaryText)
                 .lineSpacing(4)
@@ -317,7 +317,7 @@ private struct CycleLogSheet: View {
                     .font(Theme.serif(32))
                     .foregroundStyle(Theme.text)
 
-                Text("Recorded in Apple Health, where the watch can use it and where you can delete it without asking us.")
+                Text("Saved in Apple Health.")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)

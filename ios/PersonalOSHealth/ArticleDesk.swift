@@ -307,7 +307,7 @@ struct MyArticlesView: View {
                         .foregroundStyle(Theme.accent)
                 }
             } footer: {
-                Text("Articles are checked automatically, then verified by our team. Once verified, pay to put it on Home for 30 days\(price.map { " (\($0))" } ?? ""). You only pay for an article that has been verified. Editing a published article takes it off Home until it is verified again, and any paid time left carries over.")
+                Text("Our team verifies each article. Once verified, pay to show it on Home for 30 days\(price.map { " (\($0))" } ?? ""). Editing takes it off Home until it is verified again.")
             }
 
             if let failure {

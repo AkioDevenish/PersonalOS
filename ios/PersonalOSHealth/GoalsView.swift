@@ -24,7 +24,7 @@ struct GoalsView: View {
                     .flowIn(0)
 
                 Text(chosen.isEmpty
-                     ? "Nothing yet. Set one and the day's briefing closes with it whenever it hasn't been met."
+                     ? "No goals yet."
                      : "The briefing closes with whichever of these the day hasn't met.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.secondaryText)

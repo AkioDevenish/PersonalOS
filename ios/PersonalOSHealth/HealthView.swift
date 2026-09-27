@@ -115,7 +115,7 @@ struct HealthView: View {
                 // someone who had denied Health access saw an empty page and no
                 // reason for it. The flag was being set and never read.
                 if loadFailed {
-                    Text("Health access was refused, so there is nothing to read. Open Settings, then Privacy and Security, then Health, and allow Personal OS.")
+                    Text("No Health access. Allow it in Settings → Privacy & Security → Health.")
                         .font(Theme.sans(12))
                         .foregroundStyle(Theme.secondaryText)
                         .lineSpacing(4)

@@ -29,7 +29,7 @@ struct SpecialistsView: View {
                     .padding(.top, 6)
                     .flowIn(0)
 
-                Text("Practitioners who read what you have recorded and write back in their own words. Every one of them has been checked before appearing here.")
+                Text("Verified practitioners who can read your data and reply.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
@@ -458,7 +458,7 @@ struct SpecialistApplicationSheet: View {
                     .font(Theme.serif(30))
                     .foregroundStyle(Theme.text)
 
-                Text("What you write here is what someone reads before deciding to ask you. Applications are checked before anyone appears.")
+                Text("People read this before asking you. We check every application.")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)

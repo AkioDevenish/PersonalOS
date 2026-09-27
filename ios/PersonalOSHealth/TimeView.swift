@@ -161,7 +161,7 @@ struct TimeView: View {
             Text("No time logged yet")
                 .font(Theme.serif(24))
                 .foregroundStyle(Theme.text)
-            Text("Write down where the hours went, and the week starts explaining itself.")
+            Text("Record where your hours went.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)

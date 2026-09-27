@@ -22,7 +22,7 @@ struct OfflineView: View {
                 .foregroundStyle(Theme.text)
                 .padding(.top, 24)
 
-            Text("Personal OS keeps your ledger on its own servers, so it needs a connection to show you anything at all. It picks up by itself the moment you have one.")
+            Text("Personal OS needs a connection. It'll pick up as soon as you're back online.")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)

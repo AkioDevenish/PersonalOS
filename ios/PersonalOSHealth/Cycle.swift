@@ -182,13 +182,13 @@ enum Cycle {
         var note: String {
             switch self {
             case .menstrual:
-                return "The cycle begins again. Energy is usually at its lowest here, and that is the body doing its work rather than a failing."
+                return "The cycle begins again. Energy is usually lowest here."
             case .follicular:
-                return "Building. Most people find this the easiest stretch to ask something difficult of themselves."
+                return "Energy builds. Often the easiest stretch of the month."
             case .ovulatory:
-                return "The middle of the cycle, and the short window around it. Estimated by counting, not measured."
+                return "Mid-cycle. Estimated by counting, not measured."
             case .luteal:
-                return "The long descent. If a month has a week that feels heavier for no reason you can point at, it is usually this one."
+                return "The run-up to your period. Often the heaviest-feeling week."
             }
         }
     }

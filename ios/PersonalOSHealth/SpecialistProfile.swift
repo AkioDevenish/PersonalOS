@@ -182,7 +182,7 @@ struct SpecialistProfileView: View {
 
     private var costLine: String {
         specialist.free
-            ? "\(specialist.name) does not charge. Start a conversation whenever you like."
+            ? "Free to message."
             : "\(specialist.price) for a conversation, paid to \(specialist.name) when it opens."
     }
 
@@ -288,7 +288,7 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         if thread.messages.isEmpty {
                             Text(canShareReadings
-                     ? "Say what you would like to ask. \(peer) will see your ledger only if you choose to share it."
+                     ? "What would you like to ask? \(peer) only sees your data if you share it."
                      : "Nothing from their ledger is here unless they chose to send it.")
                                 .font(Theme.sans(12))
                                 .foregroundStyle(Theme.tertiaryText)
@@ -797,8 +797,8 @@ struct PaymentView: View {
                 .padding(.top, 6)
 
             Text(waiting
-                 ? "Finish in the page that opened. This screen will move on by itself once the payment clears."
-                 : "You will be taken to a secure page to pay. Your conversation opens as soon as it clears.")
+                 ? "Finish paying in the page that opened."
+                 : "You'll pay on a secure page, then the conversation opens.")
                 .font(Theme.sans(13))
                 .foregroundStyle(Theme.secondaryText)
                 .lineSpacing(5)
@@ -908,7 +908,7 @@ struct ShareReadingsSheet: View {
                     .font(Theme.serif(30))
                     .foregroundStyle(Theme.text)
 
-                Text("This is exactly what \(peerName) will see, word for word. Nothing else from your ledger goes with it.")
+                Text("This is exactly what \(peerName) will see.")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(4)

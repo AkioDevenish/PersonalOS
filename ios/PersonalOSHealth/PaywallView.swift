@@ -119,9 +119,9 @@ struct PaywallView: View {
 
     private var blurb: String {
         if store.entitlement.isSubscribed {
-            return "The readings and the whole library are open to you, and stay open while the subscription runs."
+            return "Readings and the full library are yours while you're subscribed."
         }
-        return "Recording your body is free and will stay free: the ledger, the goals, the cycle, and everything Apple Health already knows. What a subscription buys is the two things written for you — the readings a specialist writes on this phone, and everything practitioners publish."
+        return "Tracking is free. A subscription adds readings, meal ideas and practitioners' articles."
     }
 
     /// One line of what the subscription includes.

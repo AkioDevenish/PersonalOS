@@ -280,7 +280,7 @@ struct OnboardingView: View {
         layout(
             kicker: "Welcome",
             title: firstName.isEmpty ? "Let's get you set up." : "Hello, \(firstName).",
-            body: "A few questions, then three things to switch on. Two minutes, and you can skip any of it.",
+            body: "A few quick questions. Skip any of them.",
             art: { WalkingVideo().accessibilityHidden(true) },
             primary: "Begin",
             action: { go(1) }
@@ -316,7 +316,7 @@ struct OnboardingView: View {
         layout(
             kicker: "To begin with",
             title: "What would you like to take care of?",
-            body: "Pick as many as you like. It decides what the app puts in front of you first.",
+            body: "Pick as many as you like.",
             artHeight: nil,
             art: {
                 VStack(spacing: 8) {
@@ -329,7 +329,7 @@ struct OnboardingView: View {
                 }
             },
             primary: "Continue",
-            reassurance: "Nothing here locks anything away. Every part of the app stays available whatever you pick.",
+            reassurance: "You'll still have access to everything.",
             action: {
                 chosenGoals = Set(focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric))
                 go(2)
@@ -342,9 +342,9 @@ struct OnboardingView: View {
 
     private var encouragementPage: some View {
         layout(
-            kicker: "Good start",
-            title: "That is the part most people never get to.",
-            body: "Deciding what you actually want to change is harder than any of the tracking. The rest of this is switches.",
+            kicker: "Nice",
+            title: "That's the hard part done.",
+            body: "The rest is just a few switches.",
             art: { plate("stride").padding(.horizontal, 40) },
             primary: "Keep going",
             action: { go(3) }
@@ -364,7 +364,7 @@ struct OnboardingView: View {
         layout(
             kicker: "Your week",
             title: "How often do you get moving?",
-            body: "So the first target is one you can actually hit. A goal set too high is just a daily reminder that you missed it.",
+            body: "So your first target is one you can hit.",
             artHeight: nil,
             art: {
                 VStack(spacing: 8) {
@@ -374,7 +374,7 @@ struct OnboardingView: View {
                 }
             },
             primary: "Continue",
-            reassurance: "You can move any target up or down later, in one tap.",
+            reassurance: "You can change targets any time.",
             action: { go(4) },
             skip: "Skip"
         )
@@ -419,7 +419,7 @@ struct OnboardingView: View {
         layout(
             kicker: "Something to aim at",
             title: "Pick a first goal.",
-            body: "The daily briefing closes with whichever ones the day hasn't met. You can change them any time.",
+            body: "Change them any time.",
             artHeight: nil,
             art: {
                 VStack(spacing: 10) {
@@ -488,9 +488,9 @@ struct OnboardingView: View {
     /// before the permission sheet, which is when they are deciding.
     private var privacyPage: some View {
         layout(
-            kicker: "Before we go further",
-            title: "What you record here stays yours.",
-            body: "Your readings are written on this phone by Apple's own model — your health data is never sent to an AI company. Cycle tracking never leaves the device at all. Nothing is sold, and there is no advertising or tracking in this app.",
+            kicker: "Privacy",
+            title: "Your data stays yours.",
+            body: "Readings are written on this phone. Your health data is never sold or sent to an AI company.",
             art: {
                 ZStack {
                     Circle().fill(Theme.positive.opacity(0.10)).frame(width: 180, height: 180)
@@ -514,9 +514,9 @@ struct OnboardingView: View {
     /// permission arrives attached to something the person asked for.
     private var healthReason: String {
         guard let first = suggestions.first(where: { chosenGoals.contains($0.id) }) else {
-            return "Steps, sleep, heart rate and the rest, read straight from your iPhone and watch. Nothing to type in, ever."
+            return "Steps, sleep, heart rate and more, straight from your iPhone and watch."
         }
-        return "So \(first.label.lowercased()) counts itself. It is read straight from your iPhone and watch — nothing to type in, ever."
+        return "So \(first.label.lowercased()) counts itself."
     }
 
     private var healthPage: some View {
@@ -527,7 +527,7 @@ struct OnboardingView: View {
             art: { plate("watch") },
             primary: healthConnected ? "Connected" : "Connect Apple Health",
             primaryDone: healthConnected,
-            reassurance: "Apple asks which categories to share, and you choose. You can change it later in the Health app.",
+            reassurance: "You choose what to share, and can change it later.",
             action: {
                 if healthConnected { go(7); return }
                 try? await health.requestAuthorization()
@@ -548,7 +548,7 @@ struct OnboardingView: View {
         layout(
             kicker: "Staying in touch",
             title: "Hear back when it matters.",
-            body: "Only when a practitioner replies or a reading you asked for is ready. Never to tell you to open the app.",
+            body: "Only when a practitioner replies or a reading is ready.",
             art: {
                 ZStack {
                     Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)
@@ -563,7 +563,7 @@ struct OnboardingView: View {
             },
             primary: notificationsOn ? "Turned on" : "Turn on notifications",
             primaryDone: notificationsOn,
-            reassurance: "There is no daily nag and no streak to keep. Turn them off any time in Settings.",
+            reassurance: "Turn them off any time in Settings.",
             action: {
                 if notificationsOn { go(8); return }
                 if await Notifier.shared.permitted() {
@@ -582,15 +582,15 @@ struct OnboardingView: View {
     private var tourPage: some View {
         layout(
             kicker: "What you'll find",
-            title: "Four things, and that's the whole app.",
+            title: "Here's what's inside.",
             body: "",
             artHeight: nil,
             art: {
                 VStack(spacing: 2) {
-                    tourRow("newspaper", "Daily news", "What changed since yesterday, in a sentence.")
-                    tourRow("waveform.path.ecg", "Your readings", "Every measurement your phone and watch record.")
-                    tourRow("stethoscope", "Practitioners", "Ask someone qualified, and read what they write.")
-                    tourRow("drop", "Your cycle", "Four phases, tracked on this phone and nowhere else.")
+                    tourRow("newspaper", "Daily news", "What changed since yesterday.")
+                    tourRow("waveform.path.ecg", "Your readings", "Everything your phone and watch record.")
+                    tourRow("stethoscope", "Practitioners", "Ask a qualified practitioner.")
+                    tourRow("drop", "Your cycle", "Tracked on this phone only.")
                 }
             },
             primary: "Nearly there",
@@ -627,9 +627,9 @@ struct OnboardingView: View {
     /// review risk. Skipping it is a full-width button, not a grey word.
     private var planPage: some View {
         layout(
-            kicker: "Free, mostly",
-            title: "What you have already is yours.",
-            body: "Every chart, every goal, the cycle tracker and readings written on your own phone cost nothing, for good. A subscription adds the practitioners' articles and keeps your readings in sync.",
+            kicker: "Pricing",
+            title: "Most of it is free.",
+            body: "Charts, goals and cycle tracking are free. A subscription adds readings, meal ideas and practitioners' articles.",
             art: {
                 ZStack {
                     Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)
@@ -654,8 +654,8 @@ struct OnboardingView: View {
             kicker: "All set",
             title: todaySteps.map { _ in "Your day, already counted." } ?? "You're ready.",
             body: todaySteps != nil
-                ? "Apple Health is already filling in your ledger, and it will keep doing so on its own."
-                : "Everything you connect later fills in on its own. There's nothing to maintain.",
+                ? "Apple Health keeps this up to date on its own."
+                : "Everything updates on its own.",
             art: {
                 if let steps = todaySteps {
                     VStack(spacing: 4) {

@@ -62,8 +62,8 @@ struct NutritionView: View {
                     .flowIn(1)
 
                 Text(country.isEmpty
-                     ? "Read from your recent glucose, sleep and activity, not a generic meal plan."
-                     : "Read from your recent glucose, sleep and activity, and cooked with what you can actually buy in \(Cuisine.name(for: country)).")
+                     ? "Based on your recent glucose, sleep and activity."
+                     : "Based on your recent glucose, sleep and activity, with food from \(Cuisine.name(for: country)).")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
@@ -376,7 +376,7 @@ struct ExpertsView: View {
                     .padding(.top, 8)
                     .flowIn(1)
 
-                Text("The same telemetry, examined through a different lens. Patterns only, never a diagnosis.")
+                Text("Patterns only, never a diagnosis.")
                     .font(Theme.serifBody(17))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
@@ -532,7 +532,7 @@ struct ExpertsView: View {
     /// Spells out the whole request: who, over what window, on which engine.
     private var requestSummary: String {
         let window = requestWindow
-        return "Reads \(window) of your telemetry as \(indefiniteArticle(for: expertLabel)) \(expertLabel.lowercased()), written on this iPhone."
+        return "\(window) of your data, read on this iPhone."
     }
 
     /// How many days of history each period should hand the model.
