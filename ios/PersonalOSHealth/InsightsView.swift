@@ -158,7 +158,9 @@ struct NutritionView: View {
                 if !country.isEmpty {
                     SectionRule(text: "What people eat here").padding(.top, 34)
 
-                    Text(book.all.isEmpty
+                    Text(book.generating && book.all.isEmpty
+                         ? "Finding what people eat in \(Cuisine.name(for: country))…"
+                         : book.all.isEmpty
                          ? "Nothing named yet. Add a dish you eat."
                          : "Dishes eaten in \(Cuisine.name(for: country)). Hold one to say it isn't.")
                         .font(Theme.sans(11))
@@ -188,7 +190,7 @@ struct NutritionView: View {
                             .buttonStyle(.pressRow)
                             .contextMenu {
                                 // Only offered for dishes nobody has vouched for.
-                                if d.canBeRejected(threshold: book.threshold) {
+                                if d.canBeRejected(in: book) {
                                     Button("Not eaten here", systemImage: "xmark.circle", role: .destructive) {
                                         Task { await reject(d.dish) }
                                     }
@@ -271,7 +273,16 @@ struct NutritionView: View {
 
     private func loadBook() async {
         guard !country.isEmpty else { book = .empty; return }
-        book = (try? await CuisineClient().book(country: country)) ?? .empty
+        let client = CuisineClient()
+        try? await client.prepare(country: country)
+        book = (try? await client.book(country: country)) ?? .empty
+        // Generation takes a few seconds; check back until it lands.
+        var tries = 0
+        while book.generating, tries < 20, !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(3))
+            book = (try? await client.book(country: country)) ?? book
+            tries += 1
+        }
     }
 
     private func vote(_ dish: String) async {

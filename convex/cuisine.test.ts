@@ -1,11 +1,13 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test"
-import { describe, expect, test } from "vitest"
-import { api } from "./_generated/api"
+import { afterEach, describe, expect, test, vi } from "vitest"
+import { api, internal } from "./_generated/api"
 import schema from "./schema"
 import { CURATED, curatedFor } from "./health/dishes"
+import { grounded } from "./health/cuisineSource"
 
 const modules = import.meta.glob("./**/*.ts")
+afterEach(() => vi.unstubAllEnvs())
 
 const me = { subject: "user_1|session_a", tokenIdentifier: "https://x|user_1|session_a" }
 const you = { subject: "user_2|session_b", tokenIdentifier: "https://x|user_2|session_b" }
@@ -106,5 +108,63 @@ describe("saying a dish is not eaten here", () => {
     await expect(
       t.withIdentity(me).mutation(api.health.cuisine.reject, { country: "ZW", dish: "Sadza" }),
     ).rejects.toThrow(/Enough people/)
+  })
+})
+
+describe("the generated list", () => {
+  test("only keeps dishes the article actually names", () => {
+    const article = "Popular foods include doubles, roti and pelau. Callaloo is eaten on Sundays."
+    expect(grounded(["Doubles", "Roti", "Bunny chow", "Pelau", "Ackee and saltfish"], article))
+      .toEqual(["Doubles", "Roti", "Pelau"])
+  })
+
+  test("drops repeats and variations of one dish", () => {
+    const article = "caldo verde, caldo verde de peixe and funge are common"
+    expect(grounded(["Caldo verde", "Caldo verde de peixe", "caldo verde", "Funge"], article))
+      .toEqual(["Caldo verde", "Funge"])
+  })
+
+  test("matches accented names against unaccented text", () => {
+    expect(grounded(["Phở"], "pho is a noodle soup")).toEqual(["Phở"])
+  })
+
+  test("replaces the written list once it exists", async () => {
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.health.cuisine.saveGenerated, {
+      country: "TT", dishes: ["Doubles", "Pelau", "Kurma"], source: "Trinidad and Tobago cuisine",
+    })
+    const book = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "TT" })
+    expect(book.canon.sort()).toEqual(["Doubles", "Kurma", "Pelau"])
+  })
+
+  test("a generated dish can be rejected", async () => {
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.health.cuisine.saveGenerated, { country: "TT", dishes: ["Doubles", "Kurma"] })
+    await t.withIdentity(me).mutation(api.health.cuisine.reject, { country: "TT", dish: "Kurma" })
+    const book = await t.withIdentity(you).query(api.health.cuisine.forCountry, { country: "TT" })
+    expect(book.canon).toEqual(["Doubles"])
+  })
+
+  test("prepare starts one generation and reports it", async () => {
+    const t = convexTest(schema, modules)
+    vi.stubEnv("ANTHROPIC_API_KEY", "test")
+    expect((await t.withIdentity(me).mutation(api.health.cuisine.prepare, { country: "ZW" })).started).toBe(true)
+    expect((await t.withIdentity(you).mutation(api.health.cuisine.prepare, { country: "ZW" })).started).toBe(false)
+    const book = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(book.generating).toBe(true)
+  })
+
+  test("an empty result counts as failed and keeps the written list", async () => {
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.health.cuisine.saveGenerated, { country: "TT", dishes: [] })
+    const book = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "TT" })
+    expect(book.canon).toContain("Doubles")
+    expect(book.generating).toBe(false)
+  })
+
+  test("prepare refuses anything that isn't a country code", async () => {
+    const t = convexTest(schema, modules)
+    await expect(t.withIdentity(me).mutation(api.health.cuisine.prepare, { country: "zz; drop" }))
+      .rejects.toThrow(/country code/)
   })
 })

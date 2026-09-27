@@ -76,6 +76,7 @@ export const privacy = () =>
   <li><strong>Stripe</strong> handles payments for consultations and article placement. Card details are entered on Stripe's own pages and never reach our servers.</li>
   <li><strong>Apple</strong> handles subscriptions and delivers notifications.</li>
   <li><strong>Convex</strong> hosts the database and the servers.</li>
+  <li><strong>Anthropic</strong> writes each country's list of everyday dishes from public Wikipedia articles. It receives the country name and the article, never anything about you.</li>
 </ul>
 <p>We do not sell data, we do not share it with advertisers, and there are no analytics or tracking services in the app.</p>
 

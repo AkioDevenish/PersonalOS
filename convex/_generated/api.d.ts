@@ -25,6 +25,8 @@ import type * as finance from "../finance.js";
 import type * as health_connections from "../health/connections.js";
 import type * as health_consult from "../health/consult.js";
 import type * as health_cuisine from "../health/cuisine.js";
+import type * as health_cuisineAi from "../health/cuisineAi.js";
+import type * as health_cuisineSource from "../health/cuisineSource.js";
 import type * as health_dishes from "../health/dishes.js";
 import type * as health_metrics from "../health/metrics.js";
 import type * as health_providers from "../health/providers.js";
@@ -66,6 +68,8 @@ declare const fullApi: ApiFromModules<{
   "health/connections": typeof health_connections;
   "health/consult": typeof health_consult;
   "health/cuisine": typeof health_cuisine;
+  "health/cuisineAi": typeof health_cuisineAi;
+  "health/cuisineSource": typeof health_cuisineSource;
   "health/dishes": typeof health_dishes;
   "health/metrics": typeof health_metrics;
   "health/providers": typeof health_providers;

@@ -329,6 +329,16 @@ export default defineSchema({
   }).index("by_consult", ["consultId"]),
 
   /** What people in a country actually eat, and who said so. */
+  /** A country's dish list, generated from its Wikipedia cuisine article. */
+  cuisine_generated: defineTable({
+    country: v.string(),
+    status: v.string(), // "pending" | "done" | "failed"
+    dishes: v.array(v.string()),
+    source: v.optional(v.string()),
+    error: v.optional(v.string()),
+    updated_at: v.number(),
+  }).index("by_country", ["country"]),
+
   cuisine_dishes: defineTable({
     country: v.string(),        // ISO region code, e.g. "TT"
     dish: v.string(),           // as typed, for display

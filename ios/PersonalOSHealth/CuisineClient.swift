@@ -16,19 +16,23 @@ struct CuisineClient {
 
         var id: String { key }
 
-        /// Only dishes nobody has vouched for can be rejected.
-        func canBeRejected(threshold: Int) -> Bool {
-            !written && votes < threshold
+        /// AI-generated and unvouched dishes can be rejected; the hand-written fallback can't.
+        func canBeRejected(in book: Book) -> Bool {
+            (book.generated || !written) && votes < book.threshold
         }
     }
 
     struct Book: Decodable {
         let threshold: Int
+        /// True while the server is generating this country's list.
+        let generating: Bool
+        /// True when the list came from the AI rather than the hand-written fallback.
+        let generated: Bool
         let all: [Dish]
         /// What the prompt may cook from: everything vouched for, plus yours.
         let canon: [String]
 
-        static let empty = Book(threshold: 3, all: [], canon: [])
+        static let empty = Book(threshold: 3, generating: false, generated: false, all: [], canon: [])
     }
 
     /// Straight to Convex.
@@ -55,5 +59,10 @@ struct CuisineClient {
             "health/cuisine:reject", ["country": country, "dish": dish]
         )
         return (try? JSONDecoder().decode(Result.self, from: data))?.rejected ?? false
+    }
+
+    /// Asks the server to generate this country's list if it has none yet.
+    func prepare(country: String) async throws {
+        _ = try await transport.mutation("health/cuisine:prepare", ["country": country])
     }
 }
