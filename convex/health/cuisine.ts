@@ -1,6 +1,7 @@
 import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { internalMutation, mutation, query } from "../_generated/server"
+import { curatedFor } from "./dishes"
 
 /**
  * What people in a country actually eat.
@@ -57,6 +58,14 @@ export const forCountry = query({
       string,
       { dish: string; votes: number; seeded: boolean; mine: boolean }
     >()
+
+    // The written-down list first, so it is what people see and what the
+    // prompt cooks from. It lives in code rather than in rows: editing
+    // dishes.ts corrects a country for everyone at once, where seeded rows
+    // would have to be found and deleted.
+    for (const dish of curatedFor(args.country)) {
+      byKey.set(normalise(dish), { dish, votes: 0, seeded: true, mine: false })
+    }
 
     for (const row of rows) {
       const entry = byKey.get(row.key) ?? {
@@ -140,6 +149,10 @@ export const seed = mutation({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
+    // A country with a written-down list never gets a guessed one. This is
+    // the whole fix: the phone still offers to seed, and is told no.
+    if (curatedFor(args.country).length > 0) return { seeded: 0 }
+
     const existing = await ctx.db
       .query("cuisine_dishes")
       .withIndex("by_country", (q) => q.eq("country", args.country))
@@ -167,5 +180,37 @@ export const seed = mutation({
       written += 1
     }
     return { seeded: written }
+  },
+})
+
+/**
+ * Clears out the guessed rows for a country that has since been written down.
+ *
+ * Seeding happened before dishes.ts existed, and those rows outlive the change
+ * — Trinidad was left holding bunny chow and fish and chips, which would go on
+ * being offered to everybody because a seeded row needs no votes. Adding a
+ * country to dishes.ts should therefore be followed by running this for it.
+ *
+ * Only guessed rows go. What a person put forward is theirs, and stays.
+ */
+export const dropGuessed = internalMutation({
+  args: { country: v.string() },
+  handler: async (ctx, args) => {
+    if (curatedFor(args.country).length === 0) {
+      throw new Error(`${args.country} has no written-down list to replace them with`)
+    }
+
+    const rows = await ctx.db
+      .query("cuisine_dishes")
+      .withIndex("by_country", (q) => q.eq("country", args.country))
+      .collect()
+
+    let dropped = 0
+    for (const row of rows) {
+      if (!row.seeded) continue
+      await ctx.db.delete(row._id)
+      dropped += 1
+    }
+    return { dropped, kept: rows.length - dropped }
   },
 })
