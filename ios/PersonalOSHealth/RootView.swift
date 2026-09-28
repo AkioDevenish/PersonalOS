@@ -2,7 +2,7 @@ import SwiftUI
 
 /// What the tab bar shows.
 enum AppTab: CaseIterable, Hashable {
-    case home, meals, practitioners
+    case home, meals, practitioners, profile
 
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
@@ -10,6 +10,7 @@ enum AppTab: CaseIterable, Hashable {
         case .home: return "house"
         case .meals: return "leaf"
         case .practitioners: return "person.2"
+        case .profile: return "person.crop.circle"
         }
     }
 
@@ -19,6 +20,7 @@ enum AppTab: CaseIterable, Hashable {
         case .home: return "Home"
         case .meals: return "Meals"
         case .practitioners: return "Experts"
+        case .profile: return "Profile"
         }
     }
 }
@@ -71,6 +73,7 @@ struct RootView: View {
             Tab(value: AppTab.home) { stack(for: .home) }
             Tab(value: AppTab.meals) { stack(for: .meals) }
             Tab(value: AppTab.practitioners) { stack(for: .practitioners) }
+            Tab(value: AppTab.profile) { stack(for: .profile) }
         }
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to how far down the last
@@ -124,6 +127,7 @@ struct RootView: View {
         case .home:          HomeView()
         case .meals:         NutritionView()
         case .practitioners: SpecialistsView()
+        case .profile:       ProfileView()
         }
     }
 
