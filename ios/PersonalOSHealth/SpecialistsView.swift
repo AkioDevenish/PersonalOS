@@ -24,7 +24,7 @@ struct SpecialistsView: View {
                     .padding(.top, 6)
                     .flowIn(0)
 
-                Text("Message or video call a verified nutritionist or dietitian. Share your data only if you choose.")
+                Text("Real people who can help with what you eat.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
