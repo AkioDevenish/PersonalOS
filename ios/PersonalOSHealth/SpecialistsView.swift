@@ -24,7 +24,7 @@ struct SpecialistsView: View {
                     .padding(.top, 6)
                     .flowIn(0)
 
-                Text("Real people who can help with what you eat.")
+                Text("Get advice on your diet from a nutritionist.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)

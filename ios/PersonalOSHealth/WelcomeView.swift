@@ -29,7 +29,7 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: 16) {
                 line("heart.text.square", "Uses Apple Health, so there's nothing to type")
                 line("leaf", "Meal ideas made on your phone")
-                line("person.2", "Talk to a real nutritionist")
+                line("person.2", "Chat with a nutritionist")
             }
             .padding(.top, 34)
             .padding(.horizontal, 8)
