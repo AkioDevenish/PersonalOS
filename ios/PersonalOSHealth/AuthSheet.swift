@@ -35,7 +35,7 @@ struct AuthSheet: View {
                         .foregroundStyle(Theme.text)
 
                     Text(mode == .signUp
-                         ? "Your account lives with your data, and nobody else holds it."
+                         ? "It only takes a minute."
                          : "Sign in to pick up where you left off.")
                         .font(Theme.sans(14))
                         .foregroundStyle(Theme.secondaryText)

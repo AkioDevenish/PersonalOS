@@ -25,7 +25,7 @@ struct PaywallView: View {
                         .padding(.bottom, 10)
                 }
 
-                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Readings and writing.")
+                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Meal ideas and every article.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)

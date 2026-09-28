@@ -220,7 +220,7 @@ enum ArticlePlacement {
         var errorDescription: String? {
             switch self {
             case .unavailable:
-                return "Publishing isn't on sale yet. It needs the product set up in App Store Connect."
+                return "You can't publish yet. Check back soon."
             case .unverified:
                 return "The App Store couldn't verify that purchase."
             }

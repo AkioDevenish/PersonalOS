@@ -135,7 +135,7 @@ enum PaymentUnavailable: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noProcessor:
-            return "No payment processor is connected yet, so this cannot be collected."
+            return "Payments aren't set up yet."
         case .alreadySettled:
             return "This conversation is already paid for."
         }

@@ -228,7 +228,7 @@ struct OnboardingView: View {
         layout(
             kicker: "Privacy",
             title: "Your data stays yours.",
-            body: "Meal ideas are written on this phone. Your health data is never sold or sent to an AI company.",
+            body: "Meal ideas are made on your phone. We never sell your health data or send it to an AI company.",
             art: {
                 ZStack {
                     Circle().fill(Theme.positive.opacity(0.10)).frame(width: 180, height: 180)
@@ -272,9 +272,9 @@ struct OnboardingView: View {
 
     private var notificationsPage: some View {
         layout(
-            kicker: "Staying in touch",
-            title: "Hear back when it matters.",
-            body: "Only when a practitioner replies.",
+            kicker: "Notifications",
+            title: "Know when they reply.",
+            body: "We'll only notify you when a nutritionist replies.",
             art: {
                 ZStack {
                     Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)

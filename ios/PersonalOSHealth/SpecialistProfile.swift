@@ -172,7 +172,7 @@ struct SpecialistProfileView: View {
     private var costLine: String {
         specialist.free
             ? "Free to message."
-            : "\(specialist.price) for a conversation, paid to \(specialist.name) when it opens."
+            : "\(specialist.price) per conversation, paid when it starts."
     }
 
     private var confirmTitle: String {
@@ -270,7 +270,7 @@ struct ChatView: View {
                         if thread.messages.isEmpty {
                             Text(canShareReadings
                      ? "What would you like to ask? \(peer) only sees your data if you share it."
-                     : "Nothing from their ledger is here unless they chose to send it.")
+                     : "You'll only see their health data if they share it.")
                                 .font(Theme.sans(12))
                                 .foregroundStyle(Theme.tertiaryText)
                                 .lineSpacing(4)
@@ -593,7 +593,7 @@ struct VideoCallView: View {
                 // Said before a call fails rather than after, since this is the cause of most calls
                 // that cannot connect.
                 if !engine.relayAvailable, engine.state != .live {
-                    Text("No relay server is configured, so this will only connect if a direct route exists.")
+                    Text("The call may not connect on some networks.")
                         .font(Theme.sans(10.5))
                         .foregroundStyle(Theme.accent.opacity(0.9))
                         .multilineTextAlignment(.center)
@@ -880,7 +880,7 @@ struct ShareReadingsSheet: View {
                         .frame(height: 96)
                         .padding(.top, 28)
                 } else if reading.isEmpty {
-                    Text("Nothing has been recorded today, so there is nothing to share.")
+                    Text("Nothing recorded today yet.")
                         .font(Theme.sans(13))
                         .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 30)

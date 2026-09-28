@@ -64,7 +64,7 @@ struct NutritionView: View {
                 if !signals.isEmpty {
                     Plate {
                         VStack(alignment: .leading, spacing: 8) {
-                            Kicker(text: "Reading right now", size: 9)
+                            Kicker(text: "Today's numbers", size: 9)
                             ForEach(signals, id: \.label) { s in
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Image(systemName: s.symbol)
@@ -162,7 +162,7 @@ struct NutritionView: View {
                          ? "Finding what people eat in \(Cuisine.name(for: country))…"
                          : book.all.isEmpty
                          ? "Nothing named yet. Add a dish you eat."
-                         : "Dishes eaten in \(Cuisine.name(for: country)). Hold one to say it isn't.")
+                         : "What people eat in \(Cuisine.name(for: country)). Press and hold a dish if it's wrong.")
                         .font(Theme.sans(11))
                         .foregroundStyle(Theme.tertiaryText)
                         .lineSpacing(3)

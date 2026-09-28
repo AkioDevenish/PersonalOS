@@ -70,7 +70,7 @@ struct SpecialistsView: View {
 
                     if shown.isEmpty {
                         Text(hereOnly
-                             ? "Nobody is here right now. Turn off \u{201C}Here now\u{201D} to see everyone."
+                             ? "No one's online right now. Turn off \u{201C}Here now\u{201D} to see everyone."
                              : "Nobody here matches that.")
                             .font(Theme.sans(13))
                             .foregroundStyle(Theme.tertiaryText)
@@ -342,7 +342,7 @@ struct SpecialistsView: View {
             Text("Nobody listed yet")
                 .font(Theme.serif(24))
                 .foregroundStyle(Theme.text)
-            Text("No practitioner has been approved for the directory so far.")
+            Text("Check back soon.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
@@ -478,7 +478,7 @@ struct SpecialistApplicationSheet: View {
                             Text(uploading ? "Sending your photograph" : "Your photograph")
                                 .font(Theme.sans(13, medium: true))
                                 .foregroundStyle(Theme.text)
-                            Text("A face makes a card worth reading. Optional.")
+                            Text("Optional.")
                                 .font(Theme.sans(11))
                                 .foregroundStyle(Theme.tertiaryText)
                         }

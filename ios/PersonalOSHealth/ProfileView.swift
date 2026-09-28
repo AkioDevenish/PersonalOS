@@ -135,12 +135,12 @@ struct ProfileView: View {
         } else {
             Button { applying = true } label: {
                 card(
-                    title: application == nil ? "Practise on Personal OS" : "Your application",
+                    title: application == nil ? "Join as a nutritionist" : "Your application",
                     note: application == nil
-                        ? "Get verified, offer consultations and write for Home."
+                        ? "Get verified, take clients and write articles."
                         : (application?.declined == true
                            ? "Not approved yet. You can update it and send it again."
-                           : "With our team. You'll be listed once it's checked.")
+                           : "We're reviewing it. You'll be listed once it's approved.")
                 )
             }
             .buttonStyle(.pressRow)
@@ -348,7 +348,7 @@ struct AccountView: View {
                     }
                 }
             } message: {
-                Text("Your account and every way of signing in to it will be removed.")
+                Text("This deletes your account and all your data.")
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

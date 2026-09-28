@@ -27,9 +27,9 @@ struct WelcomeView: View {
                 .flowIn(1)
 
             VStack(alignment: .leading, spacing: 16) {
-                line("heart.text.square", "Reads Apple Health, so there is nothing to type")
-                line("sparkles", "Readings written on your phone, not on a server")
-                line("person.2", "Real practitioners, whenever you want one")
+                line("heart.text.square", "Uses Apple Health, so there's nothing to type")
+                line("leaf", "Meal ideas made on your phone")
+                line("person.2", "Talk to a real nutritionist")
             }
             .padding(.top, 34)
             .padding(.horizontal, 8)
