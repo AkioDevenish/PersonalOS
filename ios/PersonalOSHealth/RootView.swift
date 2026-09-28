@@ -2,13 +2,14 @@ import SwiftUI
 
 /// What the tab bar shows.
 enum AppTab: CaseIterable, Hashable {
-    case home, health
+    case home, meals, practitioners
 
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
         switch self {
         case .home: return "house"
-        case .health: return "heart"
+        case .meals: return "leaf"
+        case .practitioners: return "person.2"
         }
     }
 
@@ -16,14 +17,15 @@ enum AppTab: CaseIterable, Hashable {
     var title: String {
         switch self {
         case .home: return "Home"
-        case .health: return "Health"
+        case .meals: return "Meals"
+        case .practitioners: return "Experts"
         }
     }
 }
 
 /// Everywhere you can go from a tab's root.
 enum Route: Hashable {
-    case briefing, history, nutrition, specialists, professionals, paywall, goals, cycle
+    case professionals, paywall
     /// One practitioner's page.
     case practitioner(SpecialistsClient.Specialist)
     /// The other side of the desk, for somebody who is listed.
@@ -67,7 +69,8 @@ struct RootView: View {
     private var page: some View {
         TabView(selection: selection) {
             Tab(value: AppTab.home) { stack(for: .home) }
-            Tab(value: AppTab.health) { stack(for: .health) }
+            Tab(value: AppTab.meals) { stack(for: .meals) }
+            Tab(value: AppTab.practitioners) { stack(for: .practitioners) }
         }
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to how far down the last
@@ -76,10 +79,10 @@ struct RootView: View {
         // A tapped notification should land on the thing it announced, not on whatever screen the
         // app was last showing.
         .onChange(of: notifier.opened) { _, route in
-            guard let route else { return }
+            guard route != nil else { return }
             withAnimation(Theme.Motion.flow) {
-                tab = .health
-                paths[.health] = [route]
+                tab = .practitioners
+                paths[.practitioners] = []
             }
             notifier.opened = nil
         }
@@ -93,16 +96,10 @@ struct RootView: View {
                 .navigationDestination(for: Route.self) { route in
                     Group {
                     switch route {
-                    case .briefing:     BriefingView()
-                    case .history:      TrendsView()
-                    case .nutrition:    NutritionView()
-                    case .specialists:  ExpertsView()
                     case .professionals: SpecialistsView()
                     case .practitioner(let one): SpecialistProfileView(specialist: one)
                     case .practice: PractitionerView()
                     case .paywall:      PaywallView()
-                    case .goals:        GoalsView()
-                    case .cycle:        CycleView()
                     case .profile:      ProfileView()
                     case .practiceHub:  PracticeHubView()
                     case .myArticles:   MyArticlesView()
@@ -124,8 +121,9 @@ struct RootView: View {
         switch t {
         // The rows on Home send you to a tab, which only the bar's selection can do, so it is
         // handed the way to ask.
-        case .home:     HomeView { tab = $0 }
-        case .health:   HealthView()
+        case .home:          HomeView()
+        case .meals:         NutritionView()
+        case .practitioners: SpecialistsView()
         }
     }
 

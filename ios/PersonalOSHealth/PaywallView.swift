@@ -38,10 +38,9 @@ struct PaywallView: View {
                     .padding(.top, 12)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    point("Readings written on your phone, by four specialists")
                     point("What to eat next, from your own measurements")
-                    point("Every article practitioners write, on Home and in the archive")
-                    point("Your ledger, goals and cycle stay free, and always will")
+                    point("Every article practitioners write, including the archive")
+                    point("Browsing experts and articles stays free")
                 }
                 .padding(.top, 24)
 
@@ -110,9 +109,9 @@ struct PaywallView: View {
 
     private var blurb: String {
         if store.entitlement.isSubscribed {
-            return "Readings and the full library are yours while you're subscribed."
+            return "Meal ideas and the full library are yours while you're subscribed."
         }
-        return "Tracking is free. A subscription adds readings, meal ideas and practitioners' articles."
+        return "Browsing is free. A subscription adds meal ideas and the full article library."
     }
 
     /// One line of what the subscription includes.

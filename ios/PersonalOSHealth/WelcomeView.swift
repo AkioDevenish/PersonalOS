@@ -19,7 +19,7 @@ struct WelcomeView: View {
                 .padding(.top, 26)
                 .flowIn(1)
 
-            Text("Your health, read clearly and kept close.")
+            Text("Meals, experts and articles for your health.")
                 .font(Theme.serifBody(18))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -59,7 +59,7 @@ struct WelcomeView: View {
             }
             .flowIn(3)
 
-            Text("Your cycle and your readings stay on this phone.")
+            Text("Your health data is never sold.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)

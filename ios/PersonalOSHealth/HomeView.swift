@@ -2,12 +2,7 @@ import SwiftUI
 
 /// The landing page, laid out as a reading catalogue.
 struct HomeView: View {
-    /// Sends you to another tab.
-    var go: (AppTab) -> Void
-
-    @EnvironmentObject private var health: HealthKitManager
     @EnvironmentObject private var session: Session
-    @State private var snapshot: HealthSnapshot?
     @State private var query = ""
     @ObservedObject private var library = ArticleLibrary.shared
     /// Which most-read card is centred, for the page indicator.
@@ -27,21 +22,6 @@ struct HomeView: View {
                 } else {
                     mostRead
                         .flowIn(1)
-
-                    section("Explore")
-                        .flowIn(2)
-                    row {
-                        ForEach(Self.places, id: \.route) { place in
-                            NavigationLink(value: place.route) {
-                                ContentCard(
-                                    title: place.title, note: place.note,
-                                    symbol: place.symbol, tint: place.colour
-                                )
-                            }
-                            .buttonStyle(.pressRow)
-                        }
-                    }
-                    .flowIn(2)
 
                     if !library.archive.isEmpty {
                         section("Archive", seeAll: .articles(nil))
@@ -87,7 +67,6 @@ struct HomeView: View {
         .compactsTabBar()
         .scrollDismissesKeyboard(.immediately)
         .background(Theme.background)
-        .task { snapshot = try? await health.fetchTodaySnapshot() }
         .task { await library.refresh() }
         .refreshable { await library.refresh() }
     }
@@ -114,7 +93,7 @@ struct HomeView: View {
                     .font(.system(size: 17, weight: .regular))
                     .foregroundStyle(Theme.tertiaryText)
                     .accessibilityHidden(true)
-                TextField("Search articles, readings or pages", text: $query)
+                TextField("Search articles", text: $query)
                     .font(Theme.sans(15))
                     .foregroundStyle(Theme.text)
                     .focused($searchFocused)
@@ -144,23 +123,16 @@ struct HomeView: View {
         !query.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    /// Articles first, because that is what the field says it finds, then the places and the
-    /// measurements.
+    /// Articles matching the search.
     @ViewBuilder
     private var results: some View {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
         let articles = library.all.filter {
             [$0.title, $0.summary, $0.category].contains { $0.lowercased().contains(needle) }
         }
-        let places = Self.places.filter {
-            $0.title.lowercased().contains(needle) || $0.note.lowercased().contains(needle)
-        }
-        let metrics = Metrics.all.filter {
-            $0.label.lowercased().contains(needle) || ($0.phrase?.lowercased().contains(needle) ?? false)
-        }
 
         VStack(alignment: .leading, spacing: 0) {
-            if articles.isEmpty && places.isEmpty && metrics.isEmpty {
+            if articles.isEmpty {
                 Text("Nothing matches “\(query)”.")
                     .font(Theme.sans(15))
                     .foregroundStyle(Theme.secondaryText)
@@ -170,22 +142,6 @@ struct HomeView: View {
                 NavigationLink(value: Route.article(article)) {
                     resultRow(symbol: article.symbol, title: article.title,
                               note: "\(article.category) · \(article.minutes) min read")
-                }
-                .buttonStyle(.pressRow)
-            }
-            ForEach(places, id: \.route) { place in
-                NavigationLink(value: place.route) {
-                    resultRow(symbol: place.symbol, title: place.title, note: place.note)
-                }
-                .buttonStyle(.pressRow)
-            }
-            ForEach(metrics, id: \.id) { spec in
-                Button { go(.health) } label: {
-                    resultRow(
-                        symbol: spec.symbol, title: spec.label,
-                        note: snapshot.flatMap { spec.display($0) }.map { "\($0) \(spec.unit) today" }
-                            ?? "Nothing recorded today"
-                    )
                 }
                 .buttonStyle(.pressRow)
             }
@@ -294,29 +250,4 @@ struct HomeView: View {
         .scrollIndicators(.hidden)
         .contentMargins(.horizontal, margin, for: .scrollContent)
     }
-
-    // MARK: Places
-
-    private struct Place {
-        let route: Route
-        let title: String
-        let note: String
-        let symbol: String
-        /// Saturated mid-tones that carry white type and hold their own on a black page, so one set
-        /// serves both appearances.
-        let colour: Color
-    }
-
-    private static let places: [Place] = [
-        .init(route: .history, title: "Records", note: "Any measurement, over time",
-              symbol: "chart.xyaxis.line", colour: Color(red: 0.31, green: 0.43, blue: 0.56)),
-        .init(route: .nutrition, title: "Nutrition", note: "What to eat next",
-              symbol: "leaf", colour: Color(red: 0.36, green: 0.50, blue: 0.33)),
-        .init(route: .specialists, title: "Specialists", note: "Read on this phone",
-              symbol: "sparkles", colour: Color(red: 0.62, green: 0.20, blue: 0.18)),
-        .init(route: .professionals, title: "Practitioners", note: "Real people you can ask",
-              symbol: "person.2", colour: Color(red: 0.25, green: 0.46, blue: 0.51)),
-        .init(route: .cycle, title: "Cycle", note: "Kept on this phone only",
-              symbol: "circle.dotted", colour: Color(red: 0.62, green: 0.34, blue: 0.45)),
-    ]
 }

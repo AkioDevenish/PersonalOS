@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Getting set up, eleven pages, two or three minutes.
+/// Getting set up, seven pages.
 struct OnboardingView: View {
     /// Called once the person is through, whatever they chose along the way.
     var finish: () -> Void
@@ -12,14 +12,10 @@ struct OnboardingView: View {
     @State private var forward = true
     @State private var healthConnected = false
     @State private var notificationsOn = false
-    @State private var chosenFocus: Set<String> = []
-    @State private var rhythm: String?
-    @State private var chosenGoals: Set<String> = []
     @State private var showingPlans = false
     @State private var working = false
-    @State private var todaySteps: Double?
 
-    private let pages = 11
+    private let pages = 7
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,15 +27,11 @@ struct OnboardingView: View {
                 Group {
                     switch page {
                     case 0: hello
-                    case 1: focusPage
-                    case 2: encouragementPage
-                    case 3: rhythmPage
-                    case 4: goalsPage
-                    case 5: privacyPage
-                    case 6: healthPage
-                    case 7: notificationsPage
-                    case 8: tourPage
-                    case 9: planPage
+                    case 1: privacyPage
+                    case 2: healthPage
+                    case 3: notificationsPage
+                    case 4: tourPage
+                    case 5: planPage
                     default: readyPage
                     }
                 }
@@ -54,7 +46,7 @@ struct OnboardingView: View {
         }
         .background(Theme.background)
         .sheet(isPresented: $showingPlans) {
-            PaywallView(reason: "read what practitioners write and keep your readings")
+            PaywallView(reason: "suggest meals and read what practitioners write")
         }
     }
 
@@ -216,237 +208,27 @@ struct OnboardingView: View {
         return name.split(separator: " ").first.map(String.init) ?? name
     }
 
-    /// One tappable answer: a pill that fills in when it is chosen.
-    private func choice(_ label: String, _ symbol: String?, on: Bool, tap: @escaping () -> Void) -> some View {
-        Button {
-            Haptics.select()
-            withAnimation(Theme.Motion.bouncy, tap)
-        } label: {
-            HStack(spacing: 12) {
-                if let symbol {
-                    Image(systemName: symbol)
-                        .font(.system(size: 16, weight: .light))
-                        .environment(\.symbolVariants, .none)
-                        .foregroundStyle(on ? Theme.background : Theme.accent)
-                        .frame(width: 22)
-                }
-                Text(label)
-                    .font(Theme.sans(16, medium: true))
-                    .foregroundStyle(on ? Theme.background : Theme.text)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 15)
-            .frame(maxWidth: .infinity)
-            .background(on ? Theme.text : Theme.surface, in: Capsule())
-            .overlay(Capsule().strokeBorder(on ? .clear : Theme.separator, lineWidth: 1))
-        }
-        .buttonStyle(.press)
-    }
-
     // MARK: 1 · Hello
 
     private var hello: some View {
         layout(
             kicker: "Welcome",
             title: firstName.isEmpty ? "Let's get you set up." : "Hello, \(firstName).",
-            body: "A few quick questions. Skip any of them.",
+            body: "A few quick steps. Skip any of them.",
             art: { WalkingVideo().accessibilityHidden(true) },
             primary: "Begin",
             action: { go(1) }
         )
     }
 
-    // MARK: 2 · What you care about
-
-    /// The focus options, and the metric each one is really about.
-    private struct Focus {
-        let id: String
-        let label: String
-        let symbol: String
-        let metric: String?
-    }
-
-    private let focuses: [Focus] = [
-        .init(id: "move", label: "Move more", symbol: "figure.walk", metric: "steps"),
-        .init(id: "sleep", label: "Sleep better", symbol: "moon.stars", metric: "sleep"),
-        .init(id: "outside", label: "Get outside", symbol: "sun.max", metric: "daylight"),
-        .init(id: "calm", label: "Feel calmer", symbol: "brain.head.profile", metric: "mindful"),
-        .init(id: "cycle", label: "Follow my cycle", symbol: "drop", metric: nil),
-        .init(id: "other", label: "Something else", symbol: "sparkles", metric: nil),
-    ]
-
-    private var focusPage: some View {
-        layout(
-            kicker: "To begin with",
-            title: "What would you like to take care of?",
-            body: "Pick as many as you like.",
-            artHeight: nil,
-            art: {
-                VStack(spacing: 8) {
-                    ForEach(focuses, id: \.id) { f in
-                        choice(f.label, f.symbol, on: chosenFocus.contains(f.id)) {
-                            if chosenFocus.contains(f.id) { chosenFocus.remove(f.id) }
-                            else { chosenFocus.insert(f.id) }
-                        }
-                    }
-                }
-            },
-            primary: "Continue",
-            reassurance: "You'll still have access to everything.",
-            action: {
-                chosenGoals = Set(focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric))
-                go(2)
-            },
-            skip: "Skip"
-        )
-    }
-
-    // MARK: 3 · A word back
-
-    private var encouragementPage: some View {
-        layout(
-            kicker: "Nice",
-            title: "That's the hard part done.",
-            body: "The rest is just a few switches.",
-            art: { plate("stride").padding(.horizontal, 40) },
-            primary: "Keep going",
-            action: { go(3) }
-        )
-    }
-
-    // MARK: 4 · How the week usually goes
-
-    private let rhythms: [(id: String, label: String, scale: Double)] = [
-        ("rarely", "Rarely — I'm mostly sitting", 0.70),
-        ("sometimes", "A few times a week", 0.85),
-        ("most", "Most days", 1.00),
-        ("daily", "Every day, without fail", 1.20),
-    ]
-
-    private var rhythmPage: some View {
-        layout(
-            kicker: "Your week",
-            title: "How often do you get moving?",
-            body: "So your first target is one you can hit.",
-            artHeight: nil,
-            art: {
-                VStack(spacing: 8) {
-                    ForEach(rhythms, id: \.id) { r in
-                        choice(r.label, nil, on: rhythm == r.id) { rhythm = r.id }
-                    }
-                }
-            },
-            primary: "Continue",
-            reassurance: "You can change targets any time.",
-            action: { go(4) },
-            skip: "Skip"
-        )
-    }
-
-    // MARK: 5 · A first goal
-
-    private struct Suggestion {
-        let id: String
-        let symbol: String
-        let label: String
-        let value: String
-        let target: Double
-    }
-
-    /// What the goals page offers: whatever the focus page implied, then the usual three to fill
-    /// out the list, never the same one twice.
-    private var suggestions: [Suggestion] {
-        let wanted = focuses.filter { chosenFocus.contains($0.id) }.compactMap(\.metric)
-        var ids = wanted
-        for id in ["steps", "sleep", "daylight"] where !ids.contains(id) { ids.append(id) }
-
-        return ids.prefix(4).compactMap { id in
-            guard let spec = Metrics.by(id: id), let base = Goals.suggestion(for: spec) else { return nil }
-            let target = id == "steps" ? scaled(base) : base
-            let unit = spec.unit.isEmpty ? "" : " \(spec.unit)"
-            let shown = spec.precision == 0 ? MetricSpec.grouped(target) : Goals.editable(spec, target)
-            return Suggestion(id: id, symbol: spec.symbol, label: spec.label, value: "\(shown)\(unit)", target: target)
-        }
-    }
-
-    /// The step target, moved to meet the week that was described.
-    private func scaled(_ base: Double) -> Double {
-        guard let id = rhythm, let scale = rhythms.first(where: { $0.id == id })?.scale else { return base }
-        return (base * scale / 100).rounded() * 100
-    }
-
-    private var goalsPage: some View {
-        layout(
-            kicker: "Something to aim at",
-            title: "Pick a first goal.",
-            body: "Change them any time.",
-            artHeight: nil,
-            art: {
-                VStack(spacing: 10) {
-                    ForEach(suggestions, id: \.id) { s in
-                        goalCard(s)
-                    }
-                }
-                .padding(.horizontal, 4)
-            },
-            primary: chosenGoals.isEmpty ? "Continue" : "Set \(chosenGoals.count == 1 ? "this goal" : "these goals")",
-            action: {
-                for s in suggestions where chosenGoals.contains(s.id) {
-                    Goals.set(s.id, s.target)
-                }
-                go(5)
-            },
-            skip: "Skip"
-        )
-    }
-
-    private func goalCard(_ s: Suggestion) -> some View {
-        let on = chosenGoals.contains(s.id)
-        return Button {
-            Haptics.select()
-            withAnimation(Theme.Motion.bouncy) {
-                if on { chosenGoals.remove(s.id) } else { chosenGoals.insert(s.id) }
-            }
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: s.symbol)
-                    .font(.system(size: 18, weight: .light))
-                    .environment(\.symbolVariants, .none)
-                    .foregroundStyle(on ? Theme.background : Theme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(on ? Theme.text : Theme.accent.opacity(0.12), in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(s.label)
-                        .font(Theme.sans(16, medium: true))
-                        .foregroundStyle(Theme.text)
-                    Text(s.value)
-                        .font(Theme.sans(13))
-                        .foregroundStyle(Theme.secondaryText)
-                }
-                Spacer()
-                Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(on ? Theme.text : Theme.separator)
-            }
-            .padding(14)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(on ? Theme.text : .clear, lineWidth: 1.5)
-            }
-        }
-        .buttonStyle(.press)
-    }
-
-    // MARK: 6 · What happens to it
+    // MARK: 2 · Privacy
 
     /// Said before Apple Health is asked for, not after.
     private var privacyPage: some View {
         layout(
             kicker: "Privacy",
             title: "Your data stays yours.",
-            body: "Readings are written on this phone. Your health data is never sold or sent to an AI company.",
+            body: "Meal ideas are written on this phone. Your health data is never sold or sent to an AI company.",
             art: {
                 ZStack {
                     Circle().fill(Theme.positive.opacity(0.10)).frame(width: 180, height: 180)
@@ -460,51 +242,39 @@ struct OnboardingView: View {
                 .accessibilityHidden(true)
             },
             primary: "Good to know",
-            action: { go(6) }
+            action: { go(2) }
         )
     }
 
-    // MARK: 7 · Apple Health
-
-    /// Named after the goal that was just set, when there was one, so the permission arrives
-    /// attached to something the person asked for.
-    private var healthReason: String {
-        guard let first = suggestions.first(where: { chosenGoals.contains($0.id) }) else {
-            return "Steps, sleep, heart rate and more, straight from your iPhone and watch."
-        }
-        return "So \(first.label.lowercased()) counts itself."
-    }
+    // MARK: 3 · Apple Health
 
     private var healthPage: some View {
         layout(
-            kicker: "Your readings",
+            kicker: "Meals",
             title: "Connect Apple Health.",
-            body: healthReason,
+            body: "So meal ideas fit your sleep, activity and glucose.",
             art: { plate("watch") },
             primary: healthConnected ? "Connected" : "Connect Apple Health",
             primaryDone: healthConnected,
             reassurance: "You choose what to share, and can change it later.",
             action: {
-                if healthConnected { go(7); return }
+                if healthConnected { go(3); return }
                 try? await health.requestAuthorization()
                 healthConnected = true
-                // Nothing, or zero, reads as a broken app rather than a quiet morning; Health also
-                // returns nothing when access was declined.
-                if let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 { todaySteps = steps }
                 try? await Task.sleep(for: .milliseconds(450))
-                go(7)
+                go(3)
             },
             skip: "Not now"
         )
     }
 
-    // MARK: 8 · Notifications
+    // MARK: 4 · Notifications
 
     private var notificationsPage: some View {
         layout(
             kicker: "Staying in touch",
             title: "Hear back when it matters.",
-            body: "Only when a practitioner replies or a reading is ready.",
+            body: "Only when a practitioner replies.",
             art: {
                 ZStack {
                     Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)
@@ -521,19 +291,19 @@ struct OnboardingView: View {
             primaryDone: notificationsOn,
             reassurance: "Turn them off any time in Settings.",
             action: {
-                if notificationsOn { go(8); return }
+                if notificationsOn { go(4); return }
                 if await Notifier.shared.permitted() {
                     notificationsOn = true
                     Push.register()
                 }
                 try? await Task.sleep(for: .milliseconds(450))
-                go(8)
+                go(4)
             },
             skip: "Not now"
         )
     }
 
-    // MARK: 9 · What is in here
+    // MARK: 5 · What is in here
 
     private var tourPage: some View {
         layout(
@@ -543,14 +313,13 @@ struct OnboardingView: View {
             artHeight: nil,
             art: {
                 VStack(spacing: 2) {
-                    tourRow("newspaper", "Daily news", "What changed since yesterday.")
-                    tourRow("waveform.path.ecg", "Your readings", "Everything your phone and watch record.")
-                    tourRow("stethoscope", "Practitioners", "Ask a qualified practitioner.")
-                    tourRow("drop", "Your cycle", "Tracked on this phone only.")
+                    tourRow("leaf", "Meals", "What to eat next, with food from where you live.")
+                    tourRow("stethoscope", "Experts", "Ask a verified practitioner.")
+                    tourRow("newspaper", "Articles", "Written by practitioners, checked by our team.")
                 }
             },
             primary: "Nearly there",
-            action: { go(9) }
+            action: { go(5) }
         )
     }
 
@@ -576,15 +345,15 @@ struct OnboardingView: View {
         .padding(.vertical, 10)
     }
 
-    // MARK: 10 · What costs money
+    // MARK: 6 · What costs money
 
     /// Said plainly rather than hidden, because the free app is genuinely usable and a paywall that
     /// overstates itself is both dishonest and a review risk.
     private var planPage: some View {
         layout(
             kicker: "Pricing",
-            title: "Most of it is free.",
-            body: "Charts, goals and cycle tracking are free. A subscription adds readings, meal ideas and practitioners' articles.",
+            title: "Start free.",
+            body: "Browsing experts and articles is free. A subscription adds meal ideas and the full article library.",
             art: {
                 ZStack {
                     Circle().fill(Theme.accent.opacity(0.10)).frame(width: 180, height: 180)
@@ -602,38 +371,22 @@ struct OnboardingView: View {
         )
     }
 
-    // MARK: 11 · Ready
+    // MARK: 7 · Ready
 
     private var readyPage: some View {
         layout(
             kicker: "All set",
-            title: todaySteps.map { _ in "Your day, already counted." } ?? "You're ready.",
-            body: todaySteps != nil
-                ? "Apple Health keeps this up to date on its own."
-                : "Everything updates on its own.",
+            title: "You're ready.",
+            body: "Everything updates on its own.",
             art: {
-                if let steps = todaySteps {
-                    VStack(spacing: 4) {
-                        Text(MetricSpec.grouped(steps))
-                            .font(Theme.serif(76))
-                            .foregroundStyle(Theme.text)
-                            .contentTransition(.numericText(value: steps))
-                            .monospacedDigit()
-                        Text("steps today")
-                            .font(Theme.sans(14, medium: true))
-                            .tracking(1.2)
-                            .foregroundStyle(Theme.secondaryText)
-                    }
-                } else {
-                    ZStack {
-                        Circle().fill(Theme.positive.opacity(0.12)).frame(width: 150, height: 150)
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 52, weight: .light))
-                            .foregroundStyle(Theme.positive)
-                            .symbolEffect(.bounce, value: page)
-                    }
-                    .accessibilityHidden(true)
+                ZStack {
+                    Circle().fill(Theme.positive.opacity(0.12)).frame(width: 150, height: 150)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 52, weight: .light))
+                        .foregroundStyle(Theme.positive)
+                        .symbolEffect(.bounce, value: page)
                 }
+                .accessibilityHidden(true)
             },
             primary: "Open Personal OS",
             action: {
@@ -641,21 +394,13 @@ struct OnboardingView: View {
                 finish()
             }
         )
-        .task {
-            // Counted up from nothing the first time the page appears, so the figure arrives rather
-            // than simply sitting there.
-            guard let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 else { return }
-            todaySteps = 0
-            try? await Task.sleep(for: .milliseconds(200))
-            withAnimation(.spring(response: 1.1, dampingFraction: 0.9)) { todaySteps = steps }
-        }
     }
 }
 
 /// Shows the introduction once, then gets out of the way for good.
 struct OnboardingGate<Content: View>: View {
     /// Versioned, so a new introduction is shown once even to people who finished the old one.
-    @AppStorage("onboarded_v3") private var done = false
+    @AppStorage("onboarded_v4") private var done = false
     @ViewBuilder var content: Content
 
     var body: some View {
