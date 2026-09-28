@@ -18,13 +18,13 @@ struct SpecialistsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Ask a person")
+                Text("Talk to a nutritionist")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                     .padding(.top, 6)
                     .flowIn(0)
 
-                Text("Verified practitioners who can read your data and reply.")
+                Text("Message or video call a verified nutritionist or dietitian. Share your data only if you choose.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)

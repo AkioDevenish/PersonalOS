@@ -314,7 +314,7 @@ struct OnboardingView: View {
             art: {
                 VStack(spacing: 2) {
                     tourRow("leaf", "Meals", "What to eat next, with food from where you live.")
-                    tourRow("stethoscope", "Experts", "Ask a verified practitioner.")
+                    tourRow("stethoscope", "Experts", "Talk to a verified nutritionist.")
                     tourRow("newspaper", "Articles", "Written by practitioners, checked by our team.")
                 }
             },

@@ -174,7 +174,7 @@ struct ArticleContent: View {
                     .padding(.top, 18)
             }
 
-            Text("General information, not medical advice. If something worries you, ask a practitioner.")
+            Text("General information, not medical advice. If something worries you, talk to a nutritionist in the app.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .fixedSize(horizontal: false, vertical: true)
