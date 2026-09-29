@@ -43,3 +43,8 @@ next-env.d.ts
 # sqlite
 health.db
 *.db
+
+# xcode per-user state
+xcuserdata/
+*.xcuserstate
+DerivedData/

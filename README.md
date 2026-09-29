@@ -36,7 +36,6 @@ the `personalos://` sign-in scheme, the legal pages).
 | `convex/*.test.ts` | Backend tests, run with vitest and `convex-test`. |
 | `src/app/` | Next.js pages for `/privacy` and `/terms`, plus icons. There is no web app. |
 | `scripts/apple-secret.mjs` | Makes the Sign in with Apple client secret from a `.p8` key. |
-| `BRANDING.md`, `DESIGN.md` | Brand and design notes. |
 | `docs/machine-backups/` | Old crontab and launchd files from the Mac setup, kept for reference. |
 
 ## Getting started
