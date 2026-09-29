@@ -42,7 +42,7 @@ async function signUp(t: ReturnType<typeof convexTest>) {
 describe("email and password", () => {
   test("signing up returns a token and a refresh token", async () => {
     const t = convexTest(schema, modules)
-    const result: any = await signUp(t)
+    const result = await signUp(t)
     expect(typeof result.tokens?.token).toBe("string")
     expect(typeof result.tokens?.refreshToken).toBe("string")
   })
@@ -50,7 +50,7 @@ describe("email and password", () => {
   test("signing in again with the same password works, and the email is not case-sensitive", async () => {
     const t = convexTest(schema, modules)
     await signUp(t)
-    const result: any = await t.action(api.auth.signIn, {
+    const result = await t.action(api.auth.signIn, {
       provider: "password",
       params: { email: "someone@example.com", password, flow: "signIn" },
     })
@@ -76,8 +76,8 @@ describe("email and password", () => {
 
   test("a refresh token buys a fresh session token", async () => {
     const t = convexTest(schema, modules)
-    const first: any = await signUp(t)
-    const refreshed: any = await t.action(api.auth.signIn, { refreshToken: first.tokens.refreshToken })
+    const first = await signUp(t)
+    const refreshed = await t.action(api.auth.signIn, { refreshToken: first.tokens!.refreshToken })
     expect(typeof refreshed.tokens?.token).toBe("string")
   })
 

@@ -2,6 +2,7 @@
 import { convexTest } from "convex-test"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { api, internal } from "./_generated/api"
+import type { Id } from "./_generated/dataModel"
 import schema from "./schema"
 import { check } from "./articleRules"
 
@@ -67,7 +68,7 @@ async function verified(t: Awaited<ReturnType<typeof setup>>, title = good.title
 }
 
 /** Stands in for a purchase Apple has signed and articlePayments.ts has checked. */
-async function pay(t: Awaited<ReturnType<typeof setup>>, id: any, transactionId: string, who = AUTHOR) {
+async function pay(t: Awaited<ReturnType<typeof setup>>, id: Id<"articles">, transactionId: string, who = AUTHOR) {
   const { token } = await t.withIdentity(AUTHOR).mutation(api.articles.startPayment, { id })
   return await t.mutation(internal.articles.applyPlacement, {
     authorToken: who.subject,

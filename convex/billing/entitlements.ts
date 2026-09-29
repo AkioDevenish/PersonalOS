@@ -1,10 +1,10 @@
 import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
-import { internalMutation, mutation, query } from "../_generated/server"
+import { internalMutation, query, type QueryCtx } from "../_generated/server"
 
 /** What a user is entitled to, and what they have left. */
 
-async function requireUser(ctx: any): Promise<string> {
+async function requireUser(ctx: QueryCtx): Promise<string> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error("Not authenticated")
   return userIdOf(identity)
@@ -16,10 +16,10 @@ const EMPTY = {
   expires_at: undefined as number | undefined,
 }
 
-async function rowFor(ctx: any, userId: string) {
+async function rowFor(ctx: QueryCtx, userId: string) {
   return await ctx.db
     .query("entitlements")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .withIndex("by_user", (q) => q.eq("userId", userId))
     .first()
 }
 
