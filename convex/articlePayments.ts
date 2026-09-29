@@ -9,7 +9,7 @@ import { internal } from "./_generated/api"
 /** Turns an App Store purchase into time on Home, if Apple really signed it. */
 
 export const ARTICLE_PRODUCT_ID = "os.personal.article.30days"
-const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
+const BUNDLE_ID = "com.adevstudio.forklore"
 
 function environment(): Environment {
   switch (process.env.APPLE_IAP_ENVIRONMENT) {

@@ -8,7 +8,7 @@ import { internal } from "../_generated/api"
 
 /** Turning an App Store purchase into an entitlement, if Apple really signed it. */
 
-const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
+const BUNDLE_ID = "com.adevstudio.forklore"
 
 /** What can be bought, and never the client's to say which. */
 const SUBSCRIPTIONS = new Set(["os.personal.sub.monthly", "os.personal.sub.yearly"])

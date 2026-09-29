@@ -8,7 +8,7 @@ import { internal } from "./_generated/api"
 
 /** Sending a notification to somebody's lock screen. */
 
-const BUNDLE_ID = "ADEVSTUDIO.PersonalOSHealth"
+const BUNDLE_ID = "com.adevstudio.forklore"
 const HOSTS = {
   production: "https://api.push.apple.com",
   sandbox: "https://api.sandbox.push.apple.com",
