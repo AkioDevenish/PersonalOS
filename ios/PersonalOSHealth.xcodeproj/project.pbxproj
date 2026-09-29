@@ -6,7 +6,18 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		AA0TESTS0000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 66A6BA132FB78D4D00563D4F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 66A6BA1A2FB78D4D00563D4F;
+			remoteInfo = PersonalOSHealth;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PersonalOSHealthTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PersonalOSHealth.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -29,10 +40,22 @@
 			path = PersonalOSHealth;
 			sourceTree = "<group>";
 		};
+		AA0TESTS0000000000000002 /* PersonalOSHealthTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PersonalOSHealthTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		66A6BA182FB78D4D00563D4F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0TESTS0000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				66A6BA1D2FB78D4D00563D4F /* PersonalOSHealth */,
+				AA0TESTS0000000000000002 /* PersonalOSHealthTests */,
 				66A6BA1C2FB78D4D00563D4F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */,
+				AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -84,6 +109,27 @@
 			productReference = 66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA0TESTS0000000000000006 /* PersonalOSHealthTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "PersonalOSHealthTests" */;
+			buildPhases = (
+				AA0TESTS0000000000000004 /* Sources */,
+				AA0TESTS0000000000000003 /* Frameworks */,
+				AA0TESTS0000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0TESTS0000000000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0TESTS0000000000000002 /* PersonalOSHealthTests */,
+			);
+			name = PersonalOSHealthTests;
+			productName = PersonalOSHealthTests;
+			productReference = AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -96,6 +142,10 @@
 				TargetAttributes = {
 					66A6BA1A2FB78D4D00563D4F = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					AA0TESTS0000000000000006 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 66A6BA1A2FB78D4D00563D4F;
 					};
 				};
 			};
@@ -117,12 +167,20 @@
 			projectRoot = "";
 			targets = (
 				66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */,
+				AA0TESTS0000000000000006 /* PersonalOSHealthTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		66A6BA192FB78D4D00563D4F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0TESTS0000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -139,7 +197,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0TESTS0000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0TESTS0000000000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */;
+			targetProxy = AA0TESTS0000000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		AA0WEBRTC00000000000R1 /* XCRemoteSwiftPackageReference "WebRTC" */ = {
@@ -352,6 +425,50 @@
 			};
 			name = Release;
 		};
+		AA0TESTS0000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = NK44S2KGZY;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ADEVSTUDIO.PersonalOSHealthTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PersonalOSHealth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PersonalOSHealth";
+			};
+			name = Debug;
+		};
+		AA0TESTS0000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = NK44S2KGZY;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ADEVSTUDIO.PersonalOSHealthTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PersonalOSHealth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PersonalOSHealth";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -369,6 +486,15 @@
 			buildConfigurations = (
 				66A6BA272FB78D5900563D4F /* Debug */,
 				66A6BA282FB78D5900563D4F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "PersonalOSHealthTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0TESTS0000000000000009 /* Debug */,
+				AA0TESTS0000000000000010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
