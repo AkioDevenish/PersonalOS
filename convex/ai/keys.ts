@@ -1,11 +1,11 @@
 import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { mutation, query, type QueryCtx } from "../_generated/server"
 
 /** Storage for bring-your-own-key AI credentials. */
 
 /** Rows belong to whoever is asking, always. */
-async function requireUser(ctx: any): Promise<string> {
+async function requireUser(ctx: QueryCtx): Promise<string> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error("Not authenticated")
   return userIdOf(identity)
