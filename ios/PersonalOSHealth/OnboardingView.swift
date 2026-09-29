@@ -15,7 +15,7 @@ struct OnboardingView: View {
     @State private var showingPlans = false
     @State private var working = false
 
-    private let pages = 7
+    private let pages = Paywall.enabled ? 7 : 6
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,7 +31,7 @@ struct OnboardingView: View {
                     case 2: healthPage
                     case 3: notificationsPage
                     case 4: tourPage
-                    case 5: planPage
+                    case 5 where Paywall.enabled: planPage
                     default: readyPage
                     }
                 }

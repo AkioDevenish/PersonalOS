@@ -35,7 +35,9 @@ struct ProfileView: View {
                     .padding(.top, 34)
                     .padding(.bottom, 6)
 
-                row("creditcard", "Plan and payments", route: .paywall)
+                if Paywall.enabled {
+                    row("creditcard", "Plan and payments", route: .paywall)
+                }
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }

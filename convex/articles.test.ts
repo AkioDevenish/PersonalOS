@@ -30,6 +30,7 @@ const good = {
 beforeEach(() => {
   vi.stubEnv("ARTICLE_REVIEWER_IDS", REVIEWER.subject)
   vi.stubEnv("NUTRITIONIST_IDS", STAFF.subject)
+  vi.stubEnv("PAYWALL", "on")
   vi.useFakeTimers()
   vi.setSystemTime(new Date("2026-09-17T12:00:00Z"))
 })
@@ -365,5 +366,19 @@ describe("the archive", () => {
     const [open] = await t.withIdentity(AUTHOR).query(api.articles.published, { now: Date.now() })
     expect(open.locked).toBe(false)
     expect(open.body).toHaveLength(3)
+  })
+})
+
+describe("with the paywall off", () => {
+  test("the archive's words are open to everyone signed in", async () => {
+    vi.stubEnv("PAYWALL", "")
+    const t = await setup()
+    const id = await verified(t)
+    await pay(t, id, "tx_open")
+    vi.setSystemTime(Date.now() + 31 * DAY)
+    await t.mutation(internal.articles.expire, { id })
+    const [row] = await t.withIdentity(AUTHOR).query(api.articles.archive, { now: Date.now() })
+    expect(row.locked).toBe(false)
+    expect(row.body).toHaveLength(3)
   })
 })

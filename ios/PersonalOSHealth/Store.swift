@@ -1,6 +1,11 @@
 import Foundation
 import StoreKit
 
+/// Off for now: everything is free. Set to true to charge again.
+enum Paywall {
+    static let enabled = false
+}
+
 /// Purchases, and what they entitle you to.
 @Observable
 @MainActor

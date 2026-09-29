@@ -225,7 +225,7 @@ struct AssistantView: View {
     }
 
     private func send(_ text: String) async {
-        guard store.entitlement.isSubscribed else { locked = true; return }
+        guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
         voice.stopListening()
         draft = ""
         typing = false
@@ -234,7 +234,7 @@ struct AssistantView: View {
 
     private func toggleListening() async {
         if voice.listening { voice.stopListening(); return }
-        guard store.entitlement.isSubscribed else { locked = true; return }
+        guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
         if !(await voice.listen()) {
             assistant.failure = "Allow the microphone and speech recognition in Settings to talk to me."
         }

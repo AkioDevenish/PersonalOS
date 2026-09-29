@@ -306,7 +306,7 @@ struct NutritionView: View {
     private func generate() async {
         // The reading is written on this phone and costs nothing to serve, so this is a price on
         // the feature rather than on a bill we pay.
-        guard store.entitlement.isSubscribed else { locked = true; return }
+        guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
         isBusy = true
         status = ""
         defer { isBusy = false }
