@@ -185,7 +185,7 @@ export const checkout = action({
 
     // Recorded before the payer leaves, so a payment that completes can be traced back even if they
     // close the app on the checkout page.
-    await ctx.runMutation(api.health.consult.attachPayment, {
+    await ctx.runMutation(internal.health.consult.attachPayment, {
       id: args.id,
       ref: `${raised.provider}:${raised.ref}`,
       feeMinor: feeOn(bill.price_minor),

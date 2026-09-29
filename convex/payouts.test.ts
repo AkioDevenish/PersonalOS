@@ -64,7 +64,7 @@ describe("what a payment records", () => {
 
   test("a split payment records the fee and owes nothing", async () => {
     const { t, id } = await bookedSession()
-    await t.withIdentity(PAYER).mutation(api.health.consult.attachPayment, {
+    await t.withIdentity(PAYER).mutation(internal.health.consult.attachPayment, {
       id, ref: "stripe:cs_1", feeMinor: feeOn(4000), owed: false,
     })
     await t.run(async (ctx) => {
@@ -76,7 +76,7 @@ describe("what a payment records", () => {
 
   test("an unsplit payment is marked as owed to the practitioner", async () => {
     const { t, id } = await bookedSession()
-    await t.withIdentity(PAYER).mutation(api.health.consult.attachPayment, {
+    await t.withIdentity(PAYER).mutation(internal.health.consult.attachPayment, {
       id, ref: "wam:pi_1", feeMinor: feeOn(4000), owed: true,
     })
     await t.run(async (ctx) => {
