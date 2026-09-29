@@ -2,7 +2,6 @@ import SwiftUI
 
 /// The meal engine, in the app.
 struct NutritionView: View {
-    @EnvironmentObject private var session: Session
     @EnvironmentObject var health: HealthKitManager
     @Environment(Store.self) private var store
     @ObservedObject private var readings = Readings.shared
@@ -42,17 +41,9 @@ struct NutritionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Kicker(text: "Nutrition", color: Theme.accent, size: 11)
-                    Spacer()
-                    NavigationLink(value: Route.profile) {
-                        Avatar(account: session.account, size: 32)
-                    }
-                    .buttonStyle(.press)
-                    .accessibilityLabel("Account")
-                }
-                .padding(.top, 12)
-                .flowIn(0)
+                Kicker(text: "Nutrition", color: Theme.accent, size: 11)
+                    .padding(.top, 12)
+                    .flowIn(0)
 
                 Text("What to eat next.")
                     .font(Theme.serif(32))
