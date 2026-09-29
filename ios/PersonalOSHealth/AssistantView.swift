@@ -1,6 +1,8 @@
+import PhotosUI
 import SwiftUI
+import Vision
 
-/// A personal assistant you can type or talk to. It answers out loud if you want it to.
+/// Pitchfork, a personal assistant you can type or talk to. It answers out loud if you want it to.
 struct AssistantView: View {
     @EnvironmentObject private var health: HealthKitManager
     @EnvironmentObject private var session: Session
@@ -13,6 +15,8 @@ struct AssistantView: View {
     @State private var draft = ""
     @State private var locked = false
     @State private var started = false
+    @State private var photo: PhotosPickerItem?
+    @State private var reading = false
     @FocusState private var typing: Bool
 
     private let starters = [
@@ -74,7 +78,7 @@ struct AssistantView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Spoon")
+            Text("Pitchfork")
                 .font(Theme.serif(28))
                 .foregroundStyle(Theme.text)
             Spacer()
@@ -113,7 +117,7 @@ struct AssistantView: View {
             Text(greeting)
                 .font(Theme.serif(24))
                 .foregroundStyle(Theme.text)
-            Text("Ask me about food, cooking, or your health numbers. You can type or tap the mic.")
+            Text("Ask me about food, cooking, or your health numbers. Type, talk, or attach a photo of a recipe or label.")
                 .font(Theme.sans(15))
                 .foregroundStyle(Theme.secondaryText)
 
@@ -138,7 +142,7 @@ struct AssistantView: View {
 
     private var greeting: String {
         let name = session.account?.name?.split(separator: " ").first.map(String.init) ?? ""
-        return name.isEmpty ? "Hi, I'm Spoon. What can I help with?" : "Hi \(name), I'm Spoon. What can I help with?"
+        return name.isEmpty ? "Hi, I'm Pitchfork. What can I help with?" : "Hi \(name), I'm Pitchfork. What can I help with?"
     }
 
     @ViewBuilder
@@ -174,46 +178,84 @@ struct AssistantView: View {
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
+    /// One box: paperclip on the left, the message in the middle, mic and send on the right.
     private var composer: some View {
-        HStack(spacing: 10) {
-            Button {
-                Task { await toggleListening() }
-            } label: {
-                Image(systemName: voice.listening ? "stop.fill" : "mic.fill")
-                    .font(.system(size: 17))
-                    .foregroundStyle(voice.listening ? Theme.background : Theme.text)
-                    .frame(width: 44, height: 44)
-                    .background(voice.listening ? Theme.accent : Theme.surface, in: Circle())
+        HStack(alignment: .bottom, spacing: 4) {
+            PhotosPicker(selection: $photo, matching: .images) {
+                Image(systemName: reading ? "hourglass" : "paperclip")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 38, height: 38)
             }
-            .buttonStyle(.press)
-            .accessibilityLabel(voice.listening ? "Stop listening" : "Talk")
+            .disabled(reading)
+            .accessibilityLabel("Attach a photo")
 
-            TextField(voice.listening ? "Listening…" : "Message", text: $draft, axis: .vertical)
+            TextField(voice.listening ? "Listening…" : "Ask Pitchfork", text: $draft, axis: .vertical)
                 .font(Theme.sans(16))
                 .lineLimit(1...5)
                 .focused($typing)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 11)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.vertical, 9)
                 .submitLabel(.send)
                 .onSubmit { Task { await send(draft) } }
+
+            Button {
+                Task { await toggleListening() }
+            } label: {
+                Image(systemName: voice.listening ? "stop.fill" : "mic")
+                    .font(.system(size: 18))
+                    .foregroundStyle(voice.listening ? Theme.accent : Theme.secondaryText)
+                    .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.press)
+            .accessibilityLabel(voice.listening ? "Stop listening" : "Talk")
 
             Button {
                 Task { await send(draft) }
             } label: {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.background)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 34, height: 34)
                     .background(canSend ? Theme.text : Theme.tertiaryText, in: Circle())
             }
             .buttonStyle(.press)
             .disabled(!canSend)
+            .padding(.bottom, 2)
             .accessibilityLabel("Send")
         }
+        .padding(.leading, 6)
+        .padding(.trailing, 6)
+        .padding(.vertical, 4)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.regularMaterial)
+        .onChange(of: photo) { _, item in
+            guard let item else { return }
+            Task { await readPhoto(item) }
+        }
+    }
+
+    /// Pulls any text out of the photo (a recipe, a label) and adds it to the message.
+    private func readPhoto(_ item: PhotosPickerItem) async {
+        reading = true
+        defer { reading = false; photo = nil }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data)?.cgImage else { return }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        try? VNImageRequestHandler(cgImage: image).perform([request])
+        let text = (request.results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
+
+        guard !text.isEmpty else {
+            assistant.failure = "I couldn't find any text in that photo."
+            return
+        }
+        draft = draft.isEmpty ? "From a photo:\n\(text)" : "\(draft)\n\nFrom a photo:\n\(text)"
+        typing = true
     }
 
     private var canSend: Bool {
@@ -276,7 +318,7 @@ struct AssistantView: View {
     }
 }
 
-/// A spoon stirring, then each step appearing on a timeline.
+/// A fork twirling, then each step appearing on a timeline.
 private struct ThinkingView: View {
     let steps: [ThinkingStep]
     @State private var shimmer = false
@@ -284,10 +326,10 @@ private struct ThinkingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                StirringSpoon(size: 22)
+                TwirlingFork(size: 20)
                     .frame(width: 30, height: 30)
                     .background(Theme.surface, in: Circle())
-                Text("Spoon is thinking…")
+                Text("Pitchfork is thinking…")
                     .font(Theme.sans(15, medium: true))
                     .foregroundStyle(Theme.secondaryText)
                     .opacity(shimmer ? 0.45 : 1)
@@ -343,9 +385,9 @@ private struct ThoughtSummary: View {
                 withAnimation(Theme.Motion.flow) { open.toggle() }
             } label: {
                 HStack(spacing: 8) {
-                    SpoonShape()
+                    ForkShape()
                         .fill(Theme.accent.gradient)
-                        .frame(width: 6, height: 16)
+                        .frame(width: 7, height: 16)
                         .rotationEffect(.degrees(20))
                     Text("Thought for \(seconds)s")
                         .font(Theme.sans(13))

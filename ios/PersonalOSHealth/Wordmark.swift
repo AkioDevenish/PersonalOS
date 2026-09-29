@@ -86,12 +86,13 @@ private struct Twirl {
 /// "Forklore" in calligraphy, written out as a fork beside it twirls like it's winding pasta, then rests.
 struct ForkloreWordmark: View {
     var size: CGFloat = 56
+    var showsFork = true
     @State private var written: CGFloat = 0
     @State private var play = false
 
     var body: some View {
         HStack(alignment: .center, spacing: size * 0.14) {
-            fork
+            if showsFork { fork }
             Text("Forklore")
                 .font(.custom("SnellRoundhand-Bold", size: size))
                 .foregroundStyle(Theme.text)
@@ -146,18 +147,18 @@ struct ForkloreWordmark: View {
     }
 }
 
-/// A small spoon that keeps stirring, for while Spoon is thinking.
-struct StirringSpoon: View {
+/// A small fork that keeps twirling, for while Pitchfork is thinking.
+struct TwirlingFork: View {
     var size: CGFloat = 18
 
     var body: some View {
         TimelineView(.animation) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate * 2.4
-            SpoonShape()
+            let t = timeline.date.timeIntervalSinceReferenceDate * 5
+            ForkShape()
                 .fill(Theme.accent.gradient)
-                .frame(width: size * 0.3, height: size)
-                .rotationEffect(.degrees(15 + sin(t) * 12), anchor: .bottom)
-                .offset(x: cos(t) * size * 0.12, y: sin(t) * size * 0.06)
+                .frame(width: size * 0.34, height: size)
+                // Squeezing the width back and forth reads as the fork spinning on its handle.
+                .scaleEffect(x: max(0.12, abs(cos(t))), y: 1)
                 .frame(width: size, height: size)
         }
         .accessibilityHidden(true)

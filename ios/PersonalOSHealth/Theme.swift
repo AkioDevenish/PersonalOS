@@ -5,7 +5,7 @@ enum Theme {
     // MARK: Colors
 
     /// The page, as a flat colour. Pages draw `gradient` instead; this is for text on dark buttons.
-    static let background = adaptive(light: 0xF4EFE6, dark: 0x211D18)
+    static let background = adaptive(light: 0xEBE1CF, dark: 0x1E1A15)
     /// A card or field sitting on the page.
     static let surface = adaptive(light: 0xFFFFFF, dark: 0x3A332C, alpha: 0.55)
     /// A card sitting on a surface.
@@ -24,11 +24,11 @@ enum Theme {
     /// Bone to porcelain in light mode; a warm espresso in dark.
     static let gradient = LinearGradient(
         colors: [
-            adaptive(light: 0xE7DECD, dark: 0x1A1713),
-            adaptive(light: 0xEFE8DB, dark: 0x1F1B17),
-            adaptive(light: 0xF4EFE6, dark: 0x24201B),
-            adaptive(light: 0xFAF7F0, dark: 0x27231E),
-            adaptive(light: 0xFBFAF8, dark: 0x2A2520),
+            adaptive(light: 0xD9CAB0, dark: 0x14110E),
+            adaptive(light: 0xE3D6C0, dark: 0x1B1713),
+            adaptive(light: 0xEBE1CF, dark: 0x221D18),
+            adaptive(light: 0xF2EBDF, dark: 0x28221C),
+            adaptive(light: 0xF7F2E9, dark: 0x2E2720),
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
