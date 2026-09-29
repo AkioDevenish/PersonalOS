@@ -486,8 +486,7 @@ struct OnboardingView: View {
             reassurance: "You choose what to share, and can change it later.",
             action: {
                 if healthConnected { go(7); return }
-                try? await health.requestAuthorization()
-                healthConnected = true
+                healthConnected = (try? await health.requestAuthorization()) != nil
                 // Nothing, or zero, reads as a broken app rather than a quiet morning; Health also
                 // returns nothing when access was declined.
                 if let steps = try? await health.fetchTodaySnapshot().steps, steps > 0 { todaySteps = steps }
@@ -654,8 +653,7 @@ struct OnboardingView: View {
 
 /// Shows the introduction once, then gets out of the way for good.
 struct OnboardingGate<Content: View>: View {
-    /// Versioned, so a new introduction is shown once even to people who finished the old one.
-    @AppStorage("onboarded_v3") private var done = false
+    @AppStorage(LocalData.onboardedKey) private var done = false
     @ViewBuilder var content: Content
 
     var body: some View {

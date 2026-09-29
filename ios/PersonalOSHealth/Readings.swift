@@ -52,6 +52,12 @@ final class Readings: ObservableObject {
         save()
     }
 
+    /// Everything, for when the account these belonged to is gone.
+    func removeAll() {
+        all = []
+        try? FileManager.default.removeItem(at: file)
+    }
+
     func remove(_ reading: Reading) {
         all.removeAll { $0.id == reading.id }
         save()
