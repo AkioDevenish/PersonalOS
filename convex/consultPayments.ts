@@ -80,7 +80,8 @@ async function wamCheckout(args: {
   const response = await fetch(`${wamBase()}/api/public/payment-intents`, {
     method: "POST", headers: wamHeaders(body), body,
   })
-  const json: any = await response.json().catch(() => null)
+  const json: { checkoutUrl?: string; paymentId: string; message?: string } | null =
+    await response.json().catch(() => null)
   if (!response.ok || !json?.checkoutUrl) {
     throw new Error(json?.message ?? `Wam refused the payment (${response.status})`)
   }
@@ -93,7 +94,7 @@ async function wamSettled(paymentId: string): Promise<boolean> {
     { headers: wamHeaders("") },
   )
   if (!response.ok) return false
-  const json: any = await response.json().catch(() => null)
+  const json: { status?: unknown } | null = await response.json().catch(() => null)
   const status = String(json?.status ?? "").toLowerCase()
   return status === "paid" || status === "succeeded" || status === "completed"
 }
@@ -134,7 +135,8 @@ async function stripeCheckout(args: {
     },
     body: form,
   })
-  const json: any = await response.json().catch(() => null)
+  const json: { url?: string; id: string; error?: { message?: string } } | null =
+    await response.json().catch(() => null)
   if (!response.ok || !json?.url) {
     throw new Error(json?.error?.message ?? `Stripe refused the payment (${response.status})`)
   }
@@ -147,7 +149,7 @@ async function stripeSettled(sessionId: string): Promise<boolean> {
     { headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` } },
   )
   if (!response.ok) return false
-  const json: any = await response.json().catch(() => null)
+  const json: { payment_status?: string } | null = await response.json().catch(() => null)
   return json?.payment_status === "paid"
 }
 

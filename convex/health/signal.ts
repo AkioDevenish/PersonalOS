@@ -1,11 +1,12 @@
 import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
-import { mutation, query } from "../_generated/server"
+import { mutation, query, type QueryCtx } from "../_generated/server"
+import type { Id } from "../_generated/dataModel"
 
 /** Carrying the messages that let two phones connect a call. */
 
 /** Who may take part: the person who booked, or the practitioner they booked. */
-async function participant(ctx: any, consultId: any, userId: string) {
+async function participant(ctx: QueryCtx, consultId: Id<"consults">, userId: string) {
   const consult = await ctx.db.get(consultId)
   if (!consult) throw new Error("No such session")
   if (consult.userId !== userId && consult.nutritionistId !== userId) {

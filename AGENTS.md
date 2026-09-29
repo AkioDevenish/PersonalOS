@@ -4,26 +4,39 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# What this repo is
+
+The iOS app (`ios/PersonalOSHealth`, SwiftUI) and its Convex backend (`convex/`).
+The Next.js app in `src/app` only serves the privacy and terms pages; there are
+no API routes, and the app talks to Convex directly. See `README.md` for the
+feature map.
+
 # Environment Variables
 
-All env vars are documented in `.env.example`. Key groups:
+Secrets are Convex deployment env vars (`npx convex env set`), read with
+`process.env` inside Convex functions. Nothing is committed; `.env*` is ignored.
+The full list is in `README.md` under Configuration. Key groups:
 
-- **Auth:** `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_FRONTEND_API_URL`
-- **Convex:** `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_DEPLOYMENT_KEY`
-- **Auth mode:** `PERSONAL_OS_AUTH_MODE` (`local`|`saas`), `PERSONAL_OS_LOCAL_USER_ID`, `PERSONAL_OS_LOCAL_WORKSPACE_ID`
-- **AI:** `GEMMA_URL`/`GEMMA_MODEL`, `OLLAMA_URL`/`OLLAMA_MODEL` (aliases)
-- **Data paths:** `HEALTH_DB_PATH`
-
-The two routes that reach a local model, `well-being/analyze` and `well-being/nutrition-ai`, prefer `GEMMA_URL`/`GEMMA_MODEL` over `OLLAMA_*` over inline defaults.
+- **Auth:** `JWT_PRIVATE_KEY`, `JWKS`, `CONVEX_SITE_URL`, and optional
+  `AUTH_{GOOGLE,FACEBOOK,APPLE}_{ID,SECRET}` pairs
+- **App Store / push:** `APPLE_IAP_ENVIRONMENT`, `APPLE_ROOT_CERTS`, `APNS_*`
+- **Payments:** `STRIPE_SECRET_KEY`, `PLATFORM_FEE_PERCENT`, `WAM_*`
+- **Calls:** `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL`
+- **Roles:** `NUTRITIONIST_IDS`, `ARTICLE_REVIEWER_IDS`
 
 # Codebase Conventions
 
-- **Auth:** Clerk JWT token is passed to Convex via `getToken({ template: 'convex' })`. See `src/lib/convex-client.ts`.
-- **API routes:** Use `getRequestActor(request)` from `src/lib/request-actor.ts` for multi-tenant support.
-- **Health SQLite:** DB path is resolved via `HEALTH_DB_PATH` env var, then `~/personal_os/Well Being/data/health.db`.
-- **No web UI:** this is an API surface for the iOS app, plus the privacy and
-  terms pages. Every route here has a caller in `ios/PersonalOSHealth`; the
-  ledgers, the directory and the consultation both reach Convex directly.
+- **Auth:** `@convex-dev/auth`, configured in `convex/auth.ts` (email and
+  password, plus Google, Facebook and Apple when their credentials are set).
+  Sign-in redirects may only return to `personalos://`.
+- **Who is asking:** Convex functions get the caller from
+  `ctx.auth.getUserIdentity()` and key rows by `userIdOf(identity)` from
+  `convex/lib/me.ts`. Never take a user id from the client.
+- **Health data:** samples live in Convex (`convex/health/samples.ts`), keyed by
+  user, provider, metric and time. There is no SQLite.
+- **AI:** insights are generated on the phone with Apple's Foundation Models
+  (`ios/PersonalOSHealth/OnDeviceInsights.swift`); there is no server model.
+- **Tests:** `npm test` runs the vitest suites in `convex/**/*.test.ts`.
 
 <!-- convex-ai-start -->
 

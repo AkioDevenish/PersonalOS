@@ -2,6 +2,7 @@ import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { internal } from "../_generated/api"
+import type { Doc } from "../_generated/dataModel"
 
 /** Asking a human. */
 
@@ -17,7 +18,7 @@ function isStaff(userId: string) {
 }
 
 /** Whether somebody is party to a consultation. */
-function party(consult: any, userId: string) {
+function party(consult: Pick<Doc<"consults">, "userId" | "nutritionistId">, userId: string) {
   return consult.userId === userId || consult.nutritionistId === userId
 }
 

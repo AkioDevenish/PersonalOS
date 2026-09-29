@@ -10,7 +10,7 @@ import { feePercent } from "./fees"
 
 const STRIPE = "https://api.stripe.com/v1"
 
-async function stripe(path: string, form?: Record<string, string>): Promise<any> {
+async function stripe(path: string, form?: Record<string, string>): Promise<Record<string, unknown>> {
   const key = process.env.STRIPE_SECRET_KEY
   if (!key) throw new Error("Stripe is not connected yet")
   const response = await fetch(`${STRIPE}${path}`, {
@@ -21,8 +21,9 @@ async function stripe(path: string, form?: Record<string, string>): Promise<any>
     },
     body: form ? new URLSearchParams(form) : undefined,
   })
-  const json: any = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(json?.error?.message ?? `Stripe refused that (${response.status})`)
+  const json: (Record<string, unknown> & { error?: { message?: string } }) | null =
+    await response.json().catch(() => null)
+  if (!response.ok || !json) throw new Error(json?.error?.message ?? `Stripe refused that (${response.status})`)
   return json
 }
 
