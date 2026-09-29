@@ -55,8 +55,13 @@ struct Transport {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw TransportError.badResponse }
-        guard (200...299).contains(http.statusCode) else {
-            throw TransportError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+        return try Self.unwrap(data, status: http.statusCode)
+    }
+
+    /// The function's value out of Convex's answer, or the failure in it.
+    static func unwrap(_ data: Data, status: Int) throws -> Data {
+        guard (200...299).contains(status) else {
+            throw TransportError.http(status, String(data: data, encoding: .utf8) ?? "")
         }
 
         // Convex answers 200 even when the function threw, with the failure in the envelope.
