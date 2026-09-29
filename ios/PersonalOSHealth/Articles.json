@@ -1,0 +1,94 @@
+[
+  {
+    "id": "cycle-phases",
+    "title": "The four phases of a cycle",
+    "category": "Your cycle",
+    "minutes": 3,
+    "symbol": "circle.dotted",
+    "colour": "9E566F",
+    "summary": "Bleeding, follicular, ovulatory, luteal: what each one is, and why the second half is the steady one.",
+    "body": [
+      "A menstrual cycle is counted from the first day of a period to the day before the next one. It is usually described in four phases, and knowing roughly which one you are in can make a week that feels different make more sense.",
+      "The menstrual phase is the period itself, often somewhere between two and seven days. Hormone levels are at their lowest at the start of a cycle, and many people notice lower energy here.",
+      "The follicular phase follows. The body prepares an egg to be released, oestrogen rises, and a lot of people find this the easiest stretch of the month to take on something demanding.",
+      "Ovulation is the short window around the release of an egg. Apps like this one estimate it by counting days, which is an expectation rather than a measurement. An Apple Watch can estimate it after the fact from the small rise in overnight temperature that tends to follow ovulation.",
+      "The luteal phase runs from ovulation to the next period. It is the more predictable half, often around two weeks in most people, which is why a longer cycle usually means a longer follicular phase rather than everything stretching evenly.",
+      "Every body is different, and cycles vary from month to month. If something about your cycle worries you, a practitioner is the right person to ask."
+    ]
+  },
+  {
+    "id": "late-cycle",
+    "title": "Why a cycle can run late",
+    "category": "Your cycle",
+    "minutes": 2,
+    "symbol": "calendar.badge.clock",
+    "colour": "7A4E8C",
+    "summary": "Stress, travel, illness and sleep can all move a cycle. When a late one is worth a conversation.",
+    "body": [
+      "A cycle that arrives a few days later than expected is common, and on its own it usually means very little. Cycle length naturally moves from month to month.",
+      "Things that often shift timing include stress, illness, travel across time zones, changes in sleep, big changes in exercise or eating, and changes to contraception.",
+      "The prediction on the Cycle page is the middle of your recent cycles, not a promise. A single late month does not change it much, which is deliberate.",
+      "Cycles that are regularly very irregular, periods that stop for several months, or bleeding that is much heavier or more painful than usual are worth raising with a clinician. So is anything that simply does not feel right to you."
+    ]
+  },
+  {
+    "id": "resting-heart-rate",
+    "title": "What resting heart rate tells you",
+    "category": "Sleep & recovery",
+    "minutes": 2,
+    "symbol": "heart",
+    "colour": "A0322E",
+    "summary": "A number that moves with sleep, stress and illness, and why its trend matters more than any one day.",
+    "body": [
+      "Resting heart rate is how many times your heart beats in a minute while you are still and relaxed. Apple Health estimates it from readings taken while you are at rest through the day.",
+      "It tends to sit lower in people who do more aerobic exercise, and it moves day to day. A short night, a stressful week, alcohol, or the start of an illness can all push it up.",
+      "That is why this app compares today against your own usual rather than against a chart. A reading that is high for you is more informative than one that is high for somebody else.",
+      "A resting heart rate that stays unusually high or low for you, especially alongside dizziness, breathlessness or chest discomfort, is something to talk to a clinician about."
+    ]
+  },
+  {
+    "id": "sleep-floor",
+    "title": "Seven hours is a floor",
+    "category": "Sleep & recovery",
+    "minutes": 2,
+    "symbol": "moon.stars",
+    "colour": "2F4A7A",
+    "summary": "Why the guidance for adults says seven hours or more, and what regular timing adds.",
+    "body": [
+      "Public health guidance for adults is seven or more hours of sleep a night. It is written as a minimum, not a target to hit exactly.",
+      "Timing matters as well as length. Going to bed and getting up at similar times each day helps the body know when to wind down, and it tends to make the same number of hours feel more restful.",
+      "A single short night is rarely a problem. It is the run of them that shows up elsewhere: in resting heart rate, in mood, and in how much a normal day costs.",
+      "If you sleep enough and still wake unrefreshed most days, or someone has noticed you stop breathing in your sleep, that is worth raising with a clinician."
+    ]
+  },
+  {
+    "id": "your-own-tuesday",
+    "title": "Your steps against your own Tuesday",
+    "category": "Moving",
+    "minutes": 2,
+    "symbol": "figure.walk",
+    "colour": "4E7A45",
+    "summary": "Why this app compares a day with the same weekday in your own history instead of a universal number.",
+    "body": [
+      "A step count on its own is hard to judge. Eight thousand is a quiet day for one person and a long one for another.",
+      "Weeks have shapes. Most people move differently on a workday than at the weekend, so comparing a Sunday with your last thirty days mostly discovers that Sundays are different.",
+      "So the Health page compares today with the middle of your recent same weekdays. One unusual Tuesday, a holiday or a hike, does not redefine what your Tuesday looks like.",
+      "The point is not to beat the number. It is to notice when a pattern changes, and to decide whether that change is one you wanted."
+    ]
+  },
+  {
+    "id": "walking-steadiness",
+    "title": "Walking steadiness, explained",
+    "category": "Moving",
+    "minutes": 2,
+    "symbol": "figure.walk.motion",
+    "colour": "3F6E7A",
+    "summary": "What your iPhone measures about the way you walk, and what the steadiness rating is for.",
+    "body": [
+      "When you carry an iPhone while walking, it can measure things about your gait: walking speed, step length, how long both feet are on the ground, and how even your steps are from side to side.",
+      "Apple combines several of these into walking steadiness, which is an estimate of how stable your walking is and is intended to relate to the risk of falling over the following year.",
+      "Readings build up over time and change slowly. A single day tells you little; a steady decline over weeks is the part worth noticing.",
+      "Low steadiness is a reason to talk to a clinician or a physiotherapist, who can suggest strength and balance exercises that help."
+    ]
+  }
+]

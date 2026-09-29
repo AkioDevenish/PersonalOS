@@ -8,10 +8,32 @@
  * @module
  */
 
-import type * as business from "../business.js";
-import type * as datascience from "../datascience.js";
-import type * as marketing from "../marketing.js";
-import type * as wellbeing from "../wellbeing.js";
+import type * as ai_keys from "../ai/keys.js";
+import type * as ai_preferences from "../ai/preferences.js";
+import type * as articlePayments from "../articlePayments.js";
+import type * as articleRules from "../articleRules.js";
+import type * as articles from "../articles.js";
+import type * as auth from "../auth.js";
+import type * as billing_entitlements from "../billing/entitlements.js";
+import type * as billing_receipts from "../billing/receipts.js";
+import type * as consultPayments from "../consultPayments.js";
+import type * as devices from "../devices.js";
+import type * as fees from "../fees.js";
+import type * as health_consult from "../health/consult.js";
+import type * as health_cuisine from "../health/cuisine.js";
+import type * as health_cuisineAi from "../health/cuisineAi.js";
+import type * as health_cuisineSource from "../health/cuisineSource.js";
+import type * as health_dishes from "../health/dishes.js";
+import type * as health_metrics from "../health/metrics.js";
+import type * as health_samples from "../health/samples.js";
+import type * as health_signal from "../health/signal.js";
+import type * as http from "../http.js";
+import type * as legal from "../legal.js";
+import type * as lib_me from "../lib/me.js";
+import type * as payouts from "../payouts.js";
+import type * as payoutsData from "../payoutsData.js";
+import type * as push from "../push.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -20,10 +42,32 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  business: typeof business;
-  datascience: typeof datascience;
-  marketing: typeof marketing;
-  wellbeing: typeof wellbeing;
+  "ai/keys": typeof ai_keys;
+  "ai/preferences": typeof ai_preferences;
+  articlePayments: typeof articlePayments;
+  articleRules: typeof articleRules;
+  articles: typeof articles;
+  auth: typeof auth;
+  "billing/entitlements": typeof billing_entitlements;
+  "billing/receipts": typeof billing_receipts;
+  consultPayments: typeof consultPayments;
+  devices: typeof devices;
+  fees: typeof fees;
+  "health/consult": typeof health_consult;
+  "health/cuisine": typeof health_cuisine;
+  "health/cuisineAi": typeof health_cuisineAi;
+  "health/cuisineSource": typeof health_cuisineSource;
+  "health/dishes": typeof health_dishes;
+  "health/metrics": typeof health_metrics;
+  "health/samples": typeof health_samples;
+  "health/signal": typeof health_signal;
+  http: typeof http;
+  legal: typeof legal;
+  "lib/me": typeof lib_me;
+  payouts: typeof payouts;
+  payoutsData: typeof payoutsData;
+  push: typeof push;
+  users: typeof users;
 }>;
 
 /**
