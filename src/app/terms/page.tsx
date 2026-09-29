@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Personal OS",
+  title: "Terms of Service | Forklore",
 }
 
 export default function TermsPage() {
@@ -11,7 +11,7 @@ export default function TermsPage() {
         Terms of Service
       </h1>
       <div className="prose prose-sm text-[var(--mid-brown)] space-y-4">
-        <p>Personal OS is provided &quot;as is&quot; without warranty of any kind. You are responsible for your own data and how you use this tool.</p>
+        <p>Forklore is provided &quot;as is&quot; without warranty of any kind. You are responsible for your own data and how you use this tool.</p>
         <p>By using this software, you agree that the authors are not liable for any claims or damages arising from its use.</p>
         <p>These terms were last updated on {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}.</p>
       </div>

@@ -18,7 +18,7 @@ final class AutoSync: ObservableObject {
 
     /// Set only after the backfill has actually succeeded, so a failed one is tried again next time
     /// rather than written off.
-    private static let backfilledKey = "personal_os_backfilled"
+    static let backfilledKey = "personal_os_backfilled"
 
     private init() {}
 

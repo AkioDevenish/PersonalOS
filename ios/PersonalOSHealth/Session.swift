@@ -40,21 +40,23 @@ final class Session: NSObject, ObservableObject {
     /// One refresh at a time: several requests arriving together should wait on the same renewal,
     /// not each spend the refresh token.
     private var refreshing: Task<String?, Never>?
+    /// Held for as long as the sign-in sheet is up, since the system cancels one nobody holds.
+    private var webAuth: ASWebAuthenticationSession?
 
     private let transport = Transport()
 
     // MARK: Starting up
 
-    /// On launch: signed in if a refresh token is on the device and still works, signed out
-    /// otherwise.
+    /// On launch: signed in if a refresh token is on the device and the server has not refused it,
+    /// signed out otherwise.
     func restore() async {
         guard refreshToken != nil else { state = .signedOut; return }
-        if await validToken() != nil {
-            state = .signedIn
-            await loadAccount()
-        } else {
-            state = .signedOut
-        }
+        _ = await validToken()
+        // A refresh that failed for want of a network keeps the tokens, and the next request tries
+        // again; only a refused one has already cleared them.
+        guard refreshToken != nil else { state = .signedOut; return }
+        state = .signedIn
+        await loadAccount()
     }
 
     // MARK: Email and password
@@ -88,6 +90,7 @@ final class Session: NSObject, ObservableObject {
         let started = try JSONDecoder().decode(Started.self, from: data)
         guard let url = URL(string: started.redirect) else { throw SessionError.badResponse }
 
+        defer { webAuth = nil }
         let callback: URL = try await withCheckedThrowingContinuation { done in
             let sheet = ASWebAuthenticationSession(url: url, callbackURLScheme: "personalos") { url, error in
                 if let url { done.resume(returning: url) }
@@ -97,7 +100,8 @@ final class Session: NSObject, ObservableObject {
             // Remembers somebody already signed in to Google in the browser, so they are not asked
             // for their password again.
             sheet.prefersEphemeralWebBrowserSession = false
-            sheet.start()
+            webAuth = sheet
+            if !sheet.start() { done.resume(throwing: SessionError.badResponse) }
         }
 
         guard let code = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
@@ -124,10 +128,7 @@ final class Session: NSObject, ObservableObject {
         // Ends the session on the server too, so the refresh token on this phone stops being worth
         // anything even if it were copied.
         _ = try? await transport.action("auth:signOut")
-        Keychain.delete("session_token")
-        Keychain.delete("refresh_token")
-        account = nil
-        state = .signedOut
+        endSession()
     }
 
     // MARK: The account
@@ -135,15 +136,21 @@ final class Session: NSObject, ObservableObject {
     /// Deletes the account on the server, then forgets it here.
     func deleteAccount() async throws {
         _ = try await transport.mutation("users:deleteAccount")
-        Keychain.delete("session_token")
-        Keychain.delete("refresh_token")
-        account = nil
-        state = .signedOut
+        LocalData.forget()
+        endSession()
     }
 
     func loadAccount() async {
         guard let data = try? await transport.query("users:me") else { return }
         account = try? JSONDecoder().decode(Account.self, from: data)
+        if let account { LocalData.claim(for: account.id) }
+    }
+
+    private func endSession() {
+        Keychain.delete("session_token")
+        Keychain.delete("refresh_token")
+        account = nil
+        state = .signedOut
     }
 
     func rename(_ name: String) async throws {
@@ -168,17 +175,32 @@ final class Session: NSObject, ObservableObject {
 
     private func refresh() async -> String? {
         guard let refreshToken else { return nil }
-        guard let data = try? await transport.anonymous("action", "auth:signIn", ["refreshToken": refreshToken]),
-              (try? await adopt(data)) != nil
-        else {
-            // A refresh token that no longer works means the session is over, signed out elsewhere
-            // or expired.
-            Keychain.delete("session_token")
-            Keychain.delete("refresh_token")
-            state = .signedOut
+        let data: Data
+        do {
+            data = try await transport.anonymous("action", "auth:signIn", ["refreshToken": refreshToken])
+        } catch {
+            // Only the server refusing the token ends the session; a network that did not answer
+            // keeps it for the next try.
+            if Self.isRefusal(error) { endSession() }
+            return nil
+        }
+        do {
+            try await adopt(data)
+        } catch {
+            // No tokens back means the refresh token no longer works: signed out elsewhere, or expired.
+            endSession()
             return nil
         }
         return token
+    }
+
+    /// Whether the server answered and said no, as opposed to not answering.
+    private static func isRefusal(_ error: Error) -> Bool {
+        switch error {
+        case TransportError.server: return true
+        case TransportError.http(let code, _): return (400..<500).contains(code) && code != 408 && code != 429
+        default: return false
+        }
     }
 
     private func adopt(_ data: Data) async throws {
@@ -228,6 +250,31 @@ enum SessionError: LocalizedError {
         switch self {
         case .badResponse: return "Signing in didn't finish. Try again."
         case .cancelled: return "Signing in was cancelled."
+        }
+    }
+}
+
+/// What this phone keeps for the account signed in on it, apart from the tokens.
+enum LocalData {
+    private static let ownerKey = "personal_os_local_owner"
+    /// Versioned, so a new introduction is shown once even to people who finished the old one.
+    static let onboardedKey = "onboarded_v4"
+
+    /// Records whose data this is, clearing the last account's first if it was somebody else's.
+    @MainActor
+    static func claim(for accountId: String) {
+        let owner = UserDefaults.standard.string(forKey: ownerKey)
+        if let owner, owner != accountId { forget() }
+        UserDefaults.standard.set(accountId, forKey: ownerKey)
+    }
+
+    /// Readings, sync progress and the introduction, all tied to one account.
+    @MainActor
+    static func forget() {
+        Readings.shared.removeAll()
+        AppConfig.syncCursor = nil
+        for key in [ownerKey, "last_sync_at", AutoSync.backfilledKey, onboardedKey] {
+            UserDefaults.standard.removeObject(forKey: key)
         }
     }
 }

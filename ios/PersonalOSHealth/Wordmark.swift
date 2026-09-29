@@ -1,32 +1,5 @@
 import SwiftUI
 
-/// A spoon: an oval bowl on a tapered handle, drawn pointing up.
-struct SpoonShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let w = rect.width, h = rect.height
-        let bowl = CGRect(x: rect.minX, y: rect.minY, width: w, height: h * 0.38)
-        path.addEllipse(in: bowl)
-
-        let neck = bowl.maxY - h * 0.02
-        path.move(to: CGPoint(x: rect.midX - w * 0.09, y: neck))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.midX - w * 0.14, y: rect.maxY - w * 0.14),
-            control: CGPoint(x: rect.midX - w * 0.05, y: rect.minY + h * 0.7)
-        )
-        path.addArc(
-            center: CGPoint(x: rect.midX, y: rect.maxY - w * 0.14),
-            radius: w * 0.14, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true
-        )
-        path.addQuadCurve(
-            to: CGPoint(x: rect.midX + w * 0.09, y: neck),
-            control: CGPoint(x: rect.midX + w * 0.05, y: rect.minY + h * 0.7)
-        )
-        path.closeSubpath()
-        return path
-    }
-}
-
 /// A fork: four tines on a tapered handle, drawn pointing up.
 struct ForkShape: Shape {
     func path(in rect: CGRect) -> Path {

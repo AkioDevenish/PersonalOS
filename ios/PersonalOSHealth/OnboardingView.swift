@@ -259,8 +259,7 @@ struct OnboardingView: View {
             reassurance: "You choose what to share, and can change it later.",
             action: {
                 if healthConnected { go(3); return }
-                try? await health.requestAuthorization()
-                healthConnected = true
+                healthConnected = (try? await health.requestAuthorization()) != nil
                 try? await Task.sleep(for: .milliseconds(450))
                 go(3)
             },
@@ -399,8 +398,7 @@ struct OnboardingView: View {
 
 /// Shows the introduction once, then gets out of the way for good.
 struct OnboardingGate<Content: View>: View {
-    /// Versioned, so a new introduction is shown once even to people who finished the old one.
-    @AppStorage("onboarded_v4") private var done = false
+    @AppStorage(LocalData.onboardedKey) private var done = false
     @ViewBuilder var content: Content
 
     var body: some View {
