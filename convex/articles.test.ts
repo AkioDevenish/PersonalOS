@@ -347,6 +347,24 @@ describe("the archive", () => {
     expect(row.body).toEqual([])
   })
 
+  test("a lapsed subscription stays shut even when the phone claims an earlier time", async () => {
+    const t = await setup()
+    await expired(t)
+    await t.run(async (ctx) => {
+      await ctx.db.insert("entitlements", {
+        userId: AUTHOR.subject, subscription_status: "active",
+        product_id: "os.personal.sub.monthly",
+        expires_at: Date.now() - DAY, updated_at: Date.now(),
+      })
+    })
+    // The client supplies `now`, so it can ask as though the subscription had not yet run out.
+    // The sweep marks it expired, and after that no claimed time reopens it.
+    await t.mutation(internal.billing.entitlements.expireLapsed, {})
+    const [row] = await t.withIdentity(AUTHOR).query(api.articles.archive, { now: 0 })
+    expect(row.locked).toBe(true)
+    expect(row.body).toEqual([])
+  })
+
   test("a practitioner's article is titled to everyone and written for subscribers", async () => {
     const t = await setup()
     const id = await verified(t)
