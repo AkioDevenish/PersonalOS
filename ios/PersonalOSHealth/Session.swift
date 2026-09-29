@@ -281,7 +281,7 @@ enum LocalData {
 
 /// The two tokens, in the Keychain rather than in preferences.
 enum Keychain {
-    private static let service = "ADEVSTUDIO.PersonalOSHealth.session"
+    private static let service = "com.adevstudio.forklore.session"
 
     static func read(_ key: String) -> String? {
         var result: AnyObject?
