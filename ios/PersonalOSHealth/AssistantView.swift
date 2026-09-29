@@ -239,6 +239,8 @@ struct AssistantView: View {
     /// Pulls any text out of the photo (a recipe, a label) and adds it to the message.
     private func readPhoto(_ item: PhotosPickerItem) async {
         reading = true
+        // A new photo replaces the last one's note, but not anything else being shown.
+        if assistant.failure == Self.noText { assistant.failure = nil }
         defer { reading = false; photo = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data), let cgImage = image.cgImage else { return }
@@ -249,12 +251,14 @@ struct AssistantView: View {
         }.value
 
         guard !text.isEmpty else {
-            assistant.failure = "I couldn't find any text in that photo."
+            assistant.failure = Self.noText
             return
         }
         draft = draft.isEmpty ? "From a photo:\n\(text)" : "\(draft)\n\nFrom a photo:\n\(text)"
         typing = true
     }
+
+    private static let noText = "I couldn't find any text in that photo."
 
     /// Accurate recognition takes a moment, so it runs off the main thread.
     private nonisolated static func recognizeText(in image: CGImage, orientation: CGImagePropertyOrientation) -> String {

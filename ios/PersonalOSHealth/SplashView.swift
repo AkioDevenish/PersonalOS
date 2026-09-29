@@ -14,10 +14,13 @@ struct SplashView: View {
 struct SplashGate<Content: View>: View {
     @ViewBuilder var content: Content
     @State private var showing = true
+    /// The app stays hidden until the splash has gone, so the two wordmarks never overlap mid-fade.
+    @State private var revealed = false
 
     var body: some View {
         ZStack {
-            content
+            Theme.gradient.ignoresSafeArea()
+            content.opacity(revealed ? 1 : 0)
             if showing {
                 SplashView()
                     .transition(.opacity)
@@ -27,7 +30,9 @@ struct SplashGate<Content: View>: View {
         .task {
             // Long enough for the writing to finish.
             try? await Task.sleep(for: .milliseconds(2600))
-            withAnimation(.easeInOut(duration: 0.45)) { showing = false }
+            withAnimation(.easeIn(duration: 0.3)) { showing = false }
+            try? await Task.sleep(for: .milliseconds(300))
+            withAnimation(.easeOut(duration: 0.35)) { revealed = true }
         }
     }
 }
