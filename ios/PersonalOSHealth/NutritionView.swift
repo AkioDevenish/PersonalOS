@@ -17,9 +17,8 @@ struct NutritionView: View {
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
     @State private var choosingCountry = false
 
-    /// What people say they eat here.
+    /// Dishes for the chosen country, handed to the meal prompt.
     @State private var book = CuisineClient.Book.empty
-    @State private var newDish = ""
     @State private var locked = false
 
     /// Today's snapshot, held only so the screen can show what it's reading.
@@ -155,71 +154,6 @@ struct NutritionView: View {
                     .padding(.top, 18)
                 }
 
-                if !country.isEmpty {
-                    SectionRule(text: "What people eat here").padding(.top, 34)
-
-                    Text(book.generating && book.all.isEmpty
-                         ? "Finding what people eat in \(Cuisine.name(for: country))…"
-                         : book.all.isEmpty
-                         ? "Nothing named yet. Add a dish you eat."
-                         : "What people eat in \(Cuisine.name(for: country)). Press and hold a dish if it's wrong.")
-                        .font(Theme.sans(11))
-                        .foregroundStyle(Theme.tertiaryText)
-                        .lineSpacing(3)
-                        .padding(.top, 10)
-
-                    VStack(spacing: 0) {
-                        ForEach(book.all) { d in
-                            Button {
-                                Task { await vote(d.dish) }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Text(d.dish)
-                                        .font(Theme.serif(18))
-                                        .foregroundStyle(d.mine ? Theme.accent : Theme.text)
-                                    Spacer()
-                                    Text(voteLine(d))
-                                        .font(Theme.sans(9.5))
-                                        .tracking(1.2)
-                                        .foregroundStyle(Theme.tertiaryText)
-                                    if d.mine { SelectionMark(size: 12) }
-                                }
-                                .padding(.vertical, 12)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.pressRow)
-                            .contextMenu {
-                                // Only offered for dishes nobody has vouched for.
-                                if d.canBeRejected(in: book) {
-                                    Button("Not eaten here", systemImage: "xmark.circle", role: .destructive) {
-                                        Task { await reject(d.dish) }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.top, 6)
-
-                    HStack(spacing: 12) {
-                        TextField("Name a dish", text: $newDish)
-                            .font(Theme.serif(18))
-                            .foregroundStyle(Theme.text)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                            .submitLabel(.done)
-                            .onSubmit { Task { await add() } }
-
-                        Button {
-                            Task { await add() }
-                        } label: {
-                            Kicker(text: "Add", color: Theme.accent, size: 10)
-                        }
-                        .buttonStyle(.press)
-                        .disabled(newDish.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                    .padding(.vertical, 14)
-                }
-
                 let suggested = readings.of(.meal)
                 if !suggested.isEmpty {
                     SectionRule(text: "Recently suggested").padding(.top, 32)
@@ -253,22 +187,10 @@ struct NutritionView: View {
             book = .empty
             Task { await loadBook() }
         }
-        .animation(Theme.Motion.flow, value: book.all)
         .sheet(isPresented: $choosingCountry) {
             CountryPicker(code: $country)
         }
         .subscriptionNeeded($locked, toDo: "write you a suggestion")
-    }
-
-    private func voteLine(_ d: CuisineClient.Dish) -> String {
-        guard d.votes > 0 else { return "" }
-        return d.votes == 1 ? "named by 1" : "named by \(d.votes)"
-    }
-
-    private func reject(_ dish: String) async {
-        Haptics.tap()
-        try? await CuisineClient().reject(country: country, dish: dish)
-        book = (try? await CuisineClient().book(country: country)) ?? book
     }
 
     private func loadBook() async {
@@ -283,19 +205,6 @@ struct NutritionView: View {
             book = (try? await client.book(country: country)) ?? book
             tries += 1
         }
-    }
-
-    private func vote(_ dish: String) async {
-        Haptics.select()
-        try? await CuisineClient().suggest(country: country, dish: dish)
-        book = (try? await CuisineClient().book(country: country)) ?? book
-    }
-
-    private func add() async {
-        let dish = newDish.trimmingCharacters(in: .whitespaces)
-        guard !dish.isEmpty else { return }
-        newDish = ""
-        await vote(dish)
     }
 
     private func loadSignals() async {
