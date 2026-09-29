@@ -73,11 +73,14 @@ struct ContentCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                tint
+                LinearGradient(
+                    colors: [tint.opacity(0.22), tint.opacity(0.06)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
                 Image(systemName: symbol)
-                    .font(.system(size: 36, weight: .light))
+                    .font(.system(size: 34, weight: .light))
                     .environment(\.symbolVariants, .none)
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(tint)
             }
             .frame(height: Self.pictureHeight)
 
@@ -97,10 +100,12 @@ struct ContentCard: View {
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .frame(height: Self.bodyHeight)
-            .background(raised ? Theme.raised : Theme.surface)
         }
         .frame(width: Self.width)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(raised ? Theme.raised : Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
+        .shadow(color: .black.opacity(0.06), radius: 12, y: 6)
         .accessibilityElement(children: .combine)
     }
 }

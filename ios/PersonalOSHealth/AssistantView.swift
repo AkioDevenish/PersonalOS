@@ -36,13 +36,9 @@ struct AssistantView: View {
                     }
 
                     if assistant.thinking {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("Thinking…")
-                                .font(Theme.sans(14))
-                                .foregroundStyle(Theme.secondaryText)
-                        }
-                        .id("thinking")
+                        ThinkingView(steps: assistant.liveSteps)
+                            .id("thinking")
+                            .transition(.opacity)
                     }
 
                     if let failure = assistant.failure {
@@ -78,7 +74,7 @@ struct AssistantView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Assistant")
+            Text("Spoon")
                 .font(Theme.serif(28))
                 .foregroundStyle(Theme.text)
             Spacer()
@@ -142,10 +138,18 @@ struct AssistantView: View {
 
     private var greeting: String {
         let name = session.account?.name?.split(separator: " ").first.map(String.init) ?? ""
-        return name.isEmpty ? "Hi. What can I help with?" : "Hi \(name). What can I help with?"
+        return name.isEmpty ? "Hi, I'm Spoon. What can I help with?" : "Hi \(name), I'm Spoon. What can I help with?"
     }
 
+    @ViewBuilder
     private func bubble(_ line: ChatLine) -> some View {
+        if line.who == .assistant && !line.steps.isEmpty {
+            ThoughtSummary(steps: line.steps, seconds: line.seconds)
+        }
+        message(line)
+    }
+
+    private func message(_ line: ChatLine) -> some View {
         let mine = line.who == .you
         return HStack {
             if mine { Spacer(minLength: 48) }
@@ -221,7 +225,8 @@ struct AssistantView: View {
     private func begin(fresh: Bool = false) async {
         guard fresh || !started else { return }
         started = true
-        assistant.start(context: await context())
+        let (text, sources) = await context()
+        assistant.start(context: text, sources: sources)
     }
 
     private func send(_ text: String) async {
@@ -241,8 +246,9 @@ struct AssistantView: View {
     }
 
     /// Today's and this week's numbers, for the assistant to draw on.
-    private func context() async -> String {
+    private func context() async -> (String, [ThinkingStep]) {
         var parts: [String] = []
+        var sources: [ThinkingStep] = []
         if let today = try? await health.fetchTodaySnapshot() {
             let shown = ["steps", "sleep", "active_energy", "resting_hr", "glucose", "carbs"]
                 .compactMap { Metrics.by(id: $0) }
@@ -250,13 +256,107 @@ struct AssistantView: View {
                     guard let value = spec.display(today) else { return nil }
                     return "\(spec.label) \(value)\(spec.unit.isEmpty ? "" : " \(spec.unit)")"
                 }
-            if !shown.isEmpty { parts.append("Today: " + shown.joined(separator: ", ") + ".") }
+            if !shown.isEmpty {
+                parts.append("Today: " + shown.joined(separator: ", ") + ".")
+                sources.append(ThinkingStep(symbol: "figure.walk", label: "Checked today's numbers"))
+            }
         }
         if let week = try? await health.fetchHistoricalSnapshots(days: 7) {
             let nights = week.compactMap { snap in Metrics.by(id: "sleep").flatMap { $0.display(snap) } }
-            if !nights.isEmpty { parts.append("Sleep over the last week (hours): " + nights.joined(separator: ", ") + ".") }
+            if !nights.isEmpty {
+                parts.append("Sleep over the last week (hours): " + nights.joined(separator: ", ") + ".")
+                sources.append(ThinkingStep(symbol: "moon.stars", label: "Looked at your sleep this week"))
+            }
         }
-        if !country.isEmpty { parts.append("They cook and shop in \(Cuisine.name(for: country)).") }
-        return parts.isEmpty ? "No health numbers recorded today." : parts.joined(separator: "\n")
+        if !country.isEmpty {
+            parts.append("They cook and shop in \(Cuisine.name(for: country)).")
+            sources.append(ThinkingStep(symbol: "fork.knife", label: "Thought about food in \(Cuisine.name(for: country))"))
+        }
+        return (parts.isEmpty ? "No health numbers recorded today." : parts.joined(separator: "\n"), sources)
+    }
+}
+
+/// A spoon stirring, then each step appearing on a timeline.
+private struct ThinkingView: View {
+    let steps: [ThinkingStep]
+    @State private var shimmer = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                StirringSpoon(size: 22)
+                    .frame(width: 30, height: 30)
+                    .background(Theme.surface, in: Circle())
+                Text("Spoon is thinking…")
+                    .font(Theme.sans(15, medium: true))
+                    .foregroundStyle(Theme.secondaryText)
+                    .opacity(shimmer ? 0.45 : 1)
+                    .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: shimmer)
+            }
+            StepList(steps: steps)
+        }
+        .onAppear { shimmer = true }
+    }
+}
+
+/// The steps, joined by a thin line like a timeline.
+private struct StepList: View {
+    let steps: [ThinkingStep]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(steps) { step in
+                HStack(spacing: 12) {
+                    VStack(spacing: 0) {
+                        Rectangle().fill(Theme.separator).frame(width: 1.5, height: 10)
+                        Image(systemName: step.symbol)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 30, height: 30)
+                            .background(Theme.surface, in: Circle())
+                    }
+                    Text(step.label)
+                        .font(Theme.sans(14))
+                        .foregroundStyle(Theme.text)
+                        .padding(.top, 10)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.tertiaryText)
+                        .padding(.top, 10)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+}
+
+/// "Thought for 3s", which opens to show the steps.
+private struct ThoughtSummary: View {
+    let steps: [ThinkingStep]
+    let seconds: Int
+    @State private var open = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                Haptics.select()
+                withAnimation(Theme.Motion.flow) { open.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    SpoonShape()
+                        .fill(Theme.accent.gradient)
+                        .frame(width: 6, height: 16)
+                        .rotationEffect(.degrees(20))
+                    Text("Thought for \(seconds)s")
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.secondaryText)
+                    Image(systemName: open ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.tertiaryText)
+                }
+            }
+            .buttonStyle(.plain)
+            if open { StepList(steps: steps) }
+        }
     }
 }

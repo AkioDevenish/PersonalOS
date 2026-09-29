@@ -80,7 +80,7 @@ struct ProfileView: View {
                 application = try? await SpecialistsClient().desk().application
             }
         }
-        .confirmationDialog("Log out of Personal OS?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
+        .confirmationDialog("Log out of Spoonful?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
             Button("Log out", role: .destructive) {
                 Task {
                     // Hand the device back before the session goes, or the token stays pointed at

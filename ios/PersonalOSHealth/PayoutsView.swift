@@ -58,12 +58,12 @@ struct PayoutsView: View {
     private var footer: String {
         let share = status.feePercent.formatted(.number.precision(.fractionLength(0...1)))
         if status.ready {
-            return "Clients pay you directly. Personal OS keeps \(share)%."
+            return "Clients pay you directly. Spoonful keeps \(share)%."
         }
         if status.started {
             return "Stripe is still checking your details."
         }
-        return "Set this up to take paid consultations. Your bank details go to Stripe, not us. Personal OS keeps \(share)%."
+        return "Set this up to take paid consultations. Your bank details go to Stripe, not us. Spoonful keeps \(share)%."
     }
 
     private func open() async {

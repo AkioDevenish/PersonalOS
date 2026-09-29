@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The landing page, laid out as a reading catalogue.
 struct HomeView: View {
+    @EnvironmentObject private var session: Session
     @State private var query = ""
     @ObservedObject private var library = ArticleLibrary.shared
     /// Which most-read card is centred, for the page indicator.
@@ -72,12 +73,20 @@ struct HomeView: View {
 
     // MARK: Search
 
-    /// A large title and a search field under it.
+    /// A large title with your picture on the right, and a search field under it.
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Home")
-                .font(Theme.serif(28))
-                .foregroundStyle(Theme.text)
+            HStack(alignment: .center) {
+                Text("Home")
+                    .font(Theme.serif(28))
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                NavigationLink(value: Route.profile) {
+                    Avatar(account: session.account, size: 32)
+                }
+                .buttonStyle(.press)
+                .accessibilityLabel("Account")
+            }
 
             HStack(spacing: 9) {
                 Image(systemName: "magnifyingglass")

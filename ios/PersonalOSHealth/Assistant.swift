@@ -4,12 +4,22 @@ import FoundationModels
 import Speech
 import SwiftUI
 
+/// One thing Spoon looked at while working out a reply.
+struct ThinkingStep: Identifiable, Equatable, Hashable {
+    let id = UUID()
+    let symbol: String
+    let label: String
+}
+
 /// One line in the conversation.
 struct ChatLine: Identifiable, Equatable {
     enum Who { case you, assistant }
     let id = UUID()
     let who: Who
     var text: String
+    /// What Spoon looked at, and how long it took, for its replies.
+    var steps: [ThinkingStep] = []
+    var seconds: Int = 0
 }
 
 /// The conversation, run on the phone's own model so your data stays on the phone.
@@ -17,13 +27,17 @@ struct ChatLine: Identifiable, Equatable {
 final class Assistant: ObservableObject {
     @Published private(set) var lines: [ChatLine] = []
     @Published private(set) var thinking = false
+    /// The steps shown so far while Spoon is thinking.
+    @Published private(set) var liveSteps: [ThinkingStep] = []
     @Published var failure: String?
 
     private var session: LanguageModelSession?
+    private var sources: [ThinkingStep] = []
 
     /// Starts a fresh conversation with today's numbers as background.
-    func start(context: String) {
+    func start(context: String, sources: [ThinkingStep]) {
         lines = []
+        self.sources = sources
         session = LanguageModelSession(instructions: Self.instructions(context: context))
     }
 
@@ -38,13 +52,30 @@ final class Assistant: ObservableObject {
         failure = nil
         lines.append(ChatLine(who: .you, text: text))
         thinking = true
-        defer { thinking = false }
+        liveSteps = []
+        let began = Date()
+        let plan = [ThinkingStep(symbol: "text.bubble", label: "Reading your question")]
+            + sources
+            + [ThinkingStep(symbol: "sparkles", label: "Writing a reply")]
+        // Show each step in turn while the model works.
+        let reveal = Task { @MainActor in
+            for step in plan {
+                withAnimation(Theme.Motion.flow) { liveSteps.append(step) }
+                try? await Task.sleep(for: .milliseconds(650))
+            }
+        }
+        defer {
+            reveal.cancel()
+            thinking = false
+            liveSteps = []
+        }
 
         do {
             let reply = try await session.respond(to: text).content
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let clean = MealReading.clean(reply)
-            lines.append(ChatLine(who: .assistant, text: clean))
+            let seconds = max(1, Int(Date().timeIntervalSince(began).rounded()))
+            lines.append(ChatLine(who: .assistant, text: clean, steps: plan, seconds: seconds))
             return clean
         } catch let error as LanguageModelSession.GenerationError {
             failure = OnDeviceInsights.OnDeviceError.generation(error).localizedDescription
@@ -56,7 +87,8 @@ final class Assistant: ObservableObject {
 
     private static func instructions(context: String) -> String {
         """
-        You are a friendly personal assistant inside a food and health app. Talk like a helpful \
+        Your name is Spoon. You are a friendly personal assistant inside a food and health app \
+        called Spoonful. Talk like a helpful \
         friend: short, warm, plain sentences. No lists unless asked. No long dashes.
 
         You help with what to eat, cooking, groceries, and making sense of the person's own \

@@ -18,7 +18,7 @@ struct OfflineView: View {
                 .foregroundStyle(Theme.text)
                 .padding(.top, 24)
 
-            Text("Personal OS needs a connection. It'll pick up as soon as you're back online.")
+            Text("Spoonful needs a connection. It'll pick up as soon as you're back online.")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)

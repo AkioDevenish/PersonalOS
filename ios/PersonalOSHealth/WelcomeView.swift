@@ -13,11 +13,8 @@ struct WelcomeView: View {
                 .accessibilityHidden(true)
                 .flowIn(0, distance: 16)
 
-            Text("Personal OS")
-                .font(Theme.serif(40))
-                .foregroundStyle(Theme.text)
-                .padding(.top, 26)
-                .flowIn(1)
+            SpoonfulWordmark(size: 54)
+                .padding(.top, 22)
 
             Text("Meals, experts and articles for your health.")
                 .font(Theme.serifBody(18))

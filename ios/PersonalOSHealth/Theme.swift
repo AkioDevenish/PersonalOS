@@ -7,9 +7,9 @@ enum Theme {
     /// The page, as a flat colour. Pages draw `gradient` instead; this is for text on dark buttons.
     static let background = adaptive(light: 0xF4EFE6, dark: 0x211D18)
     /// A card or field sitting on the page.
-    static let surface = adaptive(light: 0xFBFAF8, dark: 0x2C2721)
+    static let surface = adaptive(light: 0xFFFFFF, dark: 0x3A332C, alpha: 0.55)
     /// A card sitting on a surface.
-    static let raised = adaptive(light: 0xFFFFFF, dark: 0x36302A)
+    static let raised = adaptive(light: 0xFFFFFF, dark: 0x453D35, alpha: 0.78)
     /// Titles, figures, primary text.
     static let text = adaptive(light: 0x26211C, dark: 0xF4EFE6)
     static let secondaryText = adaptive(light: 0x6B6259, dark: 0xB8AFA4)
@@ -19,7 +19,7 @@ enum Theme {
     static let accent = adaptive(light: 0x8C6A4A, dark: 0xD2B48C)
     /// Something met or connected.
     static let positive = adaptive(light: 0x4E7F52, dark: 0x8CC48F)
-    static let separator = adaptive(light: 0xE0D7C8, dark: 0x3A332C)
+    static let separator = adaptive(light: 0xFFFFFF, dark: 0xFFFFFF, alpha: 0.35)
 
     /// Bone to porcelain in light mode; a warm espresso in dark.
     static let gradient = LinearGradient(
