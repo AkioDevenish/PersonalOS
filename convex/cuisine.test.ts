@@ -84,13 +84,33 @@ describe("what the prompt may cook from", () => {
 })
 
 describe("saying a dish is not eaten here", () => {
-  test("removes an unvouched dish", async () => {
+  test("hides the dish for the person who said so", async () => {
     const t = convexTest(schema, modules)
     await t.withIdentity(me).mutation(api.health.cuisine.suggest, { country: "ZW", dish: "Mapopo candy" })
     await t.withIdentity(you).mutation(api.health.cuisine.reject, { country: "ZW", dish: "Mapopo candy" })
 
-    const book = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "ZW" })
-    expect(book.all.map((d) => d.dish)).not.toContain("Mapopo candy")
+    const yours = await t.withIdentity(you).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(yours.all.map((d) => d.dish)).not.toContain("Mapopo candy")
+  })
+
+  test("does not take the dish off anyone else's list", async () => {
+    const t = convexTest(schema, modules)
+    await t.withIdentity(me).mutation(api.health.cuisine.suggest, { country: "ZW", dish: "Mapopo candy" })
+    await t.withIdentity(you).mutation(api.health.cuisine.reject, { country: "ZW", dish: "Mapopo candy" })
+
+    const mine = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(mine.all.map((d) => d.dish)).toContain("Mapopo candy")
+    expect(mine.canon).toContain("Mapopo candy")
+  })
+
+  test("saying it again brings the dish back", async () => {
+    const t = convexTest(schema, modules)
+    await t.withIdentity(me).mutation(api.health.cuisine.suggest, { country: "ZW", dish: "Mapopo candy" })
+    await t.withIdentity(you).mutation(api.health.cuisine.reject, { country: "ZW", dish: "Mapopo candy" })
+    await t.withIdentity(you).mutation(api.health.cuisine.reject, { country: "ZW", dish: "Mapopo candy" })
+
+    const yours = await t.withIdentity(you).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(yours.all.map((d) => d.dish)).toContain("Mapopo candy")
   })
 
   test("cannot remove a written-down dish", async () => {
@@ -137,12 +157,14 @@ describe("the generated list", () => {
     expect(book.canon.sort()).toEqual(["Doubles", "Kurma", "Pelau"])
   })
 
-  test("a generated dish can be rejected", async () => {
+  test("a generated dish can be rejected, for the one who rejects it", async () => {
     const t = convexTest(schema, modules)
     await t.mutation(internal.health.cuisine.saveGenerated, { country: "TT", dishes: ["Doubles", "Kurma"] })
     await t.withIdentity(me).mutation(api.health.cuisine.reject, { country: "TT", dish: "Kurma" })
-    const book = await t.withIdentity(you).query(api.health.cuisine.forCountry, { country: "TT" })
-    expect(book.canon).toEqual(["Doubles"])
+    const mine = await t.withIdentity(me).query(api.health.cuisine.forCountry, { country: "TT" })
+    expect(mine.canon).toEqual(["Doubles"])
+    const yours = await t.withIdentity(you).query(api.health.cuisine.forCountry, { country: "TT" })
+    expect(yours.canon.sort()).toEqual(["Doubles", "Kurma"])
   })
 
   test("prepare starts one generation and reports it", async () => {

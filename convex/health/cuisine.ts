@@ -4,13 +4,13 @@ import { internalMutation, mutation, query, type QueryCtx } from "../_generated/
 import { internal } from "../_generated/api"
 import { curatedFor } from "./dishes"
 
-/** What people in a country eat: an AI list drawn from Wikipedia, plus people's votes. */
+/**
+ * What people in a country eat: an AI list drawn from Wikipedia, plus people's votes. Saying a dish
+ * is not eaten here hides it for you alone; nobody can take a dish off anyone else's list.
+ */
 
 /** Votes a dish needs before it reaches everyone's suggestions. */
 export const CANON_VOTES = 3
-
-/** Rejections that take a dish off the list. */
-export const REJECTS_TO_DROP = 1
 
 /** How long a failed generation waits before it is tried again. */
 const RETRY_AFTER = 24 * 60 * 60 * 1000
@@ -50,23 +50,28 @@ export const forCountry = query({
       .withIndex("by_country", (q) => q.eq("country", args.country))
       .collect()
 
-    type Entry = { dish: string; votes: number; rejects: number; written: boolean; mine: boolean }
-    const blank = (dish: string): Entry => ({ dish, votes: 0, rejects: 0, written: false, mine: false })
+    type Entry = { dish: string; votes: number; hidden: boolean; written: boolean; mine: boolean }
+    const blank = (dish: string): Entry => ({ dish, votes: 0, hidden: false, written: false, mine: false })
     const byKey = new Map<string, Entry>()
 
     for (const dish of base.dishes) byKey.set(normalise(dish), { ...blank(dish), written: true })
 
     for (const row of rows) {
       const entry = byKey.get(row.key) ?? blank(row.dish)
-      if (row.reject) entry.rejects += 1
-      else entry.votes += 1
-      if (row.userId === userIdOf(identity)) entry.mine = true
+      const own = row.userId === userIdOf(identity)
+      if (row.reject) {
+        // Only your own rejection hides a dish, and only from you.
+        if (own) entry.hidden = true
+      } else {
+        entry.votes += 1
+        if (own) entry.mine = true
+      }
       byKey.set(row.key, entry)
     }
 
     const all = [...byKey.entries()]
-      .map(([key, e]) => ({ key, ...e }))
-      .filter((d) => d.rejects < REJECTS_TO_DROP)
+      .filter(([, e]) => !e.hidden)
+      .map(([key, e]) => ({ key, dish: e.dish, votes: e.votes, written: e.written, mine: e.mine }))
 
     return {
       threshold: CANON_VOTES,
@@ -132,7 +137,7 @@ export const saveGenerated = internalMutation({
   },
 })
 
-/** Says a dish is not eaten in a country, or takes that back. */
+/** Says a dish is not eaten in a country, which hides it for you, or takes that back. */
 export const reject = mutation({
   args: { country: v.string(), dish: v.string() },
   handler: async (ctx, args) => {
