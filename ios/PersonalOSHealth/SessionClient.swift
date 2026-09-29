@@ -57,12 +57,17 @@ struct SessionClient {
 
     /// Raises a checkout and hands back the page to send the payer to.
     func startPayment(id: String) async throws -> URL {
+        let data = try await transport.action("consultPayments:checkout", ["id": id])
+        return try Self.checkoutPage(from: data)
+    }
+
+    /// The page a raised checkout sends the payer to, or why there is none.
+    static func checkoutPage(from data: Data) throws -> URL {
         struct Raised: Decodable {
             let url: String?
             let paid: Bool
             let error: String?
         }
-        let data = try await transport.action("consultPayments:checkout", ["id": id])
         let raised = try JSONDecoder().decode(Raised.self, from: data)
         if raised.paid { throw PaymentUnavailable.alreadySettled }
         if raised.error != nil { throw PaymentUnavailable.noProcessor }

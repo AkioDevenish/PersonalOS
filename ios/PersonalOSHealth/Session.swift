@@ -195,7 +195,7 @@ final class Session: NSObject, ObservableObject {
     }
 
     /// Whether the server answered and said no, as opposed to not answering.
-    private static func isRefusal(_ error: Error) -> Bool {
+    static func isRefusal(_ error: Error) -> Bool {
         switch error {
         case TransportError.server: return true
         case TransportError.http(let code, _): return (400..<500).contains(code) && code != 408 && code != 429
@@ -220,7 +220,7 @@ final class Session: NSObject, ObservableObject {
     }
 
     /// When a JWT stops being valid, read from its own payload.
-    private static func expiry(of jwt: String) -> Date? {
+    static func expiry(of jwt: String) -> Date? {
         let parts = jwt.split(separator: ".")
         guard parts.count == 3 else { return nil }
         var base64 = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
