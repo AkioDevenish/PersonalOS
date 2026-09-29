@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PersonalOSHealth
+@testable import Forklore
 
 @MainActor
 struct MetricCatalogTests {

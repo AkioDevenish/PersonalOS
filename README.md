@@ -31,7 +31,7 @@ the `personalos://` sign-in scheme, the legal pages).
 
 | Path | What it is |
 |------|------------|
-| `ios/PersonalOSHealth/` | The SwiftUI app (iOS 26.5+). Open `ios/PersonalOSHealth.xcodeproj`. |
+| `ios/Forklore/` | The SwiftUI app (iOS 26.5+). Open `ios/Forklore.xcodeproj`. |
 | `convex/` | The backend: schema, auth, health ingest, consultations, payouts, articles, billing, push. |
 | `convex/*.test.ts` | Backend tests, run with vitest and `convex-test`. |
 | `src/app/` | Next.js pages for `/privacy` and `/terms`, plus icons. There is no web app. |
@@ -46,9 +46,9 @@ npx convex dev        # runs the backend against your dev deployment
 npm test              # backend tests
 ```
 
-Then open `ios/PersonalOSHealth.xcodeproj` in Xcode and run on a device. The app
+Then open `ios/Forklore.xcodeproj` in Xcode and run on a device. The app
 talks straight to Convex; the deployment URL is in
-`ios/PersonalOSHealth/AppConfig.swift`.
+`ios/Forklore/AppConfig.swift`.
 
 `npm run dev` starts the Next.js site if you're working on the legal pages. The
 same pages are also served by Convex at `/privacy` and `/terms` on the deployment's

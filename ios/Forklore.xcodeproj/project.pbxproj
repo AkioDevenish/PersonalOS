@@ -12,37 +12,37 @@
 			containerPortal = 66A6BA132FB78D4D00563D4F /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 66A6BA1A2FB78D4D00563D4F;
-			remoteInfo = PersonalOSHealth;
+			remoteInfo = Forklore;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PersonalOSHealthTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PersonalOSHealth.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0TESTS0000000000000001 /* ForkloreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ForkloreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		66A6BA1B2FB78D4D00563D4F /* Forklore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Forklore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		664AE0112FB7EE650071DFE8 /* Exceptions for "PersonalOSHealth" folder in "PersonalOSHealth" target */ = {
+		664AE0112FB7EE650071DFE8 /* Exceptions for "Forklore" folder in "Forklore" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */;
+			target = 66A6BA1A2FB78D4D00563D4F /* Forklore */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		66A6BA1D2FB78D4D00563D4F /* PersonalOSHealth */ = {
+		66A6BA1D2FB78D4D00563D4F /* Forklore */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				664AE0112FB7EE650071DFE8 /* Exceptions for "PersonalOSHealth" folder in "PersonalOSHealth" target */,
+				664AE0112FB7EE650071DFE8 /* Exceptions for "Forklore" folder in "Forklore" target */,
 			);
-			path = PersonalOSHealth;
+			path = Forklore;
 			sourceTree = "<group>";
 		};
-		AA0TESTS0000000000000002 /* PersonalOSHealthTests */ = {
+		AA0TESTS0000000000000002 /* ForkloreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PersonalOSHealthTests;
+			path = ForkloreTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -68,8 +68,8 @@
 		66A6BA122FB78D4D00563D4F = {
 			isa = PBXGroup;
 			children = (
-				66A6BA1D2FB78D4D00563D4F /* PersonalOSHealth */,
-				AA0TESTS0000000000000002 /* PersonalOSHealthTests */,
+				66A6BA1D2FB78D4D00563D4F /* Forklore */,
+				AA0TESTS0000000000000002 /* ForkloreTests */,
 				66A6BA1C2FB78D4D00563D4F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -77,8 +77,8 @@
 		66A6BA1C2FB78D4D00563D4F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */,
-				AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */,
+				66A6BA1B2FB78D4D00563D4F /* Forklore.app */,
+				AA0TESTS0000000000000001 /* ForkloreTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,9 +86,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */ = {
+		66A6BA1A2FB78D4D00563D4F /* Forklore */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 66A6BA262FB78D5900563D4F /* Build configuration list for PBXNativeTarget "PersonalOSHealth" */;
+			buildConfigurationList = 66A6BA262FB78D5900563D4F /* Build configuration list for PBXNativeTarget "Forklore" */;
 			buildPhases = (
 				66A6BA172FB78D4D00563D4F /* Sources */,
 				66A6BA182FB78D4D00563D4F /* Frameworks */,
@@ -99,19 +99,19 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				66A6BA1D2FB78D4D00563D4F /* PersonalOSHealth */,
+				66A6BA1D2FB78D4D00563D4F /* Forklore */,
 			);
-			name = PersonalOSHealth;
+			name = Forklore;
 			packageProductDependencies = (
 				AA0WEBRTC00000000000P1 /* WebRTC */,
 			);
-			productName = PersonalOSHealth;
-			productReference = 66A6BA1B2FB78D4D00563D4F /* PersonalOSHealth.app */;
+			productName = Forklore;
+			productReference = 66A6BA1B2FB78D4D00563D4F /* Forklore.app */;
 			productType = "com.apple.product-type.application";
 		};
-		AA0TESTS0000000000000006 /* PersonalOSHealthTests */ = {
+		AA0TESTS0000000000000006 /* ForkloreTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "PersonalOSHealthTests" */;
+			buildConfigurationList = AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "ForkloreTests" */;
 			buildPhases = (
 				AA0TESTS0000000000000004 /* Sources */,
 				AA0TESTS0000000000000003 /* Frameworks */,
@@ -123,11 +123,11 @@
 				AA0TESTS0000000000000007 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AA0TESTS0000000000000002 /* PersonalOSHealthTests */,
+				AA0TESTS0000000000000002 /* ForkloreTests */,
 			);
-			name = PersonalOSHealthTests;
-			productName = PersonalOSHealthTests;
-			productReference = AA0TESTS0000000000000001 /* PersonalOSHealthTests.xctest */;
+			name = ForkloreTests;
+			productName = ForkloreTests;
+			productReference = AA0TESTS0000000000000001 /* ForkloreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -149,7 +149,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 66A6BA162FB78D4D00563D4F /* Build configuration list for PBXProject "PersonalOSHealth" */;
+			buildConfigurationList = 66A6BA162FB78D4D00563D4F /* Build configuration list for PBXProject "Forklore" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -166,8 +166,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */,
-				AA0TESTS0000000000000006 /* PersonalOSHealthTests */,
+				66A6BA1A2FB78D4D00563D4F /* Forklore */,
+				AA0TESTS0000000000000006 /* ForkloreTests */,
 			);
 		};
 /* End PBXProject section */
@@ -209,7 +209,7 @@
 /* Begin PBXTargetDependency section */
 		AA0TESTS0000000000000007 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 66A6BA1A2FB78D4D00563D4F /* PersonalOSHealth */;
+			target = 66A6BA1A2FB78D4D00563D4F /* Forklore */;
 			targetProxy = AA0TESTS0000000000000008 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -360,13 +360,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PersonalOSHealth/PersonalOSHealth.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Forklore/Forklore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = NK44S2KGZY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PersonalOSHealth/Info.plist;
+				INFOPLIST_FILE = Forklore/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -395,13 +395,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = PersonalOSHealth/PersonalOSHealth.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Forklore/Forklore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = NK44S2KGZY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PersonalOSHealth/Info.plist;
+				INFOPLIST_FILE = Forklore/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -443,7 +443,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PersonalOSHealth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PersonalOSHealth";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Forklore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Forklore";
 			};
 			name = Debug;
 		};
@@ -465,14 +465,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PersonalOSHealth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PersonalOSHealth";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Forklore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Forklore";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		66A6BA162FB78D4D00563D4F /* Build configuration list for PBXProject "PersonalOSHealth" */ = {
+		66A6BA162FB78D4D00563D4F /* Build configuration list for PBXProject "Forklore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				66A6BA242FB78D5900563D4F /* Debug */,
@@ -481,7 +481,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		66A6BA262FB78D5900563D4F /* Build configuration list for PBXNativeTarget "PersonalOSHealth" */ = {
+		66A6BA262FB78D5900563D4F /* Build configuration list for PBXNativeTarget "Forklore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				66A6BA272FB78D5900563D4F /* Debug */,
@@ -490,7 +490,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "PersonalOSHealthTests" */ = {
+		AA0TESTS0000000000000011 /* Build configuration list for PBXNativeTarget "ForkloreTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA0TESTS0000000000000009 /* Debug */,

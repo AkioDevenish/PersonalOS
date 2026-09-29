@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct PersonalOSHealthApp: App {
+struct ForkloreApp: App {
     @StateObject private var health = HealthKitManager()
     /// Who is signed in.
     @StateObject private var session = Session.shared

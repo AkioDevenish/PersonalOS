@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PersonalOSHealth
+@testable import Forklore
 
 /// A token fit for reading the expiry out of: header, payload and signature, base64url without
 /// padding, as a JWT is sent.

@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # What this repo is
 
-The iOS app (`ios/PersonalOSHealth`, SwiftUI) and its Convex backend (`convex/`).
+The iOS app (`ios/Forklore`, SwiftUI) and its Convex backend (`convex/`).
 The Next.js app in `src/app` only serves the privacy and terms pages; there are
 no API routes, and the app talks to Convex directly. See `README.md` for the
 feature map.
@@ -35,7 +35,7 @@ The full list is in `README.md` under Configuration. Key groups:
 - **Health data:** samples live in Convex (`convex/health/samples.ts`), keyed by
   user, provider, metric and time. There is no SQLite.
 - **AI:** insights are generated on the phone with Apple's Foundation Models
-  (`ios/PersonalOSHealth/OnDeviceInsights.swift`); there is no server model.
+  (`ios/Forklore/OnDeviceInsights.swift`); there is no server model.
 - **Tests:** `npm test` runs the vitest suites in `convex/**/*.test.ts`.
 
 <!-- convex-ai-start -->

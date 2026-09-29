@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "66A6BA1A2FB78D4D00563D4F"
-               BuildableName = "PersonalOSHealth.app"
-               BlueprintName = "PersonalOSHealth"
-               ReferencedContainer = "container:PersonalOSHealth.xcodeproj">
+               BuildableName = "Forklore.app"
+               BlueprintName = "Forklore"
+               ReferencedContainer = "container:Forklore.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,9 +35,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0TESTS0000000000000006"
-               BuildableName = "PersonalOSHealthTests.xctest"
-               BlueprintName = "PersonalOSHealthTests"
-               ReferencedContainer = "container:PersonalOSHealth.xcodeproj">
+               BuildableName = "ForkloreTests.xctest"
+               BlueprintName = "ForkloreTests"
+               ReferencedContainer = "container:Forklore.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -57,9 +57,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "66A6BA1A2FB78D4D00563D4F"
-            BuildableName = "PersonalOSHealth.app"
-            BlueprintName = "PersonalOSHealth"
-            ReferencedContainer = "container:PersonalOSHealth.xcodeproj">
+            BuildableName = "Forklore.app"
+            BlueprintName = "Forklore"
+            ReferencedContainer = "container:Forklore.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -74,9 +74,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "66A6BA1A2FB78D4D00563D4F"
-            BuildableName = "PersonalOSHealth.app"
-            BlueprintName = "PersonalOSHealth"
-            ReferencedContainer = "container:PersonalOSHealth.xcodeproj">
+            BuildableName = "Forklore.app"
+            BlueprintName = "Forklore"
+            ReferencedContainer = "container:Forklore.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

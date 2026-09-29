@@ -1,5 +1,5 @@
 import Testing
-@testable import PersonalOSHealth
+@testable import Forklore
 
 /// The meal engine answers in loosely labelled text; this is what turns it into cards.
 @MainActor
