@@ -35,7 +35,9 @@ struct ProfileView: View {
                     .padding(.top, 34)
                     .padding(.bottom, 6)
 
-                row("creditcard", "Plan and payments", route: .paywall)
+                if Paywall.enabled {
+                    row("creditcard", "Plan and payments", route: .paywall)
+                }
                 row("bell", "Notifications") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
                 }
@@ -68,7 +70,7 @@ struct ProfileView: View {
             .padding(.horizontal, margin)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .navigationBarTitleDisplayMode(.inline)
         .task { application = try? await SpecialistsClient().desk().application }
         .task { if let a = try? await ArticlesClient().abilities() { abilities = a } }
@@ -78,7 +80,7 @@ struct ProfileView: View {
                 application = try? await SpecialistsClient().desk().application
             }
         }
-        .confirmationDialog("Log out of Personal OS?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
+        .confirmationDialog("Log out of Forklore?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
             Button("Log out", role: .destructive) {
                 Task {
                     // Hand the device back before the session goes, or the token stays pointed at
@@ -135,12 +137,12 @@ struct ProfileView: View {
         } else {
             Button { applying = true } label: {
                 card(
-                    title: application == nil ? "Practise on Personal OS" : "Your application",
+                    title: application == nil ? "Join as a nutritionist" : "Your application",
                     note: application == nil
-                        ? "Get verified, offer consultations and write for Home."
+                        ? "Get verified, take clients and write articles."
                         : (application?.declined == true
                            ? "Not approved yet. You can update it and send it again."
-                           : "With our team. You'll be listed once it's checked.")
+                           : "We're reviewing it. You'll be listed once it's approved.")
                 )
             }
             .buttonStyle(.pressRow)
@@ -348,7 +350,7 @@ struct AccountView: View {
                     }
                 }
             } message: {
-                Text("Your account and every way of signing in to it will be removed.")
+                Text("This deletes your account and all your data.")
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

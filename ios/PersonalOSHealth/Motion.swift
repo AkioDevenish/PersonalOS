@@ -200,7 +200,7 @@ struct Composing: View {
                 }
         }
         .frame(height: CGFloat(lines) * barHeight + CGFloat(max(lines - 1, 0)) * gap)
-        .accessibilityLabel("Writing your reading")
+        .accessibilityLabel("Writing your meal ideas")
     }
 
     private func bars(width: CGFloat) -> some View {

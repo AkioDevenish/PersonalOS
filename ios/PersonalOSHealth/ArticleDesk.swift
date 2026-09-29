@@ -59,7 +59,7 @@ struct ArticleEditorView: View {
                     label("Category")
                     chips(Articles.categories, selection: $category)
 
-                    field("Summary", hint: "One or two sentences. Shown under the title.") {
+                    field("Summary", hint: "A sentence or two. It shows under the title.") {
                         TextField("", text: $summary, axis: .vertical).lineLimit(2...4)
                     }
 
@@ -134,7 +134,7 @@ struct ArticleEditorView: View {
                 }
                 .padding(20)
             }
-            .background(Theme.background)
+            .appBackground()
             .navigationTitle(existing == nil ? "New article" : "Edit article")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -301,7 +301,7 @@ struct MyArticlesView: View {
                         .foregroundStyle(Theme.accent)
                 }
             } footer: {
-                Text("Our team verifies each article. Once verified, pay to show it on Home for 30 days\(price.map { " (\($0))" } ?? ""). Editing takes it off Home until it is verified again.")
+                Text("Our team checks every article. Once it's approved, you can pay to put it on Home for 30 days\(price.map { " (\($0))" } ?? ""). If you edit it, it comes off Home until we check it again.")
             }
 
             if let failure {
@@ -504,7 +504,7 @@ struct ArticleReviewView: View {
             }
             .padding(20)
         }
-        .background(Theme.background)
+        .appBackground()
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .hidesSystemTabBar()

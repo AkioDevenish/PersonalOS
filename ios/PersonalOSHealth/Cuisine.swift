@@ -75,7 +75,7 @@ struct CountryPicker: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .background(Theme.background)
+            .appBackground()
             .navigationTitle("Where you eat")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: "Country")

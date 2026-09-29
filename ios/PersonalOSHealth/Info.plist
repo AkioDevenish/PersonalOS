@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Personal OS</string>
+	<string>Forklore</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Personal OS uses the camera for video consultations with a practitioner you have chosen.</string>
+	<string>So you can video call a nutritionist.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Personal OS reads steps, distance, flights, and walking metrics to sync with your hub. If you use the cycle page, it also reads your period from Health; that stays on this phone and is never sent anywhere.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Personal OS writes one thing to Health: a period you record on the cycle page. It is saved to Health so your watch can use it and so you can delete it there yourself.</string>
+	<string>Forklore reads your steps, sleep, heart rate and glucose so meal ideas fit your day.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Personal OS uses the microphone for video consultations with a practitioner you have chosen.</string>
+	<string>So you can talk to the assistant and join video calls with a nutritionist.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>So you can talk to the assistant instead of typing.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>EBGaramond.ttf</string>

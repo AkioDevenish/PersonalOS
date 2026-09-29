@@ -18,13 +18,13 @@ struct SpecialistsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Ask a person")
+                Text("Talk to a nutritionist")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                     .padding(.top, 6)
                     .flowIn(0)
 
-                Text("Verified practitioners who can read your data and reply.")
+                Text("Get advice on your diet from a nutritionist.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineSpacing(5)
@@ -70,7 +70,7 @@ struct SpecialistsView: View {
 
                     if shown.isEmpty {
                         Text(hereOnly
-                             ? "Nobody is here right now. Turn off \u{201C}Here now\u{201D} to see everyone."
+                             ? "No one's online right now. Turn off \u{201C}Here now\u{201D} to see everyone."
                              : "Nobody here matches that.")
                             .font(Theme.sans(13))
                             .foregroundStyle(Theme.tertiaryText)
@@ -82,7 +82,7 @@ struct SpecialistsView: View {
             .padding(.horizontal, 22)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .refreshable { await load() }
         // Deliberately not `.task`.
         .onAppear {
@@ -342,7 +342,7 @@ struct SpecialistsView: View {
             Text("Nobody listed yet")
                 .font(Theme.serif(24))
                 .foregroundStyle(Theme.text)
-            Text("No practitioner has been approved for the directory so far.")
+            Text("Check back soon.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
@@ -478,7 +478,7 @@ struct SpecialistApplicationSheet: View {
                             Text(uploading ? "Sending your photograph" : "Your photograph")
                                 .font(Theme.sans(13, medium: true))
                                 .foregroundStyle(Theme.text)
-                            Text("A face makes a card worth reading. Optional.")
+                            Text("Optional.")
                                 .font(Theme.sans(11))
                                 .foregroundStyle(Theme.tertiaryText)
                         }
@@ -632,7 +632,7 @@ struct SpecialistApplicationSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.background)
+        .appBackground()
         .onAppear(perform: prefill)
     }
 

@@ -18,7 +18,7 @@ struct OfflineView: View {
                 .foregroundStyle(Theme.text)
                 .padding(.top, 24)
 
-            Text("Personal OS needs a connection. It'll pick up as soon as you're back online.")
+            Text("Forklore needs a connection. It'll pick up as soon as you're back online.")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -46,6 +46,6 @@ struct OfflineView: View {
         }
         .padding(.horizontal, 34)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .appBackground()
     }
 }

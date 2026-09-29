@@ -17,7 +17,7 @@ http.route({
       `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Personal OS</title>
+<title>Forklore</title>
 <style>
   :root { color-scheme: light dark }
   body { margin: 0; display: grid; place-items: center; min-height: 100vh;
@@ -28,7 +28,7 @@ http.route({
 </style>
 <main>
   <h1>Thank you</h1>
-  <p>You can close this page and return to Personal OS. It checks the payment with the processor itself.</p>
+  <p>You can close this page and return to Forklore. It checks the payment with the processor itself.</p>
 </main>`,
       { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
     )
@@ -43,7 +43,7 @@ http.route({
       `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Personal OS</title>
+<title>Forklore</title>
 <style>
   :root { color-scheme: light dark }
   body { margin: 0; display: grid; place-items: center; min-height: 100vh;
@@ -54,7 +54,7 @@ http.route({
 </style>
 <main>
   <h1>Thank you</h1>
-  <p>You can close this page and return to Personal OS. It will ask Stripe whether your account is ready; that can take a little while after you finish.</p>
+  <p>You can close this page and return to Forklore. It will ask Stripe whether your account is ready; that can take a little while after you finish.</p>
 </main>`,
       { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
     )

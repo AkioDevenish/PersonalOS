@@ -2,13 +2,19 @@ import SwiftUI
 
 /// What the tab bar shows.
 enum AppTab: CaseIterable, Hashable {
-    case home, health
+    case home, meals, assistant, practitioners, profile
+
+    /// What the tab bar shows. Home is hidden for now; Profile is reached from the picture at the top right.
+    static let visible: [AppTab] = [.meals, .assistant, .practitioners]
 
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
         switch self {
         case .home: return "house"
-        case .health: return "heart"
+        case .meals: return "leaf"
+        case .assistant: return "sparkles"
+        case .practitioners: return "person.2"
+        case .profile: return "person.crop.circle"
         }
     }
 
@@ -16,14 +22,17 @@ enum AppTab: CaseIterable, Hashable {
     var title: String {
         switch self {
         case .home: return "Home"
-        case .health: return "Health"
+        case .meals: return "Meals"
+        case .assistant: return "Pitchfork"
+        case .practitioners: return "Experts"
+        case .profile: return "Profile"
         }
     }
 }
 
 /// Everywhere you can go from a tab's root.
 enum Route: Hashable {
-    case briefing, history, nutrition, specialists, professionals, paywall, goals, cycle
+    case professionals, paywall
     /// One practitioner's page.
     case practitioner(SpecialistsClient.Specialist)
     /// The other side of the desk, for somebody who is listed.
@@ -46,7 +55,7 @@ enum Route: Hashable {
 
 struct RootView: View {
     @EnvironmentObject private var notifier: Notifier
-    @State private var tab: AppTab = .home
+    @State private var tab: AppTab = .meals
     /// A stack per tab rather than one shared between them.
     @State private var paths: [AppTab: [Route]] = [:]
     @State private var bar = TabBarState()
@@ -54,7 +63,7 @@ struct RootView: View {
     var body: some View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background)
+            .appBackground()
             // Laid over the pages rather than beneath them, so content scrolls under the glass the
             // way it does under the system's own bar.
             .overlay(alignment: .bottom) {
@@ -66,8 +75,9 @@ struct RootView: View {
     /// The pages, in a TabView whose own bar is hidden.
     private var page: some View {
         TabView(selection: selection) {
-            Tab(value: AppTab.home) { stack(for: .home) }
-            Tab(value: AppTab.health) { stack(for: .health) }
+            ForEach(AppTab.visible, id: \.self) { t in
+                Tab(value: t) { stack(for: t) }
+            }
         }
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to how far down the last
@@ -76,10 +86,10 @@ struct RootView: View {
         // A tapped notification should land on the thing it announced, not on whatever screen the
         // app was last showing.
         .onChange(of: notifier.opened) { _, route in
-            guard let route else { return }
+            guard route != nil else { return }
             withAnimation(Theme.Motion.flow) {
-                tab = .health
-                paths[.health] = [route]
+                tab = .practitioners
+                paths[.practitioners] = []
             }
             notifier.opened = nil
         }
@@ -93,16 +103,10 @@ struct RootView: View {
                 .navigationDestination(for: Route.self) { route in
                     Group {
                     switch route {
-                    case .briefing:     BriefingView()
-                    case .history:      TrendsView()
-                    case .nutrition:    NutritionView()
-                    case .specialists:  ExpertsView()
                     case .professionals: SpecialistsView()
                     case .practitioner(let one): SpecialistProfileView(specialist: one)
                     case .practice: PractitionerView()
                     case .paywall:      PaywallView()
-                    case .goals:        GoalsView()
-                    case .cycle:        CycleView()
                     case .profile:      ProfileView()
                     case .practiceHub:  PracticeHubView()
                     case .myArticles:   MyArticlesView()
@@ -115,7 +119,7 @@ struct RootView: View {
                     // Set on every pushed page too.
                     .hidesSystemTabBar()
                 }
-                .toolbarBackground(Theme.background, for: .navigationBar)
+                .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 
@@ -124,8 +128,11 @@ struct RootView: View {
         switch t {
         // The rows on Home send you to a tab, which only the bar's selection can do, so it is
         // handed the way to ask.
-        case .home:     HomeView { tab = $0 }
-        case .health:   HealthView()
+        case .home:          HomeView()
+        case .meals:         NutritionView()
+        case .assistant:     AssistantView()
+        case .practitioners: SpecialistsView()
+        case .profile:       ProfileView()
         }
     }
 

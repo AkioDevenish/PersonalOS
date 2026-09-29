@@ -81,9 +81,13 @@ const articleFields = {
 // MARK: Reading
 
 /** Whether this reader has a subscription. */
+/** Off unless the PAYWALL env var is "on", so every signed-in reader gets the full archive. */
+const paywallOn = () => process.env.PAYWALL === "on"
+
 async function subscribes(ctx: QueryCtx, now: number): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) return false
+  if (!paywallOn()) return true
   const row = await ctx.db
     .query("entitlements")
     .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))

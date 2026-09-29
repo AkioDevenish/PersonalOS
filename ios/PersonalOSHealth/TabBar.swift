@@ -21,7 +21,7 @@ struct AppTabBar: View {
 
     var body: some View {
         HStack(spacing: state.compact ? 6 : 10) {
-            ForEach(AppTab.allCases, id: \.self) { tab in
+            ForEach(AppTab.visible, id: \.self) { tab in
                 Button {
                     select(tab)
                 } label: {

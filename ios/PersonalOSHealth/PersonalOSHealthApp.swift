@@ -62,6 +62,6 @@ struct LoadingView: View {
     var body: some View {
         VStack {}
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .appBackground()
     }
 }

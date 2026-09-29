@@ -258,7 +258,7 @@ enum SessionError: LocalizedError {
 enum LocalData {
     private static let ownerKey = "personal_os_local_owner"
     /// Versioned, so a new introduction is shown once even to people who finished the old one.
-    static let onboardedKey = "onboarded_v3"
+    static let onboardedKey = "onboarded_v4"
 
     /// Records whose data this is, clearing the last account's first if it was somebody else's.
     @MainActor
@@ -268,11 +268,10 @@ enum LocalData {
         UserDefaults.standard.set(accountId, forKey: ownerKey)
     }
 
-    /// Readings, goals, sync progress and the introduction, all tied to one account.
+    /// Readings, sync progress and the introduction, all tied to one account.
     @MainActor
     static func forget() {
         Readings.shared.removeAll()
-        Goals.all = [:]
         AppConfig.syncCursor = nil
         for key in [ownerKey, "last_sync_at", AutoSync.backfilledKey, onboardedKey] {
             UserDefaults.standard.removeObject(forKey: key)

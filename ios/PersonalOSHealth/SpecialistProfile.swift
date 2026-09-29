@@ -115,7 +115,7 @@ struct SpecialistProfileView: View {
             .padding(.top, 8)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .navigationBarTitleDisplayMode(.inline)
         // A paid conversation is confirmed before the credits move.
         .confirmationDialog(
@@ -172,7 +172,7 @@ struct SpecialistProfileView: View {
     private var costLine: String {
         specialist.free
             ? "Free to message."
-            : "\(specialist.price) for a conversation, paid to \(specialist.name) when it opens."
+            : "\(specialist.price) per conversation, paid when it starts."
     }
 
     private var confirmTitle: String {
@@ -270,7 +270,7 @@ struct ChatView: View {
                         if thread.messages.isEmpty {
                             Text(canShareReadings
                      ? "What would you like to ask? \(peer) only sees your data if you share it."
-                     : "Nothing from their ledger is here unless they chose to send it.")
+                     : "You'll only see their health data if they share it.")
                                 .font(Theme.sans(12))
                                 .foregroundStyle(Theme.tertiaryText)
                                 .lineSpacing(4)
@@ -303,7 +303,7 @@ struct ChatView: View {
 
             composer
         }
-        .background(Theme.background)
+        .appBackground()
         .task {
             await refresh()
             poller = Task {
@@ -351,7 +351,7 @@ struct ChatView: View {
         .padding(.horizontal, 20)
         .padding(.top, 18)
         .padding(.bottom, 14)
-        .background(Theme.background)
+        .background(.regularMaterial)
     }
 
     private func bubble(_ message: SessionClient.Message) -> some View {
@@ -434,7 +434,7 @@ struct ChatView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .background(Theme.background)
+        .background(.regularMaterial)
     }
 
     private var ready: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -593,7 +593,7 @@ struct VideoCallView: View {
                 // Said before a call fails rather than after, since this is the cause of most calls
                 // that cannot connect.
                 if !engine.relayAvailable, engine.state != .live {
-                    Text("No relay server is configured, so this will only connect if a direct route exists.")
+                    Text("The call may not connect on some networks.")
                         .font(Theme.sans(10.5))
                         .foregroundStyle(Theme.accent.opacity(0.9))
                         .multilineTextAlignment(.center)
@@ -811,7 +811,7 @@ struct PaymentView: View {
                 .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .appBackground()
     }
 
     private func pay() async {
@@ -880,7 +880,7 @@ struct ShareReadingsSheet: View {
                         .frame(height: 96)
                         .padding(.top, 28)
                 } else if reading.isEmpty {
-                    Text("Nothing has been recorded today, so there is nothing to share.")
+                    Text("Nothing recorded today yet.")
                         .font(Theme.sans(13))
                         .foregroundStyle(Theme.tertiaryText)
                         .padding(.top, 30)
@@ -924,7 +924,7 @@ struct ShareReadingsSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.background)
+        .appBackground()
         .task { await load() }
     }
 

@@ -3,7 +3,7 @@ import StoreKit
 
 /// The subscription and credit surface.
 struct PaywallView: View {
-    /// Completes "A subscription lets Personal OS…", when somebody arrived here by reaching for
+    /// Completes "A subscription lets Forklore…", when somebody arrived here by reaching for
     /// something rather than by opening Settings.
     var reason: String? = nil
 
@@ -13,19 +13,19 @@ struct PaywallView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Personal OS", color: Theme.accent, size: 11)
+                Kicker(text: "Forklore", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 if let reason {
-                    Text("A subscription lets Personal OS \(reason).")
+                    Text("A subscription lets Forklore \(reason).")
                         .font(Theme.sans(14, medium: true))
                         .foregroundStyle(Theme.accent)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 10)
                 }
 
-                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Readings and writing.")
+                Text(store.entitlement.isSubscribed ? "You're subscribed." : "Meal ideas and every article.")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
@@ -38,10 +38,9 @@ struct PaywallView: View {
                     .padding(.top, 12)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    point("Readings written on your phone, by four specialists")
                     point("What to eat next, from your own measurements")
-                    point("Every article practitioners write, on Home and in the archive")
-                    point("Your ledger, goals and cycle stay free, and always will")
+                    point("Every article practitioners write, including the archive")
+                    point("Browsing experts and articles stays free")
                 }
                 .padding(.top, 24)
 
@@ -97,7 +96,7 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .navigationTitle("Plans")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -110,9 +109,9 @@ struct PaywallView: View {
 
     private var blurb: String {
         if store.entitlement.isSubscribed {
-            return "Readings and the full library are yours while you're subscribed."
+            return "Meal ideas and the full library are yours while you're subscribed."
         }
-        return "Tracking is free. A subscription adds readings, meal ideas and practitioners' articles."
+        return "Browsing is free. A subscription adds meal ideas and the full article library."
     }
 
     /// One line of what the subscription includes.
@@ -181,7 +180,7 @@ struct PaywallView: View {
 /// Says what a subscription is for, at the moment somebody reaches for it.
 struct SubscriptionNeeded: ViewModifier {
     @Binding var showing: Bool
-    /// "write you a reading" — completes "A subscription lets Personal OS…".
+    /// "write you a reading" — completes "A subscription lets Forklore…".
     let toDo: String
 
     func body(content: Content) -> some View {

@@ -22,19 +22,15 @@ describe("one person across sign-ins", () => {
 
   test("what was written in one session is there in the next", async () => {
     const t = convexTest(schema, modules)
-    await t.withIdentity(first).mutation(api.finance.add, {
-      date: Date.now(), minor: -1250, currency: "USD", category: "Food",
-    })
-    const ledger = await t.withIdentity(again).query(api.finance.ledger, { from: 0, to: Date.now() + 1 })
-    expect(ledger.entries).toHaveLength(1)
+    await t.withIdentity(first).mutation(api.health.cuisine.suggest, { country: "ZW", dish: "Sadza" })
+    const book = await t.withIdentity(again).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(book.all.find((d) => d.dish === "Sadza")?.mine).toBe(true)
   })
 
   test("and is still nobody else's", async () => {
     const t = convexTest(schema, modules)
-    await t.withIdentity(first).mutation(api.finance.add, {
-      date: Date.now(), minor: -1250, currency: "USD", category: "Food",
-    })
-    const theirs = await t.withIdentity(other).query(api.finance.ledger, { from: 0, to: Date.now() + 1 })
-    expect(theirs.entries).toHaveLength(0)
+    await t.withIdentity(first).mutation(api.health.cuisine.suggest, { country: "ZW", dish: "Sadza" })
+    const book = await t.withIdentity(other).query(api.health.cuisine.forCountry, { country: "ZW" })
+    expect(book.all.find((d) => d.dish === "Sadza")?.mine).toBe(false)
   })
 })

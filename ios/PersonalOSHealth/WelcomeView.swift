@@ -13,13 +13,10 @@ struct WelcomeView: View {
                 .accessibilityHidden(true)
                 .flowIn(0, distance: 16)
 
-            Text("Personal OS")
-                .font(Theme.serif(40))
-                .foregroundStyle(Theme.text)
-                .padding(.top, 26)
-                .flowIn(1)
+            ForkloreWordmark(size: 54)
+                .padding(.top, 22)
 
-            Text("Your health, read clearly and kept close.")
+            Text("Meals, experts and articles for your health.")
                 .font(Theme.serifBody(18))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -27,9 +24,9 @@ struct WelcomeView: View {
                 .flowIn(1)
 
             VStack(alignment: .leading, spacing: 16) {
-                line("heart.text.square", "Reads Apple Health, so there is nothing to type")
-                line("sparkles", "Readings written on your phone, not on a server")
-                line("person.2", "Real practitioners, whenever you want one")
+                line("heart.text.square", "Uses Apple Health, so there's nothing to type")
+                line("leaf", "Meal ideas made on your phone")
+                line("person.2", "Chat with a nutritionist")
             }
             .padding(.top, 34)
             .padding(.horizontal, 8)
@@ -59,7 +56,7 @@ struct WelcomeView: View {
             }
             .flowIn(3)
 
-            Text("Your cycle and your readings stay on this phone.")
+            Text("Your health data is never sold.")
                 .font(Theme.sans(12))
                 .foregroundStyle(Theme.tertiaryText)
                 .multilineTextAlignment(.center)
@@ -70,7 +67,7 @@ struct WelcomeView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: 520)
         .frame(maxWidth: .infinity)
-        .background(Theme.background)
+        .appBackground()
         .sheet(item: $mode) { mode in
             AuthSheet(mode: mode)
         }

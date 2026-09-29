@@ -64,7 +64,7 @@ struct PractitionerView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .refreshable { await load() }
         .onAppear {
             guard queue.isEmpty else { return }
