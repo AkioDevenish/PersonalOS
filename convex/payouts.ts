@@ -48,7 +48,7 @@ export const link = action({
       const created = await stripe("/accounts", {
         type: "express",
         "capabilities[transfers][requested]": "true",
-        "business_profile[product_description]": "Health consultations on Spoonful",
+        "business_profile[product_description]": "Health consultations on Forklore",
         ...(profile.country ? { country: profile.country } : {}),
         ...(identity.email ? { email: identity.email } : {}),
       })

@@ -4,6 +4,9 @@ import SwiftUI
 enum AppTab: CaseIterable, Hashable {
     case home, meals, assistant, practitioners, profile
 
+    /// What the tab bar shows. Home is hidden for now; Profile is reached from the picture at the top right.
+    static let visible: [AppTab] = [.meals, .assistant, .practitioners]
+
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
         switch self {
@@ -52,7 +55,7 @@ enum Route: Hashable {
 
 struct RootView: View {
     @EnvironmentObject private var notifier: Notifier
-    @State private var tab: AppTab = .home
+    @State private var tab: AppTab = .meals
     /// A stack per tab rather than one shared between them.
     @State private var paths: [AppTab: [Route]] = [:]
     @State private var bar = TabBarState()
@@ -72,11 +75,9 @@ struct RootView: View {
     /// The pages, in a TabView whose own bar is hidden.
     private var page: some View {
         TabView(selection: selection) {
-            Tab(value: AppTab.home) { stack(for: .home) }
-            Tab(value: AppTab.meals) { stack(for: .meals) }
-            Tab(value: AppTab.assistant) { stack(for: .assistant) }
-            Tab(value: AppTab.practitioners) { stack(for: .practitioners) }
-            Tab(value: AppTab.profile) { stack(for: .profile) }
+            ForEach(AppTab.visible, id: \.self) { t in
+                Tab(value: t) { stack(for: t) }
+            }
         }
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to how far down the last

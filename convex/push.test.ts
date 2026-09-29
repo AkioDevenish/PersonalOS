@@ -60,7 +60,7 @@ describe("devices", () => {
     const t = convexTest(schema, modules)
     await t.withIdentity(ME).mutation(api.devices.register, { token: TOKEN, platform: "ios" })
     const result = await t.action(internal.push.send, {
-      userId: ME.subject, title: "Spoonful", body: "Your practitioner has replied.",
+      userId: ME.subject, title: "Forklore", body: "Your practitioner has replied.",
     })
     expect(result).toEqual({ delivered: 0, forgotten: 0, skipped: true })
   })

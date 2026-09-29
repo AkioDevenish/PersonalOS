@@ -405,7 +405,7 @@ export const send = mutation({
     if (other) {
       await ctx.scheduler.runAfter(0, internal.push.send, {
         userId: other,
-        title: "Spoonful",
+        title: "Forklore",
         body: mine ? "Someone has sent you a question." : "Your practitioner has replied.",
         route: "specialists",
       })

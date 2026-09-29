@@ -13,7 +13,7 @@ struct WelcomeView: View {
                 .accessibilityHidden(true)
                 .flowIn(0, distance: 16)
 
-            SpoonfulWordmark(size: 54)
+            ForkloreWordmark(size: 54)
                 .padding(.top, 22)
 
             Text("Meals, experts and articles for your health.")

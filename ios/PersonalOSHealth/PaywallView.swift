@@ -3,7 +3,7 @@ import StoreKit
 
 /// The subscription and credit surface.
 struct PaywallView: View {
-    /// Completes "A subscription lets Spoonful…", when somebody arrived here by reaching for
+    /// Completes "A subscription lets Forklore…", when somebody arrived here by reaching for
     /// something rather than by opening Settings.
     var reason: String? = nil
 
@@ -13,12 +13,12 @@ struct PaywallView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Kicker(text: "Spoonful", color: Theme.accent, size: 11)
+                Kicker(text: "Forklore", color: Theme.accent, size: 11)
                     .padding(.top, 12)
                     .flowIn(0)
 
                 if let reason {
-                    Text("A subscription lets Spoonful \(reason).")
+                    Text("A subscription lets Forklore \(reason).")
                         .font(Theme.sans(14, medium: true))
                         .foregroundStyle(Theme.accent)
                         .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +180,7 @@ struct PaywallView: View {
 /// Says what a subscription is for, at the moment somebody reaches for it.
 struct SubscriptionNeeded: ViewModifier {
     @Binding var showing: Bool
-    /// "write you a reading" — completes "A subscription lets Spoonful…".
+    /// "write you a reading" — completes "A subscription lets Forklore…".
     let toDo: String
 
     func body(content: Content) -> some View {

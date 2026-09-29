@@ -9,7 +9,7 @@ function page(title: string, body: string): Response {
     `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title} — Spoonful</title>
+<title>${title} — Forklore</title>
 <style>
   :root { color-scheme: light dark; --ink: #17181a; --dim: #6b6f76; --rule: #e3e4e7; --bg: #fdfdfd }
   @media (prefers-color-scheme: dark) {
@@ -52,7 +52,7 @@ export const privacy = () =>
   page(
     "Privacy",
     `
-<p>Spoonful uses your health information, which is about as personal as data gets. This page explains what we keep, where we keep it, and who can see it.</p>
+<p>Forklore uses your health information, which is about as personal as data gets. This page explains what we keep, where we keep it, and who can see it.</p>
 
 <h2>What stays on your phone</h2>
 <ul>
@@ -84,7 +84,7 @@ export const privacy = () =>
 <p>One exception: if you are a practitioner and have published articles, those remain, because readers have paid to read them. Ask us if you want them taken down.</p>
 
 <h2>Children</h2>
-<p>Spoonful isn't meant for anyone under 16.</p>
+<p>Forklore isn't meant for anyone under 16.</p>
 
 <h2>Changes</h2>
 <p>If we change what we collect or who sees it, we'll tell you in the app.</p>
@@ -96,13 +96,13 @@ export const terms = () =>
     "Terms",
     `
 <h2>What this app is</h2>
-<p>Spoonful suggests meals from your own health data, lets you consult independent practitioners, and lets you read articles they write.</p>
+<p>Forklore suggests meals from your own health data, lets you consult independent practitioners, and lets you read articles they write.</p>
 
 <h2>What it is not</h2>
-<p><strong>Nothing in Spoonful is medical advice.</strong> Meal ideas come from software reading your phone's numbers, and they can be wrong. Articles are each practitioner's own view. If something about your health worries you, see a doctor, and don't wait because of anything in this app.</p>
+<p><strong>Nothing in Forklore is medical advice.</strong> Meal ideas come from software reading your phone's numbers, and they can be wrong. Articles are each practitioner's own view. If something about your health worries you, see a doctor, and don't wait because of anything in this app.</p>
 
 <h2>Practitioners</h2>
-<p>Practitioners on Spoonful are independent, not our employees. We check who they are and review their articles before they go up, but they're responsible for their own advice.</p>
+<p>Practitioners on Forklore are independent, not our employees. We check who they are and review their articles before they go up, but they're responsible for their own advice.</p>
 <p>We take a 15% commission on consultations and paid article placement. Practitioners are paid through Stripe.</p>
 
 <h2>Paying</h2>
@@ -113,9 +113,9 @@ export const terms = () =>
 <p>Keep your password private, and tell us if you think someone else is using your account. You can delete your account at any time from inside the app.</p>
 
 <h2>Ending it</h2>
-<p>You can stop using Spoonful whenever you like. We may close accounts used to harass people, pose as a practitioner, or break the law.</p>
+<p>You can stop using Forklore whenever you like. We may close accounts used to harass people, pose as a practitioner, or break the law.</p>
 
 <h2>Liability</h2>
-<p>Spoonful is provided as is. We can't promise it will always work or that every number is right. As far as the law allows, we aren't liable for decisions you make based on the app. Nothing here limits liability that the law says can't be limited.</p>
+<p>Forklore is provided as is. We can't promise it will always work or that every number is right. As far as the law allows, we aren't liable for decisions you make based on the app. Nothing here limits liability that the law says can't be limited.</p>
 `,
   )

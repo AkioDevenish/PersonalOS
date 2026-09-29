@@ -388,7 +388,7 @@ struct OnboardingView: View {
                 }
                 .accessibilityHidden(true)
             },
-            primary: "Open Spoonful",
+            primary: "Open Forklore",
             action: {
                 Haptics.tap()
                 finish()

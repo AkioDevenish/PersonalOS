@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Spoonful</string>
+	<string>Forklore</string>
 	<key>NSCameraUsageDescription</key>
 	<string>So you can video call a nutritionist.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Spoonful reads your steps, sleep, heart rate and glucose so meal ideas fit your day.</string>
+	<string>Forklore reads your steps, sleep, heart rate and glucose so meal ideas fit your day.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>So you can talk to the assistant and join video calls with a nutritionist.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

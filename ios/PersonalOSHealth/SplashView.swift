@@ -11,9 +11,9 @@ struct SplashView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                SpoonfulWordmark(size: 64)
+                ForkloreWordmark(size: 64)
 
-                Kicker(text: "Good food, close to home")
+                Kicker(text: "Every dish has a story")
                     .tracking(3)
                     .padding(.top, 14)
                     .opacity(appeared ? 1 : 0)
