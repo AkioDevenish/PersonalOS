@@ -1,4 +1,4 @@
-# Personal OS
+# Forklore
 
 An iOS app for health, food and the rest of a day: it reads Apple Health, writes a
 morning briefing on the phone itself, and connects people with nutritionists and
@@ -24,6 +24,9 @@ serves the privacy policy and terms.
 AI insights run on the phone with Apple's Foundation Models (Apple Intelligence),
 so no health data is sent to a model server.
 
+The code still uses the working name Personal OS in places (the Xcode target,
+the `personalos://` sign-in scheme, the legal pages).
+
 ## Layout
 
 | Path | What it is |
@@ -34,6 +37,7 @@ so no health data is sent to a model server.
 | `src/app/` | Next.js pages for `/privacy` and `/terms`, plus icons. There is no web app. |
 | `scripts/apple-secret.mjs` | Makes the Sign in with Apple client secret from a `.p8` key. |
 | `BRANDING.md`, `DESIGN.md` | Brand and design notes. |
+| `docs/machine-backups/` | Old crontab and launchd files from the Mac setup, kept for reference. |
 
 ## Getting started
 
