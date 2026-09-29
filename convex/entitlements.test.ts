@@ -127,3 +127,48 @@ describe("the archive check", () => {
       .toBe(true)
   })
 })
+
+describe("the expiry sweep", () => {
+  test("marks lapsed subscriptions expired and leaves running and open-ended ones alone", async () => {
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.billing.entitlements.applyVerified, verified({ expiresAt: Date.now() - 1 }))
+    await t.mutation(internal.billing.entitlements.applyVerified, verified({
+      userId: OTHER.subject, verifiedTransactionId: "tx_running", expiresAt: Date.now() + DAY,
+    }))
+    await t.mutation(internal.billing.entitlements.applyVerified, {
+      userId: "user_forever", verifiedTransactionId: "tx_forever", productId: "os.personal.sub.yearly",
+    })
+
+    expect(await t.mutation(internal.billing.entitlements.expireLapsed, {})).toEqual({ expired: 1 })
+
+    const statuses = await t.run(async (ctx) =>
+      Object.fromEntries(
+        (await ctx.db.query("entitlements").collect()).map((r) => [r.userId, r.subscription_status]),
+      ),
+    )
+    expect(statuses).toEqual({ [ME.subject]: "expired", [OTHER.subject]: "active", user_forever: "active" })
+  })
+
+  test("once swept, an old clock from the phone does not reopen the archive", async () => {
+    const t = convexTest(schema, modules)
+    const expiresAt = Date.now() - 1
+    await t.mutation(internal.billing.entitlements.applyVerified, verified({ expiresAt }))
+    const me = t.withIdentity(ME)
+    // Before the sweep the query can only go on the time it is given.
+    expect(await me.query(api.billing.entitlements.subscribed, { now: expiresAt - DAY })).toBe(true)
+
+    await t.mutation(internal.billing.entitlements.expireLapsed, {})
+    expect(await me.query(api.billing.entitlements.subscribed, { now: expiresAt - DAY })).toBe(false)
+  })
+
+  test("a renewal after the sweep makes the subscription active again", async () => {
+    const t = convexTest(schema, modules)
+    await t.mutation(internal.billing.entitlements.applyVerified, verified({ expiresAt: Date.now() - 1 }))
+    await t.mutation(internal.billing.entitlements.expireLapsed, {})
+    await t.mutation(internal.billing.entitlements.applyVerified, verified({
+      verifiedTransactionId: "tx_2", expiresAt: Date.now() + DAY,
+    }))
+    const mine = await t.withIdentity(ME).query(api.billing.entitlements.mine, {})
+    expect(mine.subscription_status).toBe("active")
+  })
+})

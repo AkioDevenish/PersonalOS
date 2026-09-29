@@ -1,6 +1,7 @@
 import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, query, type QueryCtx } from "../_generated/server"
+import { internal } from "../_generated/api"
 
 /** What a user is entitled to, and what they have left. */
 
@@ -82,6 +83,33 @@ export const applyVerified = internalMutation({
       created_at: now,
     })
     return { applied: true }
+  },
+})
+
+/** Rows marked expired per run, before the sweep hands off to a fresh transaction. */
+const SWEEP = 200
+
+/**
+ * Marks subscriptions whose time has run out as expired. Queries are given the time by the client,
+ * which can lie about it, so the stored status is what finally shuts the door. Run by crons.ts.
+ */
+export const expireLapsed = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const lapsed = await ctx.db
+      .query("entitlements")
+      .withIndex("by_subscription_status_and_expires_at", (q) =>
+        q.eq("subscription_status", "active").gt("expires_at", undefined).lt("expires_at", now),
+      )
+      .take(SWEEP)
+    for (const row of lapsed) {
+      await ctx.db.patch(row._id, { subscription_status: "expired", updated_at: now })
+    }
+    if (lapsed.length === SWEEP) {
+      await ctx.scheduler.runAfter(0, internal.billing.entitlements.expireLapsed, {})
+    }
+    return { expired: lapsed.length }
   },
 })
 

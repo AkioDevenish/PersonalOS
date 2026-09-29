@@ -158,7 +158,9 @@ export default defineSchema({
     /** Apple's stable per-user id, for reconciling renewals. */
     original_transaction_id: v.optional(v.string()),
     updated_at: v.number(),
-  }).index("by_user", ["userId"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_subscription_status_and_expires_at", ["subscription_status", "expires_at"]),
 
   /** Every App Store purchase that has been applied. */
   purchase_receipts: defineTable({
