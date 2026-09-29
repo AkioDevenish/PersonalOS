@@ -275,8 +275,11 @@ export const billing = query({
   },
 })
 
-/** Records which processor is carrying this payment, and its reference. */
-export const attachPayment = mutation({
+/**
+ * Records which processor is carrying this payment, and its reference. Internal, so only the
+ * checkout action can set it: a client that could would point its session at any paid checkout.
+ */
+export const attachPayment = internalMutation({
   args: {
     id: v.id("consults"),
     ref: v.string(),
