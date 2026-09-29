@@ -134,7 +134,7 @@ struct AuthSheet: View {
                 .padding(24)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(Theme.background)
+            .appBackground()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
             }

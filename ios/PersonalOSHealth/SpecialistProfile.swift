@@ -115,7 +115,7 @@ struct SpecialistProfileView: View {
             .padding(.top, 8)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .navigationBarTitleDisplayMode(.inline)
         // A paid conversation is confirmed before the credits move.
         .confirmationDialog(
@@ -303,7 +303,7 @@ struct ChatView: View {
 
             composer
         }
-        .background(Theme.background)
+        .appBackground()
         .task {
             await refresh()
             poller = Task {
@@ -351,7 +351,7 @@ struct ChatView: View {
         .padding(.horizontal, 20)
         .padding(.top, 18)
         .padding(.bottom, 14)
-        .background(Theme.background)
+        .background(.regularMaterial)
     }
 
     private func bubble(_ message: SessionClient.Message) -> some View {
@@ -434,7 +434,7 @@ struct ChatView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .background(Theme.background)
+        .background(.regularMaterial)
     }
 
     private var ready: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -811,7 +811,7 @@ struct PaymentView: View {
                 .padding(.bottom, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .appBackground()
     }
 
     private func pay() async {
@@ -924,7 +924,7 @@ struct ShareReadingsSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.background)
+        .appBackground()
         .task { await load() }
     }
 

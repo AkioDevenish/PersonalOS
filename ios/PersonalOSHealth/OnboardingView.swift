@@ -44,7 +44,7 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
         }
-        .background(Theme.background)
+        .appBackground()
         .sheet(isPresented: $showingPlans) {
             PaywallView(reason: "suggest meals and read what practitioners write")
         }

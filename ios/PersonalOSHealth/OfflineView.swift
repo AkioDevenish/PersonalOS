@@ -46,6 +46,6 @@ struct OfflineView: View {
         }
         .padding(.horizontal, 34)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .appBackground()
     }
 }

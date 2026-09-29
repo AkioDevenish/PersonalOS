@@ -134,7 +134,7 @@ struct ArticleEditorView: View {
                 }
                 .padding(20)
             }
-            .background(Theme.background)
+            .appBackground()
             .navigationTitle(existing == nil ? "New article" : "Edit article")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -504,7 +504,7 @@ struct ArticleReviewView: View {
             }
             .padding(20)
         }
-        .background(Theme.background)
+        .appBackground()
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .hidesSystemTabBar()

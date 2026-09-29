@@ -96,7 +96,7 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .navigationTitle("Plans")
         .navigationBarTitleDisplayMode(.inline)
         .task {

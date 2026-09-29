@@ -65,7 +65,7 @@ struct HomeView: View {
         }
         .compactsTabBar()
         .scrollDismissesKeyboard(.immediately)
-        .background(Theme.background)
+        .appBackground()
         .task { await library.refresh() }
         .refreshable { await library.refresh() }
     }

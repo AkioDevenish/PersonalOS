@@ -246,7 +246,7 @@ struct NutritionView: View {
             .padding(.horizontal, 24)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .task { await loadSignals() }
         .task { await loadBook() }
         .onChange(of: country) { _, _ in

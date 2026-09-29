@@ -23,11 +23,11 @@ enum OnDeviceInsights {
             case .ready:
                 return "Runs on this iPhone. Nothing leaves the device."
             case .unsupportedDevice:
-                return "This iPhone can't run on-device intelligence. Choose a hosted model instead."
+                return "This iPhone can't run Apple Intelligence, which this needs."
             case .notEnabled:
                 return "Turn on Apple Intelligence in Settings to use this."
             case .preparing:
-                return "Apple Intelligence is still getting ready. Try again in a few minutes."
+                return "Apple Intelligence is still setting up. Try again in a few minutes."
             }
         }
     }
@@ -85,26 +85,26 @@ enum OnDeviceInsights {
             case .unavailable(let a):
                 return a.explanation
             case .notEnoughData:
-                return "Not enough recorded days yet to draw a pattern from. Wear your watch for a few more days, or widen the range."
+                return "There isn't enough data yet. Try again in a few days."
             case .empty:
-                return "The on-device model returned nothing. Try again."
+                return "Nothing came back. Try again."
             case .generation(let e):
                 switch e {
                 case .exceededContextWindowSize:
                     // The on-device context is far smaller than a hosted model's, so a long window
                     // genuinely won't fit.
-                    return "That's more history than the on-device model can hold at once. Try a shorter range, or switch to a hosted model."
+                    return "That's too much for it to handle at once. Try starting a new conversation."
                 case .assetsUnavailable:
                     return "Apple Intelligence is still downloading. Try again shortly."
                 case .guardrailViolation, .refusal:
                     // Health telemetry can read as medical content to a safety filter.
-                    return "The on-device model declined to answer this one. Health readings sometimes trip its safety filter. A hosted model will usually handle it."
+                    return "It couldn't answer that one. Try asking a different way."
                 case .rateLimited, .concurrentRequests:
-                    return "The on-device model is busy. Try again in a moment."
+                    return "It's busy. Try again in a moment."
                 case .unsupportedLanguageOrLocale:
-                    return "The on-device model doesn't support this language yet."
+                    return "It doesn't support this language yet."
                 default:
-                    return "The on-device model couldn't complete this. Try again, or switch models."
+                    return "Something went wrong. Try again."
                 }
             }
         }

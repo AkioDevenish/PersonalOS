@@ -11,7 +11,9 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Personal OS writes one thing to Health: a period you record on the cycle page. It is saved to Health so your watch can use it and so you can delete it there yourself.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Personal OS uses the microphone for video consultations with a practitioner you have chosen.</string>
+	<string>So you can talk to the assistant and join video calls with a nutritionist.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>So you can talk to the assistant instead of typing.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>EBGaramond.ttf</string>

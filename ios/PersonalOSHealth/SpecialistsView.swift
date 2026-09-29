@@ -82,7 +82,7 @@ struct SpecialistsView: View {
             .padding(.horizontal, 22)
         }
         .compactsTabBar()
-        .background(Theme.background)
+        .appBackground()
         .refreshable { await load() }
         // Deliberately not `.task`.
         .onAppear {
@@ -632,7 +632,7 @@ struct SpecialistApplicationSheet: View {
             .padding(.top, 26)
             .padding(.bottom, 40)
         }
-        .background(Theme.background)
+        .appBackground()
         .onAppear(perform: prefill)
     }
 

@@ -4,23 +4,35 @@ import SwiftUI
 enum Theme {
     // MARK: Colors
 
-    /// The page.
-    static let background = Color(uiColor: .systemBackground)
-    /// A card or field sitting on the page, one step off it.
-    static let surface = Color(uiColor: .secondarySystemBackground)
-    /// A card sitting on a surface: white on light grey, and in dark a step lighter again, the way
-    /// content cards read on a banded section.
-    static let raised = Color(uiColor: .tertiarySystemBackground)
-    /// Anything that speaks: titles, figures, primary text.
-    static let text = Color(uiColor: .label)
-    static let secondaryText = Color(uiColor: .secondaryLabel)
+    /// The page, as a flat colour. Pages draw `gradient` instead; this is for text on dark buttons.
+    static let background = adaptive(light: 0xF4EFE6, dark: 0x211D18)
+    /// A card or field sitting on the page.
+    static let surface = adaptive(light: 0xFBFAF8, dark: 0x2C2721)
+    /// A card sitting on a surface.
+    static let raised = adaptive(light: 0xFFFFFF, dark: 0x36302A)
+    /// Titles, figures, primary text.
+    static let text = adaptive(light: 0x26211C, dark: 0xF4EFE6)
+    static let secondaryText = adaptive(light: 0x6B6259, dark: 0xB8AFA4)
     /// Notes and captions.
-    static let tertiaryText = adaptive(light: 0x3C3C43, dark: 0xEBEBF5, alpha: 0.5)
-    /// The one colour, used as punctuation: links, the selected tab, today.
-    static let accent = adaptive(light: 0x3F7682, dark: 0x79B4C0)
+    static let tertiaryText = adaptive(light: 0x9A9084, dark: 0x8A8177)
+    /// Links, the selected tab, highlights.
+    static let accent = adaptive(light: 0x8C6A4A, dark: 0xD2B48C)
     /// Something met or connected.
     static let positive = adaptive(light: 0x4E7F52, dark: 0x8CC48F)
-    static let separator = Color(uiColor: .separator)
+    static let separator = adaptive(light: 0xE0D7C8, dark: 0x3A332C)
+
+    /// Bone to porcelain in light mode; a warm espresso in dark.
+    static let gradient = LinearGradient(
+        colors: [
+            adaptive(light: 0xE7DECD, dark: 0x1A1713),
+            adaptive(light: 0xEFE8DB, dark: 0x1F1B17),
+            adaptive(light: 0xF4EFE6, dark: 0x24201B),
+            adaptive(light: 0xFAF7F0, dark: 0x27231E),
+            adaptive(light: 0xFBFAF8, dark: 0x2A2520),
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 
     private static func adaptive(light: UInt32, dark: UInt32, alpha: CGFloat = 1) -> Color {
         func make(_ hex: UInt32) -> UIColor {
@@ -53,6 +65,13 @@ enum Theme {
 }
 
 // MARK: - Shared components
+
+extension View {
+    /// The app's gradient behind a whole page.
+    func appBackground() -> some View {
+        background { Theme.gradient.ignoresSafeArea() }
+    }
+}
 
 /// "a" or "an", for a word the app doesn't know in advance.
 func indefiniteArticle(for word: String) -> String {

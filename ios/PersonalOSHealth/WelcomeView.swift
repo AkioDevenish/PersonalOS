@@ -70,7 +70,7 @@ struct WelcomeView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: 520)
         .frame(maxWidth: .infinity)
-        .background(Theme.background)
+        .appBackground()
         .sheet(item: $mode) { mode in
             AuthSheet(mode: mode)
         }

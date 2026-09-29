@@ -2,13 +2,14 @@ import SwiftUI
 
 /// What the tab bar shows.
 enum AppTab: CaseIterable, Hashable {
-    case home, meals, practitioners, profile
+    case home, meals, assistant, practitioners, profile
 
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
         switch self {
         case .home: return "house"
         case .meals: return "leaf"
+        case .assistant: return "sparkles"
         case .practitioners: return "person.2"
         case .profile: return "person.crop.circle"
         }
@@ -19,6 +20,7 @@ enum AppTab: CaseIterable, Hashable {
         switch self {
         case .home: return "Home"
         case .meals: return "Meals"
+        case .assistant: return "Assistant"
         case .practitioners: return "Experts"
         case .profile: return "Profile"
         }
@@ -58,7 +60,7 @@ struct RootView: View {
     var body: some View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background)
+            .appBackground()
             // Laid over the pages rather than beneath them, so content scrolls under the glass the
             // way it does under the system's own bar.
             .overlay(alignment: .bottom) {
@@ -72,6 +74,7 @@ struct RootView: View {
         TabView(selection: selection) {
             Tab(value: AppTab.home) { stack(for: .home) }
             Tab(value: AppTab.meals) { stack(for: .meals) }
+            Tab(value: AppTab.assistant) { stack(for: .assistant) }
             Tab(value: AppTab.practitioners) { stack(for: .practitioners) }
             Tab(value: AppTab.profile) { stack(for: .profile) }
         }
@@ -115,7 +118,7 @@ struct RootView: View {
                     // Set on every pushed page too.
                     .hidesSystemTabBar()
                 }
-                .toolbarBackground(Theme.background, for: .navigationBar)
+                .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 
@@ -126,6 +129,7 @@ struct RootView: View {
         // handed the way to ask.
         case .home:          HomeView()
         case .meals:         NutritionView()
+        case .assistant:     AssistantView()
         case .practitioners: SpecialistsView()
         case .profile:       ProfileView()
         }
