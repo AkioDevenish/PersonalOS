@@ -1,16 +1,16 @@
-# PersonalOSHealth (iOS)
+# Forklore (iOS)
 
-## Open in Xcode
+The SwiftUI app. It needs Xcode with the iOS 26.5 SDK, and a device with Apple
+Intelligence for on-device insights.
 
-```bash
-open ~/personal_os/ios/PersonalOSHealth/PersonalOSHealth.xcodeproj
-```
+## Run it
 
-## Run on iPhone
+1. Open `ios/PersonalOSHealth.xcodeproj` in Xcode.
+2. Pick your iPhone as the run destination and press Run (⌘R).
+3. Go through onboarding and allow Health access when asked.
 
-1. Plug in iPhone → select it as run destination → **Run** (⌘R)
-2. **Server URL:** `http://192.168.100.252:3000` (your Mac Wi‑Fi IP)
-3. **Ingest token:** value from `web/.env.local` → `HEALTH_INGEST_SECRET`
-4. **Request Health access** → **Sync today to hub**
+The app talks straight to Convex. The deployment URL, and the privacy and terms
+links, are in `PersonalOSHealth/AppConfig.swift`. There is no local server to run.
 
-Mac hub must be running: `cd ~/personal_os/web && npm run dev`
+To test purchases without the App Store, choose `PersonalOSHealth/Products.storekit`
+under the scheme's Run options, StoreKit Configuration.
