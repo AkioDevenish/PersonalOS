@@ -44,7 +44,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project ios/PersonalOSHealth.xcodeproj \
-            -scheme PersonalOSHealth \
+            -project ios/Forklore.xcodeproj \
+            -scheme Forklore \
             -destination "id=$SIM_UDID" \
             CODE_SIGNING_ALLOWED=NO

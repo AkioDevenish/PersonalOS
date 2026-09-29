@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PersonalOSHealth
+@testable import Forklore
 
 /// The phone reads HealthKit in its own units; the server stores one canonical unit per metric.
 @MainActor
