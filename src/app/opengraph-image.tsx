@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
  
 export const runtime = 'edge'
-export const alt = 'Personal OS - Time Well Spent'
+export const alt = 'Forklore'
 export const size = {
   width: 1200,
   height: 630,
@@ -89,7 +89,7 @@ export default async function Image() {
             fontStyle: 'italic',
           }}
         >
-          Personal OS
+          Forklore
         </div>
 
         {/* Tagline */}
@@ -103,7 +103,7 @@ export default async function Image() {
             fontWeight: 500,
           }}
         >
-          Time Well Spent
+          Food that fits your day
         </div>
 
         {/* Features */}
@@ -116,10 +116,9 @@ export default async function Image() {
             color: '#8B7355',
           }}
         >
-          <div>💪 Health</div>
-          <div>📊 Data Science</div>
-          <div>💼 Business</div>
-          <div>📢 Marketing</div>
+          <div>🥗 Meals</div>
+          <div>🍴 Pitchfork</div>
+          <div>🧑‍⚕️ Nutritionists</div>
         </div>
       </div>
     ),

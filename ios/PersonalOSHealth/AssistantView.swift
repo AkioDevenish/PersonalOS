@@ -241,14 +241,12 @@ struct AssistantView: View {
         reading = true
         defer { reading = false; photo = nil }
         guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data)?.cgImage else { return }
-
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        try? VNImageRequestHandler(cgImage: image).perform([request])
-        let text = (request.results ?? [])
-            .compactMap { $0.topCandidates(1).first?.string }
-            .joined(separator: "\n")
+              let image = UIImage(data: data), let cgImage = image.cgImage else { return }
+        // Camera photos are stored sideways with the turn in their metadata, which the CGImage drops.
+        let orientation = Self.orientation(of: image)
+        let text = await Task.detached(priority: .userInitiated) {
+            Self.recognizeText(in: cgImage, orientation: orientation)
+        }.value
 
         guard !text.isEmpty else {
             assistant.failure = "I couldn't find any text in that photo."
@@ -256,6 +254,30 @@ struct AssistantView: View {
         }
         draft = draft.isEmpty ? "From a photo:\n\(text)" : "\(draft)\n\nFrom a photo:\n\(text)"
         typing = true
+    }
+
+    /// Accurate recognition takes a moment, so it runs off the main thread.
+    private nonisolated static func recognizeText(in image: CGImage, orientation: CGImagePropertyOrientation) -> String {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        try? VNImageRequestHandler(cgImage: image, orientation: orientation).perform([request])
+        return (request.results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
+    }
+
+    private static func orientation(of image: UIImage) -> CGImagePropertyOrientation {
+        switch image.imageOrientation {
+        case .up: return .up
+        case .down: return .down
+        case .left: return .left
+        case .right: return .right
+        case .upMirrored: return .upMirrored
+        case .downMirrored: return .downMirrored
+        case .leftMirrored: return .leftMirrored
+        case .rightMirrored: return .rightMirrored
+        @unknown default: return .up
+        }
     }
 
     private var canSend: Bool {
@@ -272,6 +294,8 @@ struct AssistantView: View {
     }
 
     private func send(_ text: String) async {
+        // Return on the keyboard skips the disabled send button, and the model takes one question at a time.
+        guard !assistant.thinking else { return }
         guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
         voice.stopListening()
         draft = ""

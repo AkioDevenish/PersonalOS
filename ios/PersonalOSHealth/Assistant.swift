@@ -4,7 +4,7 @@ import FoundationModels
 import Speech
 import SwiftUI
 
-/// One thing Spoon looked at while working out a reply.
+/// One thing Pitchfork looked at while working out a reply.
 struct ThinkingStep: Identifiable, Equatable, Hashable {
     let id = UUID()
     let symbol: String
@@ -17,7 +17,7 @@ struct ChatLine: Identifiable, Equatable {
     let id = UUID()
     let who: Who
     var text: String
-    /// What Spoon looked at, and how long it took, for its replies.
+    /// What Pitchfork looked at, and how long it took, for its replies.
     var steps: [ThinkingStep] = []
     var seconds: Int = 0
 }
@@ -27,7 +27,7 @@ struct ChatLine: Identifiable, Equatable {
 final class Assistant: ObservableObject {
     @Published private(set) var lines: [ChatLine] = []
     @Published private(set) var thinking = false
-    /// The steps shown so far while Spoon is thinking.
+    /// The steps shown so far while Pitchfork is thinking.
     @Published private(set) var liveSteps: [ThinkingStep] = []
     @Published var failure: String?
 
@@ -43,7 +43,7 @@ final class Assistant: ObservableObject {
 
     func send(_ text: String) async -> String? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let session else { return nil }
+        guard !text.isEmpty, !thinking, let session else { return nil }
         guard OnDeviceInsights.availability.isReady else {
             failure = OnDeviceInsights.availability.explanation
             return nil

@@ -25,7 +25,7 @@ struct SplashGate<Content: View>: View {
             }
         }
         .task {
-            // Long enough for the spoon and the writing to finish.
+            // Long enough for the writing to finish.
             try? await Task.sleep(for: .milliseconds(2600))
             withAnimation(.easeInOut(duration: 0.45)) { showing = false }
         }

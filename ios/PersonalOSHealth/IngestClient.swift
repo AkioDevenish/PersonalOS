@@ -32,7 +32,7 @@ enum IngestError: LocalizedError {
     }
 }
 
-/// Uploads health samples to Personal OS.
+/// Uploads health samples to Forklore.
 struct IngestClient {
     private let transport: Transport
 

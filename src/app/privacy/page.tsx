@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Personal OS",
+  title: "Privacy Policy | Forklore",
 }
 
 export default function PrivacyPage() {
@@ -11,7 +11,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <div className="prose prose-sm text-[var(--mid-brown)] space-y-4">
-        <p>Your data stays on your device and under your control. Personal OS does not sell or share your personal information.</p>
+        <p>Your data stays on your device and under your control. Forklore does not sell or share your personal information.</p>
         <p>Health data is stored locally in SQLite databases on your machine. When using SaaS mode, data is encrypted in transit and at rest.</p>
         <p>This policy was last updated on {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}.</p>
       </div>

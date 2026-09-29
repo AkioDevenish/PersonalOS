@@ -3,6 +3,7 @@ import PhotosUI
 
 /// The people you can ask, as cards.
 struct SpecialistsView: View {
+    @EnvironmentObject private var session: Session
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
 
     @State private var desk = SpecialistsClient.Desk.empty
@@ -18,11 +19,21 @@ struct SpecialistsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Talk to a nutritionist")
-                    .font(Theme.serif(34))
-                    .foregroundStyle(Theme.text)
-                    .padding(.top, 6)
-                    .flowIn(0)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Talk to a nutritionist")
+                        .font(Theme.serif(34))
+                        .foregroundStyle(Theme.text)
+                    Spacer(minLength: 12)
+                    // The only way to Profile while Home is hidden: signing out, deleting the
+                    // account and the practice hub all live there.
+                    NavigationLink(value: Route.profile) {
+                        Avatar(account: session.account, size: 32)
+                    }
+                    .buttonStyle(.press)
+                    .accessibilityLabel("Account")
+                }
+                .padding(.top, 6)
+                .flowIn(0)
 
                 Text("Get advice on your diet from a nutritionist.")
                     .font(Theme.sans(13))
