@@ -34,11 +34,14 @@ The full list is in `README.md` under Configuration. Key groups:
   `convex/lib/me.ts`. Never take a user id from the client.
 - **Health data:** samples live in Convex (`convex/health/samples.ts`), keyed by
   user, provider, metric and time. There is no SQLite.
-- **AI:** insights are generated on the phone with Apple's Foundation Models
-  (`ios/Forklore/OnDeviceInsights.swift`). The one server model call is
-  `convex/health/cuisineAi.ts`, which turns a country's Wikipedia cuisine article
-  into a dish list with Claude (`ANTHROPIC_API_KEY`). It sends only the country
-  and the article, never user data, and the privacy page says so. Keep it that way.
+- **AI:** meal ideas are generated on the phone with Apple's Foundation Models
+  (`ios/Forklore/OnDeviceInsights.swift`). Two server calls use Claude
+  (`ANTHROPIC_API_KEY`): `convex/health/cuisineAi.ts` turns a country's Wikipedia
+  cuisine article into a dish list and sends no user data; `convex/health/pitchfork.ts`
+  writes Pitchfork's chat replies and sends the conversation, the phone's summary
+  of today's numbers, and whatever health history its `health_history` tool reads
+  (`convex/health/pitchforkData.ts`). Chats are not stored on the server. The
+  privacy page describes both; update it if what either sends changes.
 - **Tests:** `npm test` runs the vitest suites in `convex/**/*.test.ts`.
 
 <!-- convex-ai-start -->

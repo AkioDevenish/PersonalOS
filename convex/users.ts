@@ -25,6 +25,7 @@ const OWNED = [
   { table: "finance_entries", index: "by_user" },
   { table: "time_blocks", index: "by_user" },
   { table: "cuisine_dishes", index: "by_userId" },
+  { table: "pitchfork_usage", index: "by_userId_and_day" },
   // An author's articles are keyed by the same id under another name. The payments go first so
   // none is left pointing at an article that is gone.
   { table: "article_payments", index: "by_authorToken", field: "authorToken" },

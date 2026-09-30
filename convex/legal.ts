@@ -1,6 +1,6 @@
 /** The privacy policy and the terms, as pages. */
 
-const UPDATED = "24 September 2026"
+const UPDATED = "30 September 2026"
 const CONTACT = "akiodevenish1@gmail.com"
 
 /** One shell for both pages: readable, adapts to dark mode, no dependencies. */
@@ -56,7 +56,8 @@ export const privacy = () =>
 
 <h2>What stays on your phone</h2>
 <ul>
-  <li><strong>Meal ideas are written on your phone.</strong> Apple's own model makes them on your phone. We don't send your health data to OpenAI, Anthropic, Google or any other AI company, and we don't use it to train anything.</li>
+  <li><strong>Meal ideas are written on your phone.</strong> Apple's own model makes them on your phone, and nothing about them leaves it.</li>
+  <li><strong>Your chats with Pitchfork</strong> are saved on your phone only. We don't keep them on our servers, apart from a count of how many messages you sent each day.</li>
 </ul>
 
 <h2>What is stored on our servers</h2>
@@ -75,7 +76,8 @@ export const privacy = () =>
   <li><strong>Stripe</strong> handles payments for consultations and article placement. You enter card details on Stripe's pages, so they never reach us.</li>
   <li><strong>Apple</strong> handles subscriptions and delivers notifications.</li>
   <li><strong>Convex</strong> hosts the database and the servers.</li>
-  <li><strong>Anthropic</strong> builds each country's list of everyday dishes from Wikipedia. It gets the country name and the article, never anything about you.</li>
+  <li><strong>Anthropic</strong> writes Pitchfork's replies. When you chat with Pitchfork, Anthropic gets your messages, a summary of today's numbers, and any health readings Pitchfork looks up to answer you, such as your sleep or steps over recent days. Anthropic doesn't use this to train its models. If you don't use Pitchfork, none of this is sent.</li>
+  <li><strong>Anthropic</strong> also builds each country's list of everyday dishes from Wikipedia. For that it gets the country name and the article, never anything about you.</li>
 </ul>
 <p>We don't sell your data or share it with advertisers, and the app has no tracking.</p>
 

@@ -360,6 +360,13 @@ export default defineSchema({
     .index("by_country_user", ["country", "userId"])
     .index("by_userId", ["userId"]),
 
+  /** How many messages someone has sent Pitchfork each day, so one account can't run up the bill. */
+  pitchfork_usage: defineTable({
+    userId: v.string(),
+    day: v.string(), // YYYY-MM-DD, UTC
+    count: v.number(),
+  }).index("by_userId_and_day", ["userId", "day"]),
+
   ai_preferences: defineTable({
     userId: v.string(),
     provider: v.string(),
