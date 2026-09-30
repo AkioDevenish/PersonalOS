@@ -62,6 +62,14 @@ struct AssistantView: View {
             .onChange(of: assistant.thinking) { _, now in
                 if now { withAnimation(Theme.Motion.flow) { proxy.scrollTo("thinking", anchor: .bottom) } }
             }
+            // The keyboard takes the bottom of the screen, so bring the latest message up above it.
+            .onChange(of: typing) { _, now in
+                guard now, let last = assistant.lines.last?.id else { return }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    withAnimation(Theme.Motion.flow) { proxy.scrollTo(last, anchor: .bottom) }
+                }
+            }
         }
         // Pinned above the chat, so the buttons stay put while it scrolls under them.
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -69,7 +77,11 @@ struct AssistantView: View {
                 .padding(.horizontal, 20)
                 .background { Theme.gradient.ignoresSafeArea(edges: .top) }
         }
-        .safeAreaInset(edge: .bottom) { composer }
+        // A solid backdrop, so the chat doesn't show through the message box or behind the keyboard.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            composer
+                .background { Theme.gradient.ignoresSafeArea(edges: .bottom) }
+        }
         .appBackground()
         .task { await begin() }
         .onChange(of: voice.heard) { _, text in if voice.listening { draft = text } }
@@ -122,7 +134,7 @@ struct AssistantView: View {
             Spacer()
 
             if !assistant.lines.isEmpty {
-                blobButton(size: 30)
+                blobButton(size: 40)
                     .transition(.opacity.combined(with: .scale(scale: 0.6)))
             }
 
