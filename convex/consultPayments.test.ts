@@ -253,3 +253,34 @@ describe("confirming a payment", () => {
     ).rejects.toThrow("No such session")
   })
 })
+
+describe("an unpaid session", () => {
+  const DOCTOR_ID = { subject: DOCTOR, tokenIdentifier: `clerk|${DOCTOR}` }
+
+  test("takes no messages from either side until it is paid", async () => {
+    const { t, id } = await booked()
+    for (const who of [PAYER, DOCTOR_ID]) {
+      await expect(
+        t.withIdentity(who).mutation(api.health.consult.send, { id, body: "Hello" }),
+      ).rejects.toThrow("hasn't been paid for yet")
+    }
+
+    await t.mutation(internal.health.consult.markPaidVerified, { id })
+    await t.withIdentity(PAYER).mutation(api.health.consult.send, { id, body: "Hello" })
+    const messages = await t.run(async (ctx) =>
+      await ctx.db.query("consult_messages").withIndex("by_consult", (q) => q.eq("consultId", id)).take(10))
+    expect(messages).toHaveLength(1)
+  })
+
+  test("cannot be used to place a call", async () => {
+    const { t, id } = await booked()
+    await expect(
+      t.withIdentity(PAYER).mutation(api.health.signal.post, { id, kind: "offer", payload: "sdp" }),
+    ).rejects.toThrow("hasn't been paid for yet")
+  })
+
+  test("a free session is open straight away", async () => {
+    const { t, id } = await booked({ minor: 0, currency: "TTD" })
+    await t.withIdentity(PAYER).mutation(api.health.consult.send, { id, body: "Hello" })
+  })
+})
