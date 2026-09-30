@@ -30,8 +30,6 @@ struct AssistantView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    header
-
                     ForEach(assistant.lines) { line in
                         bubble(line).id(line.id)
                     }
@@ -52,6 +50,7 @@ struct AssistantView: View {
                 .padding(.bottom, 12)
             }
             .scrollDismissesKeyboard(.interactively)
+            .hidesTabBarOnScroll()
             .overlay {
                 if assistant.lines.isEmpty && !assistant.thinking {
                     welcome.transition(.opacity)
@@ -63,6 +62,12 @@ struct AssistantView: View {
             .onChange(of: assistant.thinking) { _, now in
                 if now { withAnimation(Theme.Motion.flow) { proxy.scrollTo("thinking", anchor: .bottom) } }
             }
+        }
+        // Pinned above the chat, so the buttons stay put while it scrolls under them.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            header
+                .padding(.horizontal, 20)
+                .background { Theme.gradient.ignoresSafeArea(edges: .top) }
         }
         .safeAreaInset(edge: .bottom) { composer }
         .appBackground()
@@ -137,7 +142,8 @@ struct AssistantView: View {
             .opacity(assistant.lines.isEmpty ? 0 : 1)
             .disabled(assistant.lines.isEmpty)
         }
-        .padding(.top, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 4)
         .animation(Theme.Motion.flow, value: assistant.lines.isEmpty)
     }
 
