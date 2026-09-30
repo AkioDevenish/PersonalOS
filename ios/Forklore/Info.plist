@@ -5,11 +5,13 @@
 	<key>CFBundleDisplayName</key>
 	<string>Forklore</string>
 	<key>NSCameraUsageDescription</key>
-	<string>So you can video call a nutritionist.</string>
+	<string>So you can video call a nutritionist, and photograph a recipe or food label for Pitchfork.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Forklore reads your steps, sleep, heart rate and glucose so meal ideas fit your day.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>So you can talk to the assistant and join video calls with a nutritionist.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>So you can share a photo of a recipe or food label with Pitchfork.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>So you can talk to the assistant instead of typing.</string>
 	<key>UIAppFonts</key>

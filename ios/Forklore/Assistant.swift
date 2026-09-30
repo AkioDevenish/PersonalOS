@@ -1,3 +1,4 @@
+import Accelerate
 import AVFoundation
 import Combine
 import FoundationModels
@@ -107,6 +108,8 @@ final class Assistant: ObservableObject {
 final class Voice: NSObject, ObservableObject {
     @Published private(set) var listening = false
     @Published var heard = ""
+    /// How loud each band of the voice is right now, 0 to 1, lowest pitch first. Empty when not listening.
+    @Published private(set) var levels: [Float] = []
 
     private let synthesizer = AVSpeechSynthesizer()
     private let recognizer = SFSpeechRecognizer()
@@ -148,9 +151,12 @@ final class Voice: NSObject, ObservableObject {
 
             let input = engine.inputNode
             input.removeTap(onBus: 0)
-            input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in
-                request.append(buffer)
-            }
+            input.installTap(
+                onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0),
+                block: Self.tap(request: request, spectrum: Spectrum(bands: 16)) { [weak self] levels in
+                    Task { @MainActor in if self?.listening == true { self?.levels = levels } }
+                }
+            )
             engine.prepare()
             try engine.start()
 
@@ -179,6 +185,71 @@ final class Voice: NSObject, ObservableObject {
         request = nil
         task = nil
         listening = false
+        levels = []
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    /// Built outside the main actor, since the audio engine calls it on its own thread.
+    private nonisolated static func tap(
+        request: SFSpeechAudioBufferRecognitionRequest,
+        spectrum: Spectrum,
+        publish: @escaping @Sendable ([Float]) -> Void
+    ) -> AVAudioNodeTapBlock {
+        { buffer, _ in
+            request.append(buffer)
+            publish(spectrum.levels(of: buffer))
+        }
+    }
+}
+
+/// Splits the microphone's sound into bands across the range of a speaking voice.
+nonisolated final class Spectrum: @unchecked Sendable {
+    let bands: Int
+    private let size = 1024
+    private let log2n: vDSP_Length = 10
+    private let setup: FFTSetup
+    private let window: [Float]
+
+    init(bands: Int) {
+        self.bands = bands
+        setup = vDSP_create_fftsetup(log2n, FFTRadix(kFFTRadix2))!
+        window = vDSP.window(ofType: Float.self, usingSequence: .hanningDenormalized, count: size, isHalfWindow: false)
+    }
+
+    deinit { vDSP_destroy_fftsetup(setup) }
+
+    /// One level per band, 0 to 1, from quiet room to raised voice.
+    func levels(of buffer: AVAudioPCMBuffer) -> [Float] {
+        guard let channel = buffer.floatChannelData?[0] else { return [] }
+        let half = size / 2
+        var samples = [Float](repeating: 0, count: size)
+        for i in 0..<min(size, Int(buffer.frameLength)) { samples[i] = channel[i] * window[i] }
+
+        var real = [Float](repeating: 0, count: half)
+        var imag = [Float](repeating: 0, count: half)
+        var magnitudes = [Float](repeating: 0, count: half)
+        real.withUnsafeMutableBufferPointer { realPtr in
+            imag.withUnsafeMutableBufferPointer { imagPtr in
+                var split = DSPSplitComplex(realp: realPtr.baseAddress!, imagp: imagPtr.baseAddress!)
+                samples.withUnsafeBytes { raw in
+                    vDSP_ctoz(raw.bindMemory(to: DSPComplex.self).baseAddress!, 2, &split, 1, vDSP_Length(half))
+                }
+                vDSP_fft_zrip(setup, &split, 1, log2n, FFTDirection(FFT_FORWARD))
+                vDSP_zvabs(&split, 1, &magnitudes, 1, vDSP_Length(half))
+            }
+        }
+
+        // Bands spaced evenly in pitch, from a low voice's hum to the hiss of an "s".
+        let binWidth = Float(buffer.format.sampleRate) / Float(size)
+        let low: Float = 80, high: Float = 6000
+        return (0..<bands).map { band in
+            let from = low * pow(high / low, Float(band) / Float(bands))
+            let to = low * pow(high / low, Float(band + 1) / Float(bands))
+            let first = min(half - 1, max(1, Int(from / binWidth)))
+            let last = min(half, max(first + 1, Int(to / binWidth)))
+            let mean = magnitudes[first..<last].reduce(0, +) / Float(last - first)
+            let decibels = 20 * log10(mean / Float(half) + 1e-9)
+            return min(1, max(0, (decibels + 70) / 45))
+        }
     }
 }
