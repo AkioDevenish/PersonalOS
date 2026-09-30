@@ -5,11 +5,11 @@ import { v } from "convex/values"
 import { Environment, SignedDataVerifier } from "@apple/app-store-server-library"
 import { action } from "./_generated/server"
 import { internal } from "./_generated/api"
+import { BUNDLE_ID } from "./lib/app"
 
 /** Turns an App Store purchase into time on Home, if Apple really signed it. */
 
 export const ARTICLE_PRODUCT_ID = "os.personal.article.30days"
-const BUNDLE_ID = "com.adevstudio.forklore"
 
 function environment(): Environment {
   switch (process.env.APPLE_IAP_ENVIRONMENT) {

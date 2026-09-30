@@ -47,6 +47,17 @@ struct SignInTests {
         #expect(!Session.isRefusal(TransportError.http(503, "")))
     }
 
+    @Test func hashesTheNonceTheWayTheServerDoes() {
+        // convex/lib/apple.ts compares Apple's claim against the lowercase hex SHA-256 of the nonce.
+        #expect(Session.sha256Hex("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    }
+
+    @Test func makesADifferentNonceEachTime() {
+        let first = Session.makeNonce()
+        #expect(first.count == 64)
+        #expect(first != Session.makeNonce())
+    }
+
     @Test func namesTheAccountByWhatItHas() throws {
         let decode = { (json: String) in
             try JSONDecoder().decode(Session.Account.self, from: Data(json.utf8))

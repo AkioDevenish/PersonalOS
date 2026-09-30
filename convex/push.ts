@@ -5,10 +5,10 @@ import http2 from "node:http2"
 import jwt from "jsonwebtoken"
 import { internalAction } from "./_generated/server"
 import { internal } from "./_generated/api"
+import { BUNDLE_ID } from "./lib/app"
 
 /** Sending a notification to somebody's lock screen. */
 
-const BUNDLE_ID = "com.adevstudio.forklore"
 const HOSTS = {
   production: "https://api.push.apple.com",
   sandbox: "https://api.sandbox.push.apple.com",

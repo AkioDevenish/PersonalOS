@@ -5,10 +5,9 @@ import { v } from "convex/values"
 import { Environment, SignedDataVerifier } from "@apple/app-store-server-library"
 import { action } from "../_generated/server"
 import { internal } from "../_generated/api"
+import { BUNDLE_ID } from "../lib/app"
 
 /** Turning an App Store purchase into an entitlement, if Apple really signed it. */
-
-const BUNDLE_ID = "com.adevstudio.forklore"
 
 /** What can be bought, and never the client's to say which. */
 const SUBSCRIPTIONS = new Set(["os.personal.sub.monthly", "os.personal.sub.yearly"])

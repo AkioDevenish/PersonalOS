@@ -17,6 +17,17 @@
 	  set APNS_KEY_ID, APNS_TEAM_ID and APNS_P8 on the Convex deployment.
 	-->
 	<!--
+	  Signing in with Apple's own sheet needs this:
+
+	    com.apple.developer.applesignin  (an array holding the string "Default")
+
+	  Left out for the same reason as the others here: a free personal team's
+	  profile cannot carry it. Until then the app uses Apple's web sign-in when
+	  the deployment has AUTH_APPLE_ID and AUTH_APPLE_SECRET. Once enrolled,
+	  enable Sign in with Apple on the app id, add the key here, and set
+	  AppConfig.appleSignInSheet to true.
+	-->
+	<!--
 	  Running a downloaded 4B model needs these two:
 
 	    com.apple.developer.kernel.increased-memory-limit
