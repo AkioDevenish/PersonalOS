@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest"
 import { internal } from "./_generated/api"
 import schema from "./schema"
 import { DAILY_LIMIT } from "./health/pitchforkData"
+import { geminiAllowed, geminiReply } from "./health/pitchforkGemini"
 
 const modules = import.meta.glob("./**/*.ts")
 
@@ -82,5 +83,51 @@ describe("how much one person can ask", () => {
     expect(other.ok).toBe(true)
     const tomorrow = await t.mutation(internal.health.pitchforkData.take, { userId: "me", day: "2026-10-01" })
     expect(tomorrow.ok).toBe(true)
+  })
+})
+
+describe("Gemini, for testing on dev", () => {
+  test("only the dev deployment may use it", () => {
+    expect(geminiAllowed("https://wary-penguin-35.convex.cloud")).toBe(true)
+    expect(geminiAllowed("https://astute-ant-253.convex.cloud")).toBe(false)
+    expect(geminiAllowed("https://wary-penguin-35.convex.cloud.evil.com")).toBe(false)
+    expect(geminiAllowed(undefined)).toBe(false)
+    expect(geminiAllowed("not a url")).toBe(false)
+  })
+
+  test("looks things up, hands the results back, and returns the answer", async () => {
+    const bodies: { contents: { role: string; parts: Record<string, unknown>[] }[] }[] = []
+    const replies = [
+      { candidates: [{ content: { role: "model", parts: [
+        { functionCall: { name: "health_history", args: { metric: "steps", days: 7 } }, thoughtSignature: "sig" },
+      ] } }] },
+      { candidates: [{ content: { role: "model", parts: [
+        { text: "thinking", thought: true },
+        { text: "You walked a lot this week." },
+      ] } }] },
+    ]
+    const fakeFetch = (async (_url: unknown, init?: { body?: unknown }) => {
+      bodies.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify(replies.shift()), { status: 200 })
+    }) as typeof fetch
+    const asked: [string, number][] = []
+
+    const text = await geminiReply({
+      apiKey: "k", model: "m", system: "s",
+      lines: [{ who: "you", text: "How active was I?" }],
+      metrics: ["steps"], maxDays: 90, maxRounds: 5,
+      lookup: async (metric, days) => { asked.push([metric, days]); return "5000 a day" },
+      fetchImpl: fakeFetch,
+    })
+
+    expect(text).toBe("You walked a lot this week.")
+    expect(asked).toEqual([["steps", 7]])
+    const second = bodies[1].contents
+    expect(second[1]).toEqual({ role: "model", parts: [
+      { functionCall: { name: "health_history", args: { metric: "steps", days: 7 } }, thoughtSignature: "sig" },
+    ] })
+    expect(second[2]).toEqual({ role: "user", parts: [
+      { functionResponse: { name: "health_history", response: { result: "5000 a day" } } },
+    ] })
   })
 })

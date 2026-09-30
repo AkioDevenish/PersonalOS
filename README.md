@@ -77,3 +77,7 @@ in the repo. The backend reads:
 - **Consultation payments (WAM)**: `WAM_API_KEY`, `WAM_BUSINESS_ID`, `WAM_ENVIRONMENT`
 - **Calls**: `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` (optional; STUN is used without them)
 - **Roles**: `NUTRITIONIST_IDS`, `ARTICLE_REVIEWER_IDS`
+- **AI**: `ANTHROPIC_API_KEY` for Pitchfork and the dish lists. For cheap testing on the dev
+  deployment only, `PITCHFORK_PROVIDER=gemini` with `GEMINI_API_KEY` (and optionally
+  `GEMINI_MODEL`, default `gemini-2.5-flash`) answers Pitchfork with Gemini's free tier instead.
+  The code refuses it anywhere but dev.

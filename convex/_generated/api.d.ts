@@ -28,6 +28,7 @@ import type * as health_dishes from "../health/dishes.js";
 import type * as health_metrics from "../health/metrics.js";
 import type * as health_pitchfork from "../health/pitchfork.js";
 import type * as health_pitchforkData from "../health/pitchforkData.js";
+import type * as health_pitchforkGemini from "../health/pitchforkGemini.js";
 import type * as health_samples from "../health/samples.js";
 import type * as health_signal from "../health/signal.js";
 import type * as http from "../http.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "health/metrics": typeof health_metrics;
   "health/pitchfork": typeof health_pitchfork;
   "health/pitchforkData": typeof health_pitchforkData;
+  "health/pitchforkGemini": typeof health_pitchforkGemini;
   "health/samples": typeof health_samples;
   "health/signal": typeof health_signal;
   http: typeof http;

@@ -6,11 +6,15 @@ import { internal } from "../_generated/api"
 import { userIdOf } from "../lib/me"
 import { METRIC_KEYS } from "./metrics"
 import { MAX_DAYS } from "./pitchforkData"
+import { geminiAllowed, geminiReply } from "./pitchforkGemini"
 
 /**
  * Pitchfork's replies, written by Claude. It gets the conversation, a short note of today's
  * numbers from the phone, and a tool that reads the person's own synced health history. Nothing
  * is stored here except a count of messages per day; the chat itself lives on the phone.
+ *
+ * On the dev deployment only, PITCHFORK_PROVIDER=gemini (with GEMINI_API_KEY) answers with
+ * Google's Gemini free tier instead, for cheap testing. See pitchforkGemini.ts.
  */
 
 /** The longest conversation sent in one go. Older lines drop off the front. */
@@ -45,6 +49,8 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
 ]
+
+const SORRY = "Sorry, I lost my train of thought. Could you ask that again?"
 
 /** How a lookup reads in the "thinking" steps on the phone. */
 function label(metric: string, days: number): string {
@@ -83,13 +89,38 @@ export const reply = action({
       return { text: "That's all I can do for today. Let's pick this up again tomorrow.", looked: [] }
     }
 
+    const system = `${SYSTEM}\n\nWhat the phone knows about them today:\n${args.context.slice(0, MAX_CHARS)}`
+    const looked: string[] = []
+
+    /** One health_history call, always for the person asking, as text for the model. */
+    const lookup = async (metric: string, days: number): Promise<string> => {
+      const series = await ctx.runQuery(internal.health.pitchforkData.history, { userId, metric, days, now })
+      looked.push(label(metric, Math.min(MAX_DAYS, Math.max(1, Math.round(days)))))
+      return series.days.length > 0 ? JSON.stringify(series) : `No ${metric} data in that time.`
+    }
+
+    if (process.env.PITCHFORK_PROVIDER === "gemini") {
+      if (geminiAllowed(process.env.CONVEX_CLOUD_URL) && process.env.GEMINI_API_KEY) {
+        const text = await geminiReply({
+          apiKey: process.env.GEMINI_API_KEY,
+          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+          system,
+          lines,
+          metrics: METRIC_KEYS,
+          maxDays: MAX_DAYS,
+          maxRounds: MAX_ROUNDS,
+          lookup,
+        })
+        return { text: text || SORRY, looked }
+      }
+      console.warn("PITCHFORK_PROVIDER=gemini ignored: only allowed on dev, with GEMINI_API_KEY set")
+    }
+
     const messages: Anthropic.Beta.BetaMessageParam[] = lines.map((l) => ({
       role: l.who === "you" ? "user" : "assistant",
       content: l.text,
     }))
-    const system = `${SYSTEM}\n\nWhat the phone knows about them today:\n${args.context.slice(0, MAX_CHARS)}`
     const client = new Anthropic()
-    const looked: string[] = []
 
     for (let round = 0; round <= MAX_ROUNDS; round++) {
       const response = await client.beta.messages.create({
@@ -118,7 +149,7 @@ export const reply = action({
           .map((b) => b.text)
           .join("\n")
           .trim()
-        return { text: text || "Sorry, I lost my train of thought. Could you ask that again?", looked }
+        return { text: text || SORRY, looked }
       }
 
       // The whole reply goes back, thinking included, so the next round carries on from it.
@@ -134,18 +165,7 @@ export const reply = action({
             return { type: "tool_result", tool_use_id: call.id, content: "Unknown tool or bad input", is_error: true }
           }
           try {
-            const series = await ctx.runQuery(internal.health.pitchforkData.history, {
-              userId,
-              metric: input.metric,
-              days: input.days,
-              now,
-            })
-            looked.push(label(input.metric, Math.min(MAX_DAYS, Math.max(1, Math.round(input.days)))))
-            return {
-              type: "tool_result",
-              tool_use_id: call.id,
-              content: series.days.length > 0 ? JSON.stringify(series) : `No ${input.metric} data in that time.`,
-            }
+            return { type: "tool_result", tool_use_id: call.id, content: await lookup(input.metric, input.days) }
           } catch (error) {
             return { type: "tool_result", tool_use_id: call.id, content: String(error), is_error: true }
           }
@@ -155,6 +175,6 @@ export const reply = action({
       messages.push({ role: "user", content: results })
     }
 
-    return { text: "Sorry, I lost my train of thought. Could you ask that again?", looked }
+    return { text: SORRY, looked }
   },
 })

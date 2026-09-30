@@ -41,7 +41,10 @@ The full list is in `README.md` under Configuration. Key groups:
   writes Pitchfork's chat replies and sends the conversation, the phone's summary
   of today's numbers, and whatever health history its `health_history` tool reads
   (`convex/health/pitchforkData.ts`). Chats are not stored on the server. The
-  privacy page describes both; update it if what either sends changes.
+  privacy page describes both; update it if what either sends changes. For testing,
+  `PITCHFORK_PROVIDER=gemini` switches Pitchfork to Gemini's free tier
+  (`convex/health/pitchforkGemini.ts`), which may train on what it gets, so `geminiAllowed`
+  limits it to the dev deployment. Never widen that to production.
 - **Tests:** `npm test` runs the vitest suites in `convex/**/*.test.ts`.
 
 <!-- convex-ai-start -->
