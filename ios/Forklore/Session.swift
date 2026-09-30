@@ -320,10 +320,10 @@ extension Session: ASWebAuthenticationPresentationContextProviding {
 
     /// Where a sign-in sheet hangs from.
     fileprivate var keyWindow: ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let key = scenes.flatMap(\.windows).first(where: \.isKeyWindow) { return key }
+        // Sign-in only starts from a tap, so there is always a scene to hang a window on.
+        return ASPresentationAnchor(windowScene: scenes[0])
     }
 }
 

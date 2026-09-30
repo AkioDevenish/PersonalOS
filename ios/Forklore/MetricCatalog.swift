@@ -76,7 +76,7 @@ struct MetricSpec: Identifiable, Hashable {
 
 enum Metrics {
     /// Sleep is stored in hours; zero means "no samples", not a measured night.
-    private static func sleep(_ s: HealthSnapshot) -> Double? {
+    private nonisolated static func sleep(_ s: HealthSnapshot) -> Double? {
         guard let h = s.totalSleepHours, h > 0 else { return nil }
         return h
     }

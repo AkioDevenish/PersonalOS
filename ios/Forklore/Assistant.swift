@@ -154,7 +154,7 @@ final class Voice: NSObject, ObservableObject {
             input.installTap(
                 onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0),
                 block: Self.tap(request: request, spectrum: Spectrum(bands: 16)) { [weak self] levels in
-                    Task { @MainActor in if self?.listening == true { self?.levels = levels } }
+                    Task { @MainActor [weak self] in if self?.listening == true { self?.levels = levels } }
                 }
             )
             engine.prepare()
@@ -163,10 +163,12 @@ final class Voice: NSObject, ObservableObject {
             heard = ""
             listening = true
             task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-                Task { @MainActor in
+                let text = result?.bestTranscription.formattedString
+                let done = error != nil || result?.isFinal == true
+                Task { @MainActor [weak self] in
                     guard let self else { return }
-                    if let result { self.heard = result.bestTranscription.formattedString }
-                    if error != nil || result?.isFinal == true { self.stopListening() }
+                    if let text { self.heard = text }
+                    if done { self.stopListening() }
                 }
             }
             return true

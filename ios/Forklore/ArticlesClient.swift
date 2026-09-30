@@ -175,7 +175,7 @@ final class ArticleLibrary: ObservableObject {
 /// Buying thirty days on Home for one article.
 @MainActor
 enum ArticlePlacement {
-    static let productID = "os.personal.article.30days"
+    nonisolated static let productID = "os.personal.article.30days"
 
     enum Outcome { case placed, cancelled, pending }
 
