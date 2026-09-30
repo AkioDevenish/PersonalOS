@@ -19,9 +19,9 @@ struct WelcomeView: View {
                 .flowIn(1)
 
             VStack(alignment: .leading, spacing: 16) {
-                line("heart.text.square", "Uses Apple Health, so there's nothing to type")
-                line("leaf", "Meal ideas made on your phone")
-                line("person.2", "Chat with a nutritionist")
+                line("Uses Apple Health, so there's nothing to type")
+                line("Meal ideas made on your phone")
+                line("Chat with a nutritionist")
             }
             .padding(.top, 34)
             .padding(.horizontal, 8)
@@ -68,17 +68,10 @@ struct WelcomeView: View {
         }
     }
 
-    private func line(_ symbol: String, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .light))
-                .environment(\.symbolVariants, .none)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 24)
-            Text(text)
-                .font(Theme.sans(15))
-                .foregroundStyle(Theme.text)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+    private func line(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.sans(15))
+            .foregroundStyle(Theme.text)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
