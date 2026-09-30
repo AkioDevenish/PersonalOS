@@ -1,11 +1,12 @@
+import PDFKit
 import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 import Vision
 
 /// Pitchfork, a personal assistant you can type or talk to. It answers out loud if you want it to.
 struct AssistantView: View {
     @EnvironmentObject private var health: HealthKitManager
-    @EnvironmentObject private var session: Session
     @Environment(Store.self) private var store
     @StateObject private var assistant = Assistant()
     @StateObject private var voice = Voice()
@@ -17,6 +18,10 @@ struct AssistantView: View {
     @State private var started = false
     @State private var photo: PhotosPickerItem?
     @State private var reading = false
+    @State private var pickingPhoto = false
+    @State private var pickingFile = false
+    @State private var takingPhoto = false
+    @State private var micOff = false
     @FocusState private var typing: Bool
 
     var body: some View {
@@ -24,10 +29,6 @@ struct AssistantView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     header
-
-                    if assistant.lines.isEmpty {
-                        welcome
-                    }
 
                     ForEach(assistant.lines) { line in
                         bubble(line).id(line.id)
@@ -49,6 +50,11 @@ struct AssistantView: View {
                 .padding(.bottom, 12)
             }
             .scrollDismissesKeyboard(.interactively)
+            .overlay {
+                if assistant.lines.isEmpty && !assistant.thinking {
+                    welcome.transition(.opacity)
+                }
+            }
             .onChange(of: assistant.lines.count) { _, _ in
                 withAnimation(Theme.Motion.flow) { proxy.scrollTo(assistant.lines.last?.id, anchor: .bottom) }
             }
@@ -66,15 +72,21 @@ struct AssistantView: View {
         }
         .onDisappear { voice.stopSpeaking(); voice.stopListening() }
         .subscriptionNeeded($locked, toDo: "chat with you")
+        .alert("Turn on the microphone", isPresented: $micOff) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+            }
+            Button("Not now", role: .cancel) {}
+        } message: {
+            Text("Pitchfork needs the microphone and speech recognition to hear you.")
+        }
     }
 
     // MARK: Pieces
 
+    /// Read-aloud and new-conversation buttons, top right.
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("Pitchfork")
-                .font(Theme.serif(28))
-                .foregroundStyle(Theme.text)
+        HStack {
             Spacer()
             Button {
                 speaks.toggle()
@@ -106,21 +118,19 @@ struct AssistantView: View {
         .padding(.top, 12)
     }
 
+    /// Before the first message: Pitchfork's blob, a little above the middle, with its name under it.
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(greeting)
-                .font(Theme.serif(24))
-                .foregroundStyle(Theme.text)
-            Text("Ask me about food, cooking, or your health numbers. Type, talk, or attach a photo of a recipe or label.")
-                .font(Theme.sans(15))
-                .foregroundStyle(Theme.secondaryText)
+        GeometryReader { geo in
+            VStack(spacing: 18) {
+                PitchforkBlob(size: min(geo.size.width * 0.42, 170))
+                Text("Pitchfork")
+                    .font(Theme.serif(26))
+                    .foregroundStyle(Theme.text)
+            }
+            .position(x: geo.size.width / 2, y: geo.size.height * 0.4)
         }
-        .padding(.top, 24)
-    }
-
-    private var greeting: String {
-        let name = session.account?.name?.split(separator: " ").first.map(String.init) ?? ""
-        return name.isEmpty ? "Hi, I'm Pitchfork. What can I help with?" : "Hi \(name), I'm Pitchfork. What can I help with?"
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -159,22 +169,23 @@ struct AssistantView: View {
     /// One box: paperclip on the left, the message in the middle, mic and send on the right.
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 4) {
-            PhotosPicker(selection: $photo, matching: .images) {
-                Image(systemName: reading ? "hourglass" : "paperclip")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Theme.secondaryText)
-                    .frame(width: 38, height: 38)
-            }
-            .disabled(reading)
-            .accessibilityLabel("Attach a photo")
+            if voice.listening {
+                VoiceBars(levels: voice.levels)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 38)
+                    .padding(.leading, 10)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            } else {
+                attach
 
-            TextField(voice.listening ? "Listening…" : "Ask Pitchfork", text: $draft, axis: .vertical)
-                .font(Theme.sans(16))
-                .lineLimit(1...5)
-                .focused($typing)
-                .padding(.vertical, 9)
-                .submitLabel(.send)
-                .onSubmit { Task { await send(draft) } }
+                TextField("Ask Pitchfork", text: $draft, axis: .vertical)
+                    .font(Theme.sans(16))
+                    .lineLimit(1...5)
+                    .focused($typing)
+                    .padding(.vertical, 9)
+                    .submitLabel(.send)
+                    .onSubmit { Task { await send(draft) } }
+            }
 
             Button {
                 Task { await toggleListening() }
@@ -183,11 +194,60 @@ struct AssistantView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(voice.listening ? Theme.accent : Theme.secondaryText)
                     .frame(width: 38, height: 38)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.press)
             .accessibilityLabel(voice.listening ? "Stop listening" : "Talk")
 
-            Button {
+            if !voice.listening {
+                sendButton
+            }
+        }
+        .animation(Theme.Motion.flow, value: voice.listening)
+        .padding(.leading, 6)
+        .padding(.trailing, 6)
+        .padding(.vertical, 4)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .photosPicker(isPresented: $pickingPhoto, selection: $photo, matching: .images)
+        .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.image, .pdf]) { result in
+            if case .success(let url) = result { Task { await readFile(url) } }
+        }
+        .fullScreenCover(isPresented: $takingPhoto) {
+            CameraPicker { image in
+                takingPhoto = false
+                if let image { Task { await readImage(image) } }
+            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: photo) { _, item in
+            guard let item else { return }
+            Task { await readPhoto(item) }
+        }
+    }
+
+    /// The paperclip: take a photo, pick one from the library, or pick an image or PDF from Files.
+    private var attach: some View {
+        Menu {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Take Photo", systemImage: "camera") { takingPhoto = true }
+            }
+            Button("Photo Library", systemImage: "photo.on.rectangle") { pickingPhoto = true }
+            Button("Files", systemImage: "folder") { pickingFile = true }
+        } label: {
+            Image(systemName: reading ? "hourglass" : "paperclip")
+                .font(.system(size: 18))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 38, height: 38)
+        }
+        .disabled(reading)
+        .accessibilityLabel("Attach a photo or file")
+    }
+
+    private var sendButton: some View {
+        Button {
                 Task { await send(draft) }
             } label: {
                 Image(systemName: "arrow.up")
@@ -200,43 +260,55 @@ struct AssistantView: View {
             .disabled(!canSend)
             .padding(.bottom, 2)
             .accessibilityLabel("Send")
-        }
-        .padding(.leading, 6)
-        .padding(.trailing, 6)
-        .padding(.vertical, 4)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .onChange(of: photo) { _, item in
-            guard let item else { return }
-            Task { await readPhoto(item) }
-        }
     }
 
     /// Pulls any text out of the photo (a recipe, a label) and adds it to the message.
     private func readPhoto(_ item: PhotosPickerItem) async {
+        defer { photo = nil }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else { return }
+        await readImage(image)
+    }
+
+    /// An image or a PDF picked in Files.
+    private func readFile(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return }
+        if let pdf = PDFDocument(data: data) {
+            reading = true
+            defer { reading = false }
+            if assistant.failure == Self.noText { assistant.failure = nil }
+            add(pdf.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "", from: "a file")
+        } else if let image = UIImage(data: data) {
+            await readImage(image)
+        }
+    }
+
+    private func readImage(_ image: UIImage) async {
+        guard let cgImage = image.cgImage else { return }
         reading = true
         // A new photo replaces the last one's note, but not anything else being shown.
         if assistant.failure == Self.noText { assistant.failure = nil }
-        defer { reading = false; photo = nil }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data), let cgImage = image.cgImage else { return }
+        defer { reading = false }
         // Camera photos are stored sideways with the turn in their metadata, which the CGImage drops.
         let orientation = Self.orientation(of: image)
         let text = await Task.detached(priority: .userInitiated) {
             Self.recognizeText(in: cgImage, orientation: orientation)
         }.value
+        add(text, from: "a photo")
+    }
 
+    private func add(_ text: String, from source: String) {
         guard !text.isEmpty else {
             assistant.failure = Self.noText
             return
         }
-        draft = draft.isEmpty ? "From a photo:\n\(text)" : "\(draft)\n\nFrom a photo:\n\(text)"
+        draft = draft.isEmpty ? "From \(source):\n\(text)" : "\(draft)\n\nFrom \(source):\n\(text)"
         typing = true
     }
 
-    private static let noText = "I couldn't find any text in that photo."
+    private static let noText = "I couldn't find any text in that."
 
     /// Accurate recognition takes a moment, so it runs off the main thread.
     private nonisolated static func recognizeText(in image: CGImage, orientation: CGImagePropertyOrientation) -> String {
@@ -288,9 +360,7 @@ struct AssistantView: View {
     private func toggleListening() async {
         if voice.listening { voice.stopListening(); return }
         guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
-        if !(await voice.listen()) {
-            assistant.failure = "Allow the microphone and speech recognition in Settings to talk to me."
-        }
+        if !(await voice.listen()) { micOff = true }
     }
 
     /// Today's and this week's numbers, for the assistant to draw on.
@@ -405,6 +475,119 @@ private struct ThoughtSummary: View {
             }
             .buttonStyle(.plain)
             if open { StepList(steps: steps) }
+        }
+    }
+}
+
+/// Pitchfork's face: a soft, slowly shifting blob of warm colour.
+private struct PitchforkBlob: View {
+    let size: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let colors = [
+        Color(red: 0.84, green: 0.66, blue: 0.47),
+        Color(red: 0.72, green: 0.49, blue: 0.36),
+        Color(red: 0.91, green: 0.80, blue: 0.64),
+        Color(red: 0.62, green: 0.45, blue: 0.33),
+        Color(red: 0.84, green: 0.66, blue: 0.47),
+    ]
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            Canvas { context, canvas in
+                let center = CGPoint(x: canvas.width / 2, y: canvas.height / 2)
+                let radius = size * 0.4
+                let shape = blob(center: center, radius: radius, t: t)
+                let colours = Gradient(colors: colors)
+
+                // A soft glow behind it.
+                context.drawLayer { glow in
+                    glow.addFilter(.blur(radius: size * 0.12))
+                    glow.opacity = 0.45
+                    glow.fill(shape, with: .conicGradient(colours, center: center, angle: .radians(t * 0.35)))
+                }
+                context.fill(shape, with: .conicGradient(colours, center: center, angle: .radians(t * 0.35)))
+                // A highlight, top left, so it reads as round.
+                context.fill(shape, with: .radialGradient(
+                    Gradient(colors: [.white.opacity(0.45), .white.opacity(0)]),
+                    center: CGPoint(x: center.x - radius * 0.35, y: center.y - radius * 0.4),
+                    startRadius: 0,
+                    endRadius: radius * 1.1
+                ))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    /// A circle whose edge ripples a little, a few slow waves at once.
+    private func blob(center: CGPoint, radius: CGFloat, t: Double) -> Path {
+        Path { path in
+            let points = 96
+            for i in 0...points {
+                let angle = Double(i) / Double(points) * 2 * .pi
+                let wobble = 0.045 * sin(3 * angle + t * 0.9)
+                    + 0.035 * sin(5 * angle - t * 1.3)
+                    + 0.025 * sin(2 * angle + t * 0.6)
+                let r = radius * (1 + wobble)
+                let point = CGPoint(x: center.x + r * cos(angle), y: center.y + r * sin(angle))
+                if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
+            }
+            path.closeSubpath()
+        }
+    }
+}
+
+/// While listening: bars that rise and fall with your voice, low pitches in the middle.
+private struct VoiceBars: View {
+    let levels: [Float]
+    private let bands = 16
+
+    var body: some View {
+        // Mirrored, so the bars spread out from the middle.
+        let half = (0..<bands).map { $0 < levels.count ? CGFloat(levels[$0]) : 0 }
+        let bars = half.reversed() + half
+        HStack(alignment: .center, spacing: 3) {
+            ForEach(bars.indices, id: \.self) { i in
+                Capsule()
+                    .fill(Theme.accent.gradient)
+                    .frame(width: 3, height: 4 + bars[i] * 26)
+                    .opacity(0.45 + bars[i] * 0.55)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(response: 0.18, dampingFraction: 0.7), value: levels)
+        .accessibilityLabel("Listening")
+    }
+}
+
+/// The camera, for photographing a recipe or a label.
+private struct CameraPicker: UIViewControllerRepresentable {
+    /// The photo, or nil if they cancelled. Either way the camera should close.
+    let done: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ parent: CameraPicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            parent.done(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.done(nil)
         }
     }
 }

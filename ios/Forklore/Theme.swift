@@ -21,17 +21,15 @@ enum Theme {
     static let positive = adaptive(light: 0x4E7F52, dark: 0x8CC48F)
     static let separator = adaptive(light: 0xFFFFFF, dark: 0xFFFFFF, alpha: 0.35)
 
-    /// Bone to porcelain in light mode; a warm espresso in dark.
+    /// A soft wash from bone to porcelain in light mode; a warm espresso in dark.
     static let gradient = LinearGradient(
         colors: [
-            adaptive(light: 0xD9CAB0, dark: 0x14110E),
-            adaptive(light: 0xE3D6C0, dark: 0x1B1713),
-            adaptive(light: 0xEBE1CF, dark: 0x221D18),
-            adaptive(light: 0xF2EBDF, dark: 0x28221C),
-            adaptive(light: 0xF7F2E9, dark: 0x2E2720),
+            adaptive(light: 0xE8DECC, dark: 0x1D1915),
+            adaptive(light: 0xEEE6D8, dark: 0x221D18),
+            adaptive(light: 0xF3EDE3, dark: 0x26201A),
         ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        startPoint: .top,
+        endPoint: .bottom
     )
 
     private static func adaptive(light: UInt32, dark: UInt32, alpha: CGFloat = 1) -> Color {
