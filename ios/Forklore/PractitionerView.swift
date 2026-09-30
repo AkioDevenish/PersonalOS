@@ -63,7 +63,6 @@ struct PractitionerView: View {
             }
             .padding(.horizontal, 24)
         }
-        .compactsTabBar()
         .appBackground()
         .refreshable { await load() }
         .onAppear {

@@ -21,11 +21,11 @@ enum Theme {
     static let positive = adaptive(light: 0x4E7F52, dark: 0x8CC48F)
     static let separator = adaptive(light: 0xFFFFFF, dark: 0xFFFFFF, alpha: 0.35)
 
-    /// Nearly flat bone in light mode, espresso in dark, with only a faint lift toward the bottom.
+    /// Nearly flat pale bone in light mode, espresso in dark, with only a faint lift toward the bottom.
     static let gradient = LinearGradient(
         colors: [
-            adaptive(light: 0xEEE7DB, dark: 0x201B16),
-            adaptive(light: 0xF1EBE1, dark: 0x221D18),
+            adaptive(light: 0xF6F2EB, dark: 0x201B16),
+            adaptive(light: 0xF9F6F1, dark: 0x221D18),
         ],
         startPoint: .top,
         endPoint: .bottom

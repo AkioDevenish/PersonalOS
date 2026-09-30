@@ -81,7 +81,6 @@ struct SpecialistsView: View {
             }
             .padding(.horizontal, 22)
         }
-        .compactsTabBar()
         .appBackground()
         .refreshable { await load() }
         // Deliberately not `.task`.

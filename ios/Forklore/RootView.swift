@@ -1,14 +1,14 @@
 import Combine
 import SwiftUI
 
-/// What the tab bar shows.
+/// The app's pages, picked from the sidebar.
 enum AppTab: CaseIterable, Hashable {
     case home, meals, assistant, practitioners, profile
 
-    /// What the tab bar shows. Home is hidden for now.
+    /// What the sidebar lists. Home is hidden for now.
     static let visible: [AppTab] = [.meals, .assistant, .practitioners, .profile]
 
-    /// The system fills the selected one and tints it, so only the outline is named here.
+    /// The outline; the sidebar fills the selected one.
     var symbol: String {
         switch self {
         case .home: return "house"
@@ -59,27 +59,19 @@ struct RootView: View {
     @State private var tab: AppTab = .meals
     /// A stack per tab rather than one shared between them.
     @State private var paths: [AppTab: [Route]] = [:]
-    @State private var bar = TabBarState()
+    @State private var menu = SideMenu()
 
     var body: some View {
         page
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .appBackground()
-            // Laid over the pages rather than beneath them, so content scrolls under the glass the
-            // way it does under the system's own bar.
-            .overlay(alignment: .bottom) {
-                if !bar.away {
-                    AppTabBar(selected: tab) { selection.wrappedValue = $0 }
-                        .transition(.opacity)
+            .overlay {
+                SidebarPanel(selected: tab) { next in
+                    selection.wrappedValue = next
+                    menu.set(open: false)
                 }
             }
-            .environment(bar)
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                bar.set(keyboard: true)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                bar.set(keyboard: false)
-            }
+            .environment(menu)
     }
 
     /// The pages, in a TabView whose own bar is hidden.
@@ -90,9 +82,6 @@ struct RootView: View {
             }
         }
         .tint(Theme.accent)
-        // A new tab starts with the bar at full size: the shrink belonged to how far down the last
-        // page you had read, not to this one.
-        .onChange(of: tab) { _, _ in bar.set(compact: false); bar.set(hidden: false) }
         // A tapped notification should land on the thing it announced, not on whatever screen the
         // app was last showing.
         .onChange(of: notifier.opened) { _, route in
@@ -110,6 +99,12 @@ struct RootView: View {
         NavigationStack(path: binding(for: t)) {
             root(for: t)
                 .hidesSystemTabBar()
+                // Pitchfork draws its own header, with the menu button in it.
+                .toolbar {
+                    if t != .assistant {
+                        ToolbarItem(placement: .topBarTrailing) { MenuButton() }
+                    }
+                }
                 .navigationDestination(for: Route.self) { route in
                     Group {
                     switch route {
@@ -136,8 +131,6 @@ struct RootView: View {
     @ViewBuilder
     private func root(for t: AppTab) -> some View {
         switch t {
-        // The rows on Home send you to a tab, which only the bar's selection can do, so it is
-        // handed the way to ask.
         case .home:          HomeView()
         case .meals:         NutritionView()
         case .assistant:     AssistantView()
@@ -172,15 +165,10 @@ struct RootView: View {
     }
 }
 
-/// Hides the system's tab bar and leaves room at the bottom for the app's, except while the bar has
-/// stepped aside for the keyboard or a scroll.
+/// Hides the system's tab bar: pages are picked from the sidebar instead.
 private struct HidesSystemTabBar: ViewModifier {
-    @Environment(TabBarState.self) private var bar: TabBarState?
-
     func body(content: Content) -> some View {
-        content
-            .toolbarVisibility(.hidden, for: .tabBar)
-            .safeAreaPadding(.bottom, bar?.away == true ? 0 : AppTabBar.clearance)
+        content.toolbarVisibility(.hidden, for: .tabBar)
     }
 }
 

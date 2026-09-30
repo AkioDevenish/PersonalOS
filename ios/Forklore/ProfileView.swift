@@ -69,7 +69,6 @@ struct ProfileView: View {
             }
             .padding(.horizontal, margin)
         }
-        .compactsTabBar()
         .appBackground()
         .navigationBarTitleDisplayMode(.inline)
         .task { application = try? await SpecialistsClient().desk().application }

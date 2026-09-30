@@ -50,7 +50,6 @@ struct AssistantView: View {
                 .padding(.bottom, 12)
             }
             .scrollDismissesKeyboard(.interactively)
-            .hidesTabBarOnScroll()
             .overlay {
                 if assistant.lines.isEmpty && !assistant.thinking {
                     welcome.transition(.opacity)
@@ -116,47 +115,60 @@ struct AssistantView: View {
 
     // MARK: Pieces
 
-    /// Past chats top left, Pitchfork's blob in the middle once a chat is going, a new chat top right.
+    /// Pitchfork's blob top left once a chat is going, the chat's name in a pill in the middle, and the
+    /// menu top right.
     private var header: some View {
-        HStack {
-            Button {
-                Haptics.select()
-                browsing = true
-            } label: {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 17))
-                    .foregroundStyle(Theme.text)
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.press)
-            .accessibilityLabel("Past chats")
-
-            Spacer()
-
-            if !assistant.lines.isEmpty {
-                blobButton(size: 40)
-                    .transition(.opacity.combined(with: .scale(scale: 0.6)))
+        ZStack {
+            HStack {
+                if !assistant.lines.isEmpty {
+                    blobButton(size: 34)
+                        .frame(width: 40, height: 40)
+                        .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                }
+                Spacer()
+                MenuButton()
             }
 
-            Spacer()
-
-            Button {
-                voice.stopSpeaking()
-                Task { await begin(fresh: true) }
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 17))
-                    .foregroundStyle(Theme.text)
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.press)
-            .accessibilityLabel("New conversation")
-            .opacity(assistant.lines.isEmpty ? 0 : 1)
-            .disabled(assistant.lines.isEmpty)
+            chatPill
+                .padding(.horizontal, 52)
         }
         .padding(.top, 4)
         .padding(.bottom, 4)
         .animation(Theme.Motion.flow, value: assistant.lines.isEmpty)
+    }
+
+    /// Which chat this is. Tapping it starts a new one or opens the past ones.
+    private var chatPill: some View {
+        Menu {
+            Button("New Chat", systemImage: "square.and.pencil") {
+                voice.stopSpeaking()
+                Task { await begin(fresh: true) }
+            }
+            .disabled(assistant.lines.isEmpty)
+            Button("Past Chats", systemImage: "clock.arrow.circlepath") { browsing = true }
+        } label: {
+            HStack(spacing: 6) {
+                Text(chatName)
+                    .font(Theme.sans(15, medium: true))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 36)
+            .glassEffect(.regular.interactive(), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .accessibilityLabel("Chat: \(chatName)")
+        .accessibilityHint("Start a new chat or open a past one")
+    }
+
+    private var chatName: String {
+        assistant.lines.isEmpty
+            ? "New Chat"
+            : SavedChat(id: assistant.chatID, lines: assistant.lines, updated: .now).title
     }
 
     /// Before the first message: Pitchfork's blob, a little above the middle.
@@ -215,8 +227,37 @@ struct AssistantView: View {
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
-    /// One box: paperclip on the left, the message in the middle, mic and send on the right.
+    /// A plus on the left for attachments, then one box: the message, mic and send.
     private var composer: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if !voice.listening {
+                attach
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+
+            box
+        }
+        .animation(Theme.Motion.flow, value: voice.listening)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .photosPicker(isPresented: $pickingPhoto, selection: $photo, matching: .images)
+        .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.image, .pdf]) { result in
+            if case .success(let url) = result { Task { await readFile(url) } }
+        }
+        .fullScreenCover(isPresented: $takingPhoto) {
+            CameraPicker { image in
+                takingPhoto = false
+                if let image { Task { await readImage(image) } }
+            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: photo) { _, item in
+            guard let item else { return }
+            Task { await readPhoto(item) }
+        }
+    }
+
+    private var box: some View {
         HStack(alignment: .bottom, spacing: 4) {
             if voice.listening {
                 VoiceBars(levels: voice.levels)
@@ -225,9 +266,7 @@ struct AssistantView: View {
                     .padding(.leading, 10)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             } else {
-                attach
-
-                TextField("Ask Pitchfork", text: $draft, axis: .vertical)
+                TextField("Ask Pitchfork…", text: $draft, axis: .vertical)
                     .font(Theme.sans(16))
                     .lineLimit(1...5)
                     .focused($typing)
@@ -252,32 +291,14 @@ struct AssistantView: View {
                 sendButton
             }
         }
-        .animation(Theme.Motion.flow, value: voice.listening)
-        .padding(.leading, 6)
+        .padding(.leading, 14)
         .padding(.trailing, 6)
         .padding(.vertical, 4)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .photosPicker(isPresented: $pickingPhoto, selection: $photo, matching: .images)
-        .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.image, .pdf]) { result in
-            if case .success(let url) = result { Task { await readFile(url) } }
-        }
-        .fullScreenCover(isPresented: $takingPhoto) {
-            CameraPicker { image in
-                takingPhoto = false
-                if let image { Task { await readImage(image) } }
-            }
-            .ignoresSafeArea()
-        }
-        .onChange(of: photo) { _, item in
-            guard let item else { return }
-            Task { await readPhoto(item) }
-        }
     }
 
-    /// The paperclip: take a photo, pick one from the library, or pick an image or PDF from Files.
+    /// The plus: take a photo, pick one from the library, or pick an image or PDF from Files.
     private var attach: some View {
         Menu {
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -286,10 +307,12 @@ struct AssistantView: View {
             Button("Photo Library", systemImage: "photo.on.rectangle") { pickingPhoto = true }
             Button("Files", systemImage: "folder") { pickingFile = true }
         } label: {
-            Image(systemName: reading ? "hourglass" : "paperclip")
-                .font(.system(size: 18))
-                .foregroundStyle(Theme.secondaryText)
-                .frame(width: 38, height: 38)
+            Image(systemName: reading ? "hourglass" : "plus")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Theme.text)
+                .frame(width: 46, height: 46)
+                .glassEffect(.regular.interactive(), in: Circle())
+                .contentShape(Circle())
         }
         .disabled(reading)
         .accessibilityLabel("Attach a photo or file")

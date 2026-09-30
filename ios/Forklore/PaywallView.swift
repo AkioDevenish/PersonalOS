@@ -95,7 +95,6 @@ struct PaywallView: View {
             .animation(Theme.Motion.flow, value: store.entitlement.isSubscribed)
             .padding(.horizontal, 24)
         }
-        .compactsTabBar()
         .appBackground()
         .navigationTitle("Plans")
         .navigationBarTitleDisplayMode(.inline)
