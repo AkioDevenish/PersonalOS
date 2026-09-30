@@ -13,6 +13,10 @@ enum AppConfig {
     static let privacyURL = URL(string: "https://wary-penguin-35.convex.site/privacy")!
     static let termsURL = URL(string: "https://wary-penguin-35.convex.site/terms")!
 
+    /// Whether this build carries the Sign in with Apple entitlement, which Apple's own sheet needs.
+    /// Keep it in step with `com.apple.developer.applesignin` in Forklore.entitlements.
+    static let appleSignInSheet = false
+
     /// Resume token from the last anchored query, so each sync asks only for what changed.
     private static let cursorKey = "personal_os_sync_cursor"
 

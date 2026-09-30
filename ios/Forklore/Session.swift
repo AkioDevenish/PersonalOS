@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import Security
 import AuthenticationServices
+import CryptoKit
 import UIKit
 
 /// Who is signed in, run by this app rather than by a service.
@@ -42,6 +43,9 @@ final class Session: NSObject, ObservableObject {
     private var refreshing: Task<String?, Never>?
     /// Held for as long as the sign-in sheet is up, since the system cancels one nobody holds.
     private var webAuth: ASWebAuthenticationSession?
+    /// Apple's own sheet, and who is waiting on it, for the same reason.
+    private var appleAuth: ASAuthorizationController?
+    private var appleAnswer: CheckedContinuation<ASAuthorization, Error>?
 
     private let transport = Transport()
 
@@ -78,10 +82,73 @@ final class Session: NSObject, ObservableObject {
 
     // MARK: Google, Facebook, Apple
 
+    /// Signs in with Google, Facebook or Apple. Apple uses its own sheet where the build allows it.
+    func signIn(with provider: Provider) async throws {
+        if provider == .apple && AppConfig.appleSignInSheet {
+            do {
+                try await signInWithAppleSheet()
+                return
+            } catch let error as ASAuthorizationError where error.code == .canceled {
+                throw SessionError.cancelled
+            } catch {
+                // A build without the Sign in with Apple entitlement cannot show Apple's sheet; the
+                // browser route still works when the deployment has Apple's web credentials.
+                guard await providers().apple else { throw error }
+            }
+        }
+        try await signInInBrowser(with: provider)
+    }
+
+    /// Apple's own sheet: no browser, and Apple signs a token the server checks for itself.
+    private func signInWithAppleSheet() async throws {
+        let nonce = Self.makeNonce()
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        // Apple puts this hash in the token; the server hashes the nonce itself and compares.
+        request.nonce = Self.sha256Hex(nonce)
+
+        defer { appleAuth = nil; appleAnswer = nil }
+        let authorization: ASAuthorization = try await withCheckedThrowingContinuation { answer in
+            appleAnswer = answer
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            appleAuth = controller
+            controller.performRequests()
+        }
+
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let identityToken = String(data: tokenData, encoding: .utf8) else {
+            throw SessionError.badResponse
+        }
+        var params: [String: Any] = ["identityToken": identityToken, "nonce": nonce]
+        // Apple gives the name once, on the first sign-in, and never puts it in the token.
+        if let parts = credential.fullName {
+            let name = PersonNameComponentsFormatter().string(from: parts).trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty { params["name"] = name }
+        }
+        let data = try await transport.anonymous("action", "auth:signIn", [
+            "provider": "apple-native", "params": params,
+        ])
+        try await adopt(data)
+    }
+
+    /// A one-off value that ties Apple's token to this request.
+    static func makeNonce() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return bytes.map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func sha256Hex(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
     /// Opens the provider in a secure browser sheet, which closes the moment it is sent back to the
     /// app with a one-time code; that code, with the verifier from the first step, is exchanged for
     /// tokens.
-    func signIn(with provider: Provider) async throws {
+    private func signInInBrowser(with provider: Provider) async throws {
         struct Started: Decodable { let redirect: String; let verifier: String }
         let data = try await transport.anonymous("action", "auth:signIn", [
             "provider": provider.rawValue,
@@ -232,14 +299,31 @@ final class Session: NSObject, ObservableObject {
     }
 }
 
+extension Session: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    nonisolated func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        MainActor.assumeIsolated { appleAnswer?.resume(returning: authorization); appleAnswer = nil }
+    }
+
+    nonisolated func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        MainActor.assumeIsolated { appleAnswer?.resume(throwing: error); appleAnswer = nil }
+    }
+
+    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        MainActor.assumeIsolated { keyWindow }
+    }
+}
+
 extension Session: ASWebAuthenticationPresentationContextProviding {
     nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        MainActor.assumeIsolated {
-            UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap(\.windows)
-                .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
-        }
+        MainActor.assumeIsolated { keyWindow }
+    }
+
+    /// Where a sign-in sheet hangs from.
+    fileprivate var keyWindow: ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
     }
 }
 

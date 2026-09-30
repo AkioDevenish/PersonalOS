@@ -18,6 +18,8 @@ struct AuthSheet: View {
     @State private var working = false
     @State private var failure: String?
     @State private var providers = Session.Providers(password: true, google: false, facebook: false, apple: false)
+    /// Apple's own sheet needs nothing on the server; the browser route needs Apple's web credentials.
+    private var appleOffered: Bool { AppConfig.appleSignInSheet || providers.apple }
     @FocusState private var field: Field?
 
     private enum Field { case name, email, password }
@@ -90,7 +92,7 @@ struct AuthSheet: View {
                     .disabled(!ready)
                     .padding(.top, 22)
 
-                    if providers.google || providers.facebook || providers.apple {
+                    if appleOffered || providers.google || providers.facebook {
                         HStack {
                             Rectangle().fill(Theme.separator).frame(height: 1)
                             Text("or").font(Theme.sans(12)).foregroundStyle(Theme.tertiaryText)
@@ -99,7 +101,7 @@ struct AuthSheet: View {
                         .padding(.vertical, 22)
 
                         VStack(spacing: 10) {
-                            if providers.apple {
+                            if appleOffered {
                                 social("Continue with Apple", .apple) {
                                     // Apple's mark ships with the system, and is the one logo here
                                     // that should take the text colour: black on white, white on
