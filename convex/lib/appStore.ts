@@ -1,6 +1,11 @@
 "use node"
 
-import { Environment, SignedDataVerifier, type JWSTransactionDecodedPayload } from "@apple/app-store-server-library"
+import {
+  Environment,
+  SignedDataVerifier,
+  type JWSTransactionDecodedPayload,
+  type ResponseBodyV2DecodedPayload,
+} from "@apple/app-store-server-library"
 import { BUNDLE_ID } from "./app"
 import { storeConfig, type StoreEnvironment } from "./appStoreConfig"
 
@@ -20,7 +25,8 @@ function appleRoots(): Buffer[] {
     .map((b64) => Buffer.from(b64, "base64"))
 }
 
-export async function verifyTransaction(signedTransaction: string): Promise<JWSTransactionDecodedPayload> {
+/** One verifier per accepted environment, in the order they should be tried. */
+function verifiers(): SignedDataVerifier[] {
   const config = storeConfig(process.env)
   const roots = appleRoots()
   if (!config.environments.includes("xcode") && roots.length === 0) {
@@ -28,8 +34,13 @@ export async function verifyTransaction(signedTransaction: string): Promise<JWST
     // who can send a request.
     throw new Error("Purchase verification is not configured yet")
   }
-  for (const name of config.environments) {
-    const verifier = new SignedDataVerifier(roots, true, ENVIRONMENTS[name], BUNDLE_ID, config.appAppleId)
+  return config.environments.map(
+    (name) => new SignedDataVerifier(roots, true, ENVIRONMENTS[name], BUNDLE_ID, config.appAppleId),
+  )
+}
+
+export async function verifyTransaction(signedTransaction: string): Promise<JWSTransactionDecodedPayload> {
+  for (const verifier of verifiers()) {
     try {
       return await verifier.verifyAndDecodeTransaction(signedTransaction)
     } catch {
@@ -37,4 +48,23 @@ export async function verifyTransaction(signedTransaction: string): Promise<JWST
     }
   }
   throw new Error("That purchase could not be verified with Apple")
+}
+
+/** A server notification from Apple, and the transaction it is about, both checked. */
+export async function verifyNotification(signedPayload: string): Promise<{
+  notification: ResponseBodyV2DecodedPayload
+  transaction: JWSTransactionDecodedPayload | null
+}> {
+  for (const verifier of verifiers()) {
+    let notification: ResponseBodyV2DecodedPayload
+    try {
+      notification = await verifier.verifyAndDecodeNotification(signedPayload)
+    } catch {
+      continue
+    }
+    const signed = notification.data?.signedTransactionInfo
+    const transaction = signed ? await verifier.verifyAndDecodeTransaction(signed) : null
+    return { notification, transaction }
+  }
+  throw new Error("That notification could not be verified with Apple")
 }

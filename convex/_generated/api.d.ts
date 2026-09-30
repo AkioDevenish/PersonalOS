@@ -15,6 +15,7 @@ import type * as articleRules from "../articleRules.js";
 import type * as articles from "../articles.js";
 import type * as auth from "../auth.js";
 import type * as billing_entitlements from "../billing/entitlements.js";
+import type * as billing_notifications from "../billing/notifications.js";
 import type * as billing_receipts from "../billing/receipts.js";
 import type * as consultPayments from "../consultPayments.js";
 import type * as devices from "../devices.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   articles: typeof articles;
   auth: typeof auth;
   "billing/entitlements": typeof billing_entitlements;
+  "billing/notifications": typeof billing_notifications;
   "billing/receipts": typeof billing_receipts;
   consultPayments: typeof consultPayments;
   devices: typeof devices;
