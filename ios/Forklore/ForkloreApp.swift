@@ -31,7 +31,7 @@ struct ForkloreApp: App {
                     // would flash at somebody already signed in.
                     switch session.state {
                     case .restoring: LoadingView()
-                    case .signedIn: OnboardingGate { RootView() }
+                    case .signedIn: RootView()
                     case .signedOut: WelcomeView()
                     }
                 }

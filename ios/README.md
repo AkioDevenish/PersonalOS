@@ -7,7 +7,7 @@ Intelligence for on-device insights.
 
 1. Open `ios/Forklore.xcodeproj` in Xcode.
 2. Pick your iPhone as the run destination and press Run (⌘R).
-3. Go through onboarding and allow Health access when asked.
+3. Sign in and allow Health access when asked.
 
 The app talks straight to Convex. The deployment URL, and the privacy and terms
 links, are in `Forklore/AppConfig.swift`. There is no local server to run.
