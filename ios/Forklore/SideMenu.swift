@@ -49,7 +49,7 @@ private struct MenuHeader: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .top, spacing: 0) {
+            .safeAreaBar(edge: .top, spacing: 0) {
                 HStack {
                     MenuButton()
                     Spacer()

@@ -5,7 +5,7 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             Theme.gradient.ignoresSafeArea()
-            ForkloreWordmark(size: 64, showsFork: false)
+            ForkloreWordmark(size: 64, showsFork: false, writing: 0.9)
         }
     }
 }
@@ -28,11 +28,11 @@ struct SplashGate<Content: View>: View {
             }
         }
         .task {
-            // Long enough for the writing to finish.
-            try? await Task.sleep(for: .milliseconds(2600))
-            withAnimation(.easeIn(duration: 0.3)) { showing = false }
-            try? await Task.sleep(for: .milliseconds(300))
-            withAnimation(.easeOut(duration: 0.35)) { revealed = true }
+            // Just long enough for the writing to finish.
+            try? await Task.sleep(for: .milliseconds(1200))
+            withAnimation(.easeIn(duration: 0.25)) { showing = false }
+            try? await Task.sleep(for: .milliseconds(250))
+            withAnimation(.easeOut(duration: 0.3)) { revealed = true }
         }
     }
 }
