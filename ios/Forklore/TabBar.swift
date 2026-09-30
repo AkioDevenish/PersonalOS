@@ -1,10 +1,12 @@
 import SwiftUI
 import Observation
 
-/// Whether the bar is at full size or tucked down.
+/// Whether the bar is at full size, tucked down, or out of the way.
 @Observable
 final class TabBarState {
     private(set) var compact = false
+    /// Gone altogether, for a page that would rather have the room while it is scrolled.
+    private(set) var hidden = false
     /// Whether the keyboard is up. The bar steps aside while it is, so whatever is being typed into
     /// sits straight on top of the keys.
     private(set) var keyboard = false
@@ -13,6 +15,14 @@ final class TabBarState {
         guard next != compact else { return }
         withAnimation(Theme.Motion.flow) { compact = next }
     }
+
+    func set(hidden next: Bool) {
+        guard next != hidden else { return }
+        withAnimation(Theme.Motion.flow) { hidden = next }
+    }
+
+    /// Whether the bar is off screen, so pages can take back the room they leave for it.
+    var away: Bool { keyboard || hidden }
 
     func set(keyboard next: Bool) {
         guard next != keyboard else { return }
@@ -63,8 +73,10 @@ struct AppTabBar: View {
     static let clearance: CGFloat = 72
 }
 
-/// Reports which way a page is being scrolled, so the bar can follow.
+/// Reports which way a page is being scrolled, so the bar can follow: shrinking it, or hiding it.
 struct CompactsTabBar: ViewModifier {
+    /// Hide the bar outright instead of shrinking it.
+    var hides = false
     @Environment(TabBarState.self) private var state: TabBarState?
     /// Where the current run of scrolling in one direction began.
     @State private var anchor: CGFloat = 0
@@ -80,26 +92,35 @@ struct CompactsTabBar: ViewModifier {
             // Near the top the bar is always full: there is nothing above to be making room for.
             if y < travel {
                 anchor = y
-                state.set(compact: false)
+                set(state, tucked: false)
                 return
             }
-            if state.compact {
+            if tucked(state) {
                 anchor = max(anchor, y)
                 if anchor - y > travel {
                     anchor = y
-                    state.set(compact: false)
+                    set(state, tucked: false)
                 }
             } else {
                 anchor = min(anchor, y)
                 if y - anchor > travel {
                     anchor = y
-                    state.set(compact: true)
+                    set(state, tucked: true)
                 }
             }
         }
+        .onDisappear { if hides { state?.set(hidden: false) } }
+    }
+
+    private func tucked(_ state: TabBarState) -> Bool { hides ? state.hidden : state.compact }
+
+    private func set(_ state: TabBarState, tucked: Bool) {
+        if hides { state.set(hidden: tucked) } else { state.set(compact: tucked) }
     }
 }
 
 extension View {
     func compactsTabBar() -> some View { modifier(CompactsTabBar()) }
+    /// Like `compactsTabBar`, but the bar leaves the screen instead of shrinking.
+    func hidesTabBarOnScroll() -> some View { modifier(CompactsTabBar(hides: true)) }
 }

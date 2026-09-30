@@ -68,7 +68,7 @@ struct RootView: View {
             // Laid over the pages rather than beneath them, so content scrolls under the glass the
             // way it does under the system's own bar.
             .overlay(alignment: .bottom) {
-                if !bar.keyboard {
+                if !bar.away {
                     AppTabBar(selected: tab) { selection.wrappedValue = $0 }
                         .transition(.opacity)
                 }
@@ -92,7 +92,7 @@ struct RootView: View {
         .tint(Theme.accent)
         // A new tab starts with the bar at full size: the shrink belonged to how far down the last
         // page you had read, not to this one.
-        .onChange(of: tab) { _, _ in bar.set(compact: false) }
+        .onChange(of: tab) { _, _ in bar.set(compact: false); bar.set(hidden: false) }
         // A tapped notification should land on the thing it announced, not on whatever screen the
         // app was last showing.
         .onChange(of: notifier.opened) { _, route in
@@ -172,15 +172,15 @@ struct RootView: View {
     }
 }
 
-/// Hides the system's tab bar and leaves room at the bottom for the app's, except while the keyboard
-/// is up and the bar has stepped aside.
+/// Hides the system's tab bar and leaves room at the bottom for the app's, except while the bar has
+/// stepped aside for the keyboard or a scroll.
 private struct HidesSystemTabBar: ViewModifier {
     @Environment(TabBarState.self) private var bar: TabBarState?
 
     func body(content: Content) -> some View {
         content
             .toolbarVisibility(.hidden, for: .tabBar)
-            .safeAreaPadding(.bottom, bar?.keyboard == true ? 0 : AppTabBar.clearance)
+            .safeAreaPadding(.bottom, bar?.away == true ? 0 : AppTabBar.clearance)
     }
 }
 
