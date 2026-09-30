@@ -18,15 +18,6 @@ struct WelcomeView: View {
                 .padding(.top, 8)
                 .flowIn(1)
 
-            VStack(alignment: .leading, spacing: 16) {
-                line("heart.text.square", "Uses Apple Health, so there's nothing to type")
-                line("leaf", "Meal ideas made on your phone")
-                line("person.2", "Chat with a nutritionist")
-            }
-            .padding(.top, 34)
-            .padding(.horizontal, 8)
-            .flowIn(2)
-
             Spacer(minLength: 28)
 
             VStack(spacing: 12) {
@@ -49,15 +40,8 @@ struct WelcomeView: View {
                 }
                 .buttonStyle(.press)
             }
-            .flowIn(3)
-
-            Text("Your health data is never sold.")
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.tertiaryText)
-                .multilineTextAlignment(.center)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
-                .flowIn(3)
+            .padding(.bottom, 10)
+            .flowIn(2)
         }
         .padding(.horizontal, 28)
         .frame(maxWidth: 520)
@@ -65,20 +49,6 @@ struct WelcomeView: View {
         .appBackground()
         .sheet(item: $mode) { mode in
             AuthSheet(mode: mode)
-        }
-    }
-
-    private func line(_ symbol: String, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .light))
-                .environment(\.symbolVariants, .none)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 24)
-            Text(text)
-                .font(Theme.sans(15))
-                .foregroundStyle(Theme.text)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
