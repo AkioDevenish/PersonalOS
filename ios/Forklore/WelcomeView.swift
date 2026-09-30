@@ -8,13 +8,8 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 20)
 
-            WalkingVideo()
-                .frame(maxWidth: 240, maxHeight: 240)
-                .accessibilityHidden(true)
-                .flowIn(0, distance: 16)
-
             ForkloreWordmark(size: 54)
-                .padding(.top, 22)
+                .flowIn(0, distance: 16)
 
             Text("Meals, experts and articles for your health.")
                 .font(Theme.serifBody(18))

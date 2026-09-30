@@ -19,12 +19,6 @@ struct AssistantView: View {
     @State private var reading = false
     @FocusState private var typing: Bool
 
-    private let starters = [
-        "What should I eat tonight?",
-        "How did I sleep this week?",
-        "Give me a quick lunch idea",
-    ]
-
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -120,22 +114,6 @@ struct AssistantView: View {
             Text("Ask me about food, cooking, or your health numbers. Type, talk, or attach a photo of a recipe or label.")
                 .font(Theme.sans(15))
                 .foregroundStyle(Theme.secondaryText)
-
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(starters, id: \.self) { starter in
-                    Button { Task { await send(starter) } } label: {
-                        Text(starter)
-                            .font(Theme.sans(15))
-                            .foregroundStyle(Theme.text)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 11)
-                            .background(Theme.surface.opacity(0.8), in: Capsule())
-                            .overlay(Capsule().strokeBorder(Theme.separator, lineWidth: 1))
-                    }
-                    .buttonStyle(.press)
-                }
-            }
-            .padding(.top, 6)
         }
         .padding(.top, 24)
     }
