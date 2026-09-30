@@ -169,6 +169,13 @@ struct NutritionView: View {
                     }
                 }
 
+                // Readings lean on glucose, so App Review (1.4.1) wants this said where they appear.
+                Text("Meal ideas, not medical advice. If your numbers worry you, talk to a nutritionist or your doctor.")
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.tertiaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 30)
+
                 Spacer(minLength: 40)
             }
             // A suggestion arriving pushes the history down the page; it should slide rather than
