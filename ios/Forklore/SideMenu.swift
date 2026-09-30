@@ -12,7 +12,7 @@ final class SideMenu {
     }
 }
 
-/// The three lines at the top right of a page's root that bring the sidebar out.
+/// The round glass button at the top left of a page's root that brings the sidebar out.
 struct MenuButton: View {
     @Environment(SideMenu.self) private var menu: SideMenu?
 
@@ -21,18 +21,50 @@ struct MenuButton: View {
             Haptics.select()
             menu?.set(open: true)
         } label: {
-            Image(systemName: "line.3.horizontal")
+            Image(systemName: "text.alignleft")
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Theme.text)
-                .frame(width: 40, height: 40)
-                .contentShape(Rectangle())
+                .frame(width: GlassCircle.size, height: GlassCircle.size)
+                .glassCircle()
         }
-        .buttonStyle(.press)
+        .buttonStyle(.plain)
         .accessibilityLabel("Menu")
     }
 }
 
-/// The sidebar, sliding in from the right over a dimmed page.
+/// A round Liquid Glass backing, for the buttons at the top of a page.
+enum GlassCircle {
+    static let size: CGFloat = 46
+}
+
+extension View {
+    func glassCircle() -> some View {
+        glassEffect(.regular.interactive(), in: Circle())
+            .contentShape(Circle())
+    }
+}
+
+/// Keeps the menu button at the top left of a page's root, over the content as it scrolls.
+private struct MenuHeader: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaBar(edge: .top, spacing: 0) {
+                HStack {
+                    MenuButton()
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+            }
+    }
+}
+
+extension View {
+    func menuHeader() -> some View { modifier(MenuHeader()) }
+}
+
+/// The sidebar, sliding in from the left over a dimmed page.
 struct SidebarPanel: View {
     let selected: AppTab
     let select: (AppTab) -> Void
@@ -42,7 +74,7 @@ struct SidebarPanel: View {
     static let width: CGFloat = 290
 
     var body: some View {
-        ZStack(alignment: .trailing) {
+        ZStack(alignment: .leading) {
             if menu.open {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea()
@@ -51,7 +83,7 @@ struct SidebarPanel: View {
                     .accessibilityHidden(true)
 
                 panel
-                    .transition(.move(edge: .trailing))
+                    .transition(.move(edge: .leading))
             }
         }
     }
@@ -88,13 +120,13 @@ struct SidebarPanel: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background {
             Theme.gradient
-                .overlay(alignment: .leading) { Rectangle().fill(Theme.separator).frame(width: 1) }
+                .overlay(alignment: .trailing) { Rectangle().fill(Theme.separator).frame(width: 1) }
                 .ignoresSafeArea()
-                .shadow(color: .black.opacity(0.12), radius: 24, x: -4)
+                .shadow(color: .black.opacity(0.12), radius: 24, x: 4)
         }
         .gesture(
             DragGesture(minimumDistance: 20).onEnded { value in
-                if value.translation.width > 60 { menu.set(open: false) }
+                if value.translation.width < -60 { menu.set(open: false) }
             }
         )
         .accessibilityAddTraits(.isModal)

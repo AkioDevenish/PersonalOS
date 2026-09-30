@@ -60,6 +60,8 @@ private struct Twirl {
 struct ForkloreWordmark: View {
     var size: CGFloat = 56
     var showsFork = true
+    /// How long the writing takes.
+    var writing: Double = 1.7
     @State private var written: CGFloat = 0
     @State private var play = false
 
@@ -80,7 +82,7 @@ struct ForkloreWordmark: View {
         .accessibilityLabel("Forklore")
         .onAppear {
             play = true
-            withAnimation(.easeInOut(duration: 1.7).delay(0.15)) { written = 1 }
+            withAnimation(.easeInOut(duration: writing).delay(0.15)) { written = 1 }
         }
     }
 

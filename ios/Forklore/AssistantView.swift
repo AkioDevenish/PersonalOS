@@ -46,6 +46,9 @@ struct AssistantView: View {
                             .foregroundStyle(Theme.secondaryText)
                     }
                 }
+                // Full width even with no messages, so the welcome blob is sized from the screen and a
+                // drag anywhere can scroll the keyboard away.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
@@ -70,16 +73,14 @@ struct AssistantView: View {
                 }
             }
         }
-        // Pinned above the chat, so the buttons stay put while it scrolls under them.
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // Pinned above the chat, which scrolls under the glass and fades out at the edge, the way it
+        // does under the system's own bars. No backdrop of its own, so there's no band to line up.
+        .safeAreaBar(edge: .top, spacing: 0) {
             header
-                .padding(.horizontal, 20)
-                .background { Theme.gradient.ignoresSafeArea(edges: .top) }
+                .padding(.horizontal, 16)
         }
-        // A solid backdrop, so the chat doesn't show through the message box or behind the keyboard.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaBar(edge: .bottom, spacing: 0) {
             composer
-                .background { Theme.gradient.ignoresSafeArea(edges: .bottom) }
         }
         .appBackground()
         .task { await begin() }
@@ -115,22 +116,22 @@ struct AssistantView: View {
 
     // MARK: Pieces
 
-    /// Pitchfork's blob top left once a chat is going, the chat's name in a pill in the middle, and the
-    /// menu top right.
+    /// The menu top left, the chat's name in a pill in the middle, and Pitchfork's blob top right once a
+    /// chat is going.
     private var header: some View {
         ZStack {
             HStack {
+                MenuButton()
+                Spacer()
                 if !assistant.lines.isEmpty {
-                    blobButton(size: 34)
-                        .frame(width: 40, height: 40)
+                    blobButton(size: 38)
+                        .frame(width: GlassCircle.size, height: GlassCircle.size)
                         .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
-                Spacer()
-                MenuButton()
             }
 
             chatPill
-                .padding(.horizontal, 52)
+                .padding(.horizontal, GlassCircle.size + 12)
         }
         .padding(.top, 4)
         .padding(.bottom, 4)
@@ -156,8 +157,8 @@ struct AssistantView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Theme.secondaryText)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 36)
+            .padding(.horizontal, 18)
+            .frame(height: GlassCircle.size)
             .glassEffect(.regular.interactive(), in: Capsule())
             .contentShape(Capsule())
         }
@@ -294,8 +295,7 @@ struct AssistantView: View {
         .padding(.leading, 14)
         .padding(.trailing, 6)
         .padding(.vertical, 4)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     /// The plus: take a photo, pick one from the library, or pick an image or PDF from Files.
