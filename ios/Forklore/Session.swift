@@ -350,10 +350,11 @@ enum LocalData {
         UserDefaults.standard.set(accountId, forKey: ownerKey)
     }
 
-    /// Readings and sync progress, both tied to one account.
+    /// Readings, saved chats and sync progress, all tied to one account.
     @MainActor
     static func forget() {
         Readings.shared.removeAll()
+        Chats.shared.removeAll()
         AppConfig.syncCursor = nil
         for key in [ownerKey, "last_sync_at", AutoSync.backfilledKey] {
             UserDefaults.standard.removeObject(forKey: key)

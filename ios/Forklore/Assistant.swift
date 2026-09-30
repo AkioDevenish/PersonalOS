@@ -6,16 +6,16 @@ import Speech
 import SwiftUI
 
 /// One thing Pitchfork looked at while working out a reply.
-struct ThinkingStep: Identifiable, Equatable, Hashable {
-    let id = UUID()
+struct ThinkingStep: Identifiable, Equatable, Hashable, Codable {
+    var id = UUID()
     let symbol: String
     let label: String
 }
 
 /// One line in the conversation.
-struct ChatLine: Identifiable, Equatable {
-    enum Who { case you, assistant }
-    let id = UUID()
+struct ChatLine: Identifiable, Equatable, Hashable, Codable {
+    enum Who: String, Codable { case you, assistant }
+    var id = UUID()
     let who: Who
     var text: String
     /// What Pitchfork looked at, and how long it took, for its replies.
@@ -31,15 +31,19 @@ final class Assistant: ObservableObject {
     /// The steps shown so far while Pitchfork is thinking.
     @Published private(set) var liveSteps: [ThinkingStep] = []
     @Published var failure: String?
+    /// Which saved chat this is, so each message updates the same one.
+    @Published private(set) var chatID = UUID()
 
     private var session: LanguageModelSession?
     private var sources: [ThinkingStep] = []
 
-    /// Starts a fresh conversation with today's numbers as background.
-    func start(context: String, sources: [ThinkingStep]) {
-        lines = []
+    /// Starts a conversation with today's numbers as background: a fresh one, or a saved one picked up again.
+    func start(context: String, sources: [ThinkingStep], resuming chat: SavedChat? = nil) {
+        lines = chat?.lines ?? []
+        chatID = chat?.id ?? UUID()
+        failure = nil
         self.sources = sources
-        session = LanguageModelSession(instructions: Self.instructions(context: context))
+        session = LanguageModelSession(instructions: Self.instructions(context: context, earlier: Self.recap(lines)))
     }
 
     func send(_ text: String) async -> String? {
@@ -51,7 +55,9 @@ final class Assistant: ObservableObject {
         }
 
         failure = nil
+        let chat = chatID
         lines.append(ChatLine(who: .you, text: text))
+        keep()
         thinking = true
         liveSteps = []
         let began = Date()
@@ -74,9 +80,12 @@ final class Assistant: ObservableObject {
         do {
             let reply = try await session.respond(to: text).content
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+            // They moved to another chat while this one was thinking.
+            guard chat == chatID else { return nil }
             let clean = MealReading.clean(reply)
             let seconds = max(1, Int(Date().timeIntervalSince(began).rounded()))
             lines.append(ChatLine(who: .assistant, text: clean, steps: plan, seconds: seconds))
+            keep()
             return clean
         } catch let error as LanguageModelSession.GenerationError {
             failure = OnDeviceInsights.OnDeviceError.generation(error).localizedDescription
@@ -86,7 +95,25 @@ final class Assistant: ObservableObject {
         return nil
     }
 
-    private static func instructions(context: String) -> String {
+    private func keep() {
+        Chats.shared.save(SavedChat(id: chatID, lines: lines, updated: Date()))
+    }
+
+    /// The end of an earlier conversation, so a picked-up chat carries on from where it was. The phone's
+    /// model only holds a few pages, so a long chat keeps just its latest part.
+    private static func recap(_ lines: [ChatLine]) -> String {
+        var kept: [String] = []
+        var used = 0
+        for line in lines.reversed() {
+            let entry = (line.who == .you ? "Them: " : "You: ") + line.text
+            if used + entry.count > 2400 { break }
+            kept.insert(entry, at: 0)
+            used += entry.count
+        }
+        return kept.joined(separator: "\n")
+    }
+
+    private static func instructions(context: String, earlier: String) -> String {
         """
         Your name is Pitchfork. You are a friendly personal assistant inside a food and health app \
         called Forklore. Talk like a helpful friend: short, warm, plain sentences. No lists unless \
@@ -99,7 +126,12 @@ final class Assistant: ObservableObject {
 
         What you know about them today:
         \(context)
-        """
+        """ + (earlier.isEmpty ? "" : """
+
+
+        You are picking up an earlier conversation with them. It ended like this:
+        \(earlier)
+        """)
     }
 }
 
