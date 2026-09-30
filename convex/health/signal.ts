@@ -1,10 +1,28 @@
 import { userIdOf } from "../lib/me"
 import { requireSettled } from "../lib/consults"
 import { v } from "convex/values"
-import { mutation, query, type QueryCtx } from "../_generated/server"
+import { internalMutation, mutation, query, type QueryCtx } from "../_generated/server"
 import type { Id } from "../_generated/dataModel"
+import { internal } from "../_generated/api"
 
 /** Carrying the messages that let two phones connect a call. */
+
+/** What one side can say while setting up a call. */
+const signalKind = v.union(
+  v.literal("offer"),
+  v.literal("answer"),
+  v.literal("candidate"),
+  v.literal("bye"),
+)
+
+/** A session description is a few kilobytes; anything near this is not one. */
+const MAX_PAYLOAD = 32_000
+
+/** More than a call could need, even redialled many times over. */
+const MAX_SIGNALS = 500
+
+/** A call is set up in seconds, so what is older than this is only clutter. */
+const KEEP_FOR_MS = 24 * 60 * 60 * 1000
 
 /** Who may take part: the person who booked, or the practitioner they booked. */
 async function participant(ctx: QueryCtx, consultId: Id<"consults">, userId: string) {
@@ -19,13 +37,20 @@ async function participant(ctx: QueryCtx, consultId: Id<"consults">, userId: str
 export const post = mutation({
   args: {
     id: v.id("consults"),
-    kind: v.string(),
+    kind: signalKind,
     payload: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
     requireSettled(await participant(ctx, args.id, userIdOf(identity)))
+    if (args.payload.length > MAX_PAYLOAD) throw new Error("That is too large to be part of a call")
+
+    const existing = await ctx.db
+      .query("call_signals")
+      .withIndex("by_consult", (q) => q.eq("consultId", args.id))
+      .take(MAX_SIGNALS)
+    if (existing.length >= MAX_SIGNALS) throw new Error("Too many attempts to connect this call")
 
     await ctx.db.insert("call_signals", {
       consultId: args.id,
@@ -51,11 +76,11 @@ export const since = query({
       .withIndex("by_consult_time", (q) =>
         q.eq("consultId", args.id).gt("created_at", args.after)
       )
-      .collect()
+      .take(MAX_SIGNALS)
 
+    // Already in time order, from the index.
     return rows
       .filter((r) => r.from !== userIdOf(identity))
-      .sort((a, b) => a.created_at - b.created_at)
       .map((r) => ({ kind: r.kind, payload: r.payload, at: r.created_at }))
   },
 })
@@ -71,9 +96,24 @@ export const clear = mutation({
     const rows = await ctx.db
       .query("call_signals")
       .withIndex("by_consult", (q) => q.eq("consultId", args.id))
-      .collect()
+      .take(MAX_SIGNALS)
     await Promise.all(rows.map((r) => ctx.db.delete(r._id)))
     return { cleared: rows.length }
+  },
+})
+
+/** Sweeps away signalling from calls that ended long ago, oldest first. */
+export const sweep = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - KEEP_FOR_MS
+    const rows = await ctx.db
+      .query("call_signals")
+      .withIndex("by_creation_time", (q) => q.lt("_creationTime", cutoff))
+      .take(500)
+    for (const row of rows) await ctx.db.delete(row._id)
+    if (rows.length === 500) await ctx.scheduler.runAfter(0, internal.health.signal.sweep, {})
+    return { swept: rows.length }
   },
 })
 

@@ -23,6 +23,30 @@ function validCountry(country: string) {
   if (!/^[A-Z]{2}$/.test(country)) throw new Error("Not a country code")
 }
 
+/** Dishes one person may name or set aside in one country. Nobody eats more than this. */
+const PER_PERSON = 60
+
+/** Votes read for one country's list. */
+const VOTES_READ = 8000
+
+/** A dish name: words, not links or addresses. */
+function validDish(dish: string) {
+  if (!dish) throw new Error("A dish needs a name")
+  if (dish.length > 60) throw new Error("That is longer than a dish name")
+  if (/https?:|www\.|\.(com|net|org|io)\b|@|[<>{}\[\]\\]/i.test(dish)) {
+    throw new Error("That doesn't look like a dish")
+  }
+}
+
+/** Refuses a new entry from somebody who has already named a country's worth of dishes. */
+async function underLimit(ctx: QueryCtx, country: string, userId: string) {
+  const mine = await ctx.db
+    .query("cuisine_dishes")
+    .withIndex("by_country_user", (q) => q.eq("country", country).eq("userId", userId))
+    .take(PER_PERSON)
+  if (mine.length >= PER_PERSON) throw new Error("That's as many dishes as one person can name here")
+}
+
 /** The generated list when there is one, otherwise the hand-written list while it is made. */
 async function baseList(ctx: QueryCtx, country: string) {
   const row = await ctx.db
@@ -43,12 +67,13 @@ export const forCountry = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
+    validCountry(args.country)
 
     const base = await baseList(ctx, args.country)
     const rows = await ctx.db
       .query("cuisine_dishes")
       .withIndex("by_country", (q) => q.eq("country", args.country))
-      .collect()
+      .take(VOTES_READ)
 
     type Entry = { dish: string; votes: number; hidden: boolean; written: boolean; mine: boolean }
     const blank = (dish: string): Entry => ({ dish, votes: 0, hidden: false, written: false, mine: false })
@@ -143,6 +168,8 @@ export const reject = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
+    validCountry(args.country)
+    validDish(args.dish.trim())
 
     const key = normalise(args.dish)
     const base = await baseList(ctx, args.country)
@@ -153,7 +180,7 @@ export const reject = mutation({
     const rows = await ctx.db
       .query("cuisine_dishes")
       .withIndex("by_country_key", (q) => q.eq("country", args.country).eq("key", key))
-      .collect()
+      .take(VOTES_READ)
 
     if (rows.filter((r) => !r.reject).length >= CANON_VOTES) {
       throw new Error("Enough people have named that dish for it to stay")
@@ -164,6 +191,7 @@ export const reject = mutation({
       await ctx.db.delete(mine._id)
       return { rejected: false }
     }
+    await underLimit(ctx, args.country, userIdOf(identity))
 
     await ctx.db.insert("cuisine_dishes", {
       country: args.country,
@@ -184,21 +212,22 @@ export const suggest = mutation({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
+    validCountry(args.country)
     const dish = args.dish.trim()
-    if (!dish) throw new Error("A dish needs a name")
-    if (dish.length > 60) throw new Error("That is longer than a dish name")
+    validDish(dish)
 
     const key = normalise(dish)
     const existing = await ctx.db
       .query("cuisine_dishes")
       .withIndex("by_country_key", (q) => q.eq("country", args.country).eq("key", key))
-      .collect()
+      .take(VOTES_READ)
 
     const mine = existing.find((r) => r.userId === userIdOf(identity) && !r.reject)
     if (mine) {
       await ctx.db.delete(mine._id)
       return { added: false }
     }
+    await underLimit(ctx, args.country, userIdOf(identity))
 
     await ctx.db.insert("cuisine_dishes", {
       country: args.country,

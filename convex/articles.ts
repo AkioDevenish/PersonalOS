@@ -422,6 +422,30 @@ export const applyPlacement = internalMutation({
   },
 })
 
+/** Takes back the time on Home that a refunded purchase paid for. */
+export async function refundPlacement(ctx: MutationCtx, transactionId: string) {
+  const payment = await ctx.db
+    .query("article_payments")
+    .withIndex("by_transactionId", (q) => q.eq("transactionId", transactionId))
+    .first()
+  if (!payment || payment.refunded_at) return { refunded: false }
+
+  const now = Date.now()
+  await ctx.db.patch(payment._id, { refunded_at: now })
+
+  const row = await ctx.db.get(payment.articleId)
+  if (row && row.status === "published") {
+    const liveUntil = (row.live_until ?? now) - PLACEMENT_DAYS * DAY
+    if (liveUntil > now) {
+      await ctx.db.patch(row._id, { live_until: liveUntil, updated_at: now })
+      await ctx.scheduler.runAt(liveUntil, internal.articles.expire, { id: row._id })
+    } else {
+      await ctx.db.patch(row._id, { status: "expired", live_until: undefined, updated_at: now })
+    }
+  }
+  return { refunded: true }
+}
+
 /** Takes an article off Home when its paid time has run out. */
 export const expire = internalMutation({
   args: { id: v.id("articles") },

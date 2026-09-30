@@ -18,6 +18,21 @@ function isStaff(userId: string) {
   return staff().includes(userId)
 }
 
+/** How many practitioners the directory lists. */
+const DIRECTORY_SIZE = 300
+
+/** How many consultations a practitioner's queue shows, newest first. */
+const QUEUE_SIZE = 100
+
+/** Messages counted towards a queue entry's reply count. */
+const REPLIES_COUNTED = 50
+
+/** How much of a conversation is sent at once: the most recent messages. */
+const THREAD_SIZE = 300
+
+/** Longest a field on a practitioner's profile may be. */
+const LIMITS = { name: 80, credentials: 200, bio: 1500, specialty: 40 }
+
 /** Whether somebody is party to a consultation. */
 function party(consult: Pick<Doc<"consults">, "userId" | "nutritionistId">, userId: string) {
   return consult.userId === userId || consult.nutritionistId === userId
@@ -30,22 +45,28 @@ export const directory = query({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
 
-    const rows = await ctx.db.query("nutritionists").collect()
+    const approved = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .take(DIRECTORY_SIZE)
+    // Being on the environment allowlist is itself an approval: those rows predate applications
+    // and were vetted by whoever added the id.
+    const allowlisted = await Promise.all(
+      staff().map((userId) =>
+        ctx.db
+          .query("nutritionists")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .first(),
+      ),
+    )
+    const byId = new Map<string, Doc<"nutritionists">>()
+    for (const r of [...approved, ...allowlisted]) if (r) byId.set(r._id, r)
 
-    const fresh = Date.now() - 3 * 60 * 1000
-
-    const listed = rows
-      // Being on the environment allowlist is itself an approval: those rows predate applications
-      // and were vetted by whoever added the id.
-      .filter((r) => r.active && (r.status === "approved" || staff().includes(r.userId)))
-      // Whoever can answer now, first.
-      .sort((a, b) => {
-        const onA = (a.last_seen ?? 0) > fresh
-        const onB = (b.last_seen ?? 0) > fresh
-        if (onA !== onB) return onA ? -1 : 1
-        if (onA && onB) return (b.last_seen ?? 0) - (a.last_seen ?? 0)
-        return a.name.localeCompare(b.name)
-      })
+    const listed = [...byId.values()]
+      .filter((r) => r.active)
+      // Whoever was around most recently first, which puts whoever can answer now at the top
+      // without the query having to know what time it is.
+      .sort((a, b) => (b.last_seen ?? 0) - (a.last_seen ?? 0) || a.name.localeCompare(b.name))
 
     // Signed URLs are minted at read time rather than stored, so a photo can be replaced or
     // withdrawn without anything else having to be rewritten.
@@ -116,44 +137,64 @@ export const apply = mutation({
 
     const name = args.name.trim()
     const credentials = args.credentials.trim()
+    const bio = args.bio.trim()
     if (!name) throw new Error("A name is required")
     if (!credentials) throw new Error("Your qualifications are required")
+    if (name.length > LIMITS.name) throw new Error("That is longer than a name")
+    if (credentials.length > LIMITS.credentials) throw new Error("Keep your qualifications shorter")
+    if (bio.length > LIMITS.bio) throw new Error("Keep your bio shorter")
 
     const specialties = args.specialties
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, 6)
     if (specialties.length === 0) throw new Error("Name at least one specialism")
+    if (specialties.some((s) => s.length > LIMITS.specialty)) {
+      throw new Error("Keep each specialism shorter")
+    }
 
     const existing = await ctx.db
       .query("nutritionists")
       .withIndex("by_user", (q) => q.eq("userId", userIdOf(identity)))
       .first()
 
+    const photo = args.photo ?? existing?.photo
+    // What was vetted is who they are: a new name, qualifications or face goes back to review.
+    // Everything else, a bio or a price, can change without it.
+    const same =
+      existing !== null &&
+      existing.name === name &&
+      existing.credentials === credentials &&
+      existing.photo === photo
+
     const doc = {
       userId: userIdOf(identity),
       name,
       country: args.country.trim().toUpperCase(),
       credentials,
-      bio: args.bio.trim(),
+      bio,
       specialties,
       offers_video: args.offers_video,
       // Left alone when no new file was chosen, so editing a bio does not silently remove a
       // photograph.
-      photo: args.photo ?? existing?.photo,
+      photo,
       price_minor: Math.max(0, Math.floor(args.price_minor)),
       currency: args.currency.trim().toUpperCase() || "TTD",
       // Kept at zero so the old column stops being consulted anywhere.
       price_credits: 0,
       active: args.active,
-      // An approved profile stays approved through an edit; anything else is pending, including a
-      // previously declined application being redone.
-      status: existing?.status === "approved" ? "approved" : "pending",
+      // An approved profile stays approved through an edit that leaves the vetted parts alone;
+      // anything else is pending, including a previously declined application being redone.
+      status: same && existing.status === "approved" ? "approved" : "pending",
       updated_at: Date.now(),
     }
 
     if (existing) {
       await ctx.db.patch(existing._id, doc)
+      // The old photograph is no longer anybody's.
+      if (existing.photo && existing.photo !== photo && (await ctx.db.system.get(existing.photo))) {
+        await ctx.storage.delete(existing.photo)
+      }
       return { status: doc.status }
     }
     await ctx.db.insert("nutritionists", doc)
@@ -348,10 +389,12 @@ export const thread = query({
     if (!consult) throw new Error("No such consultation")
     if (!party(consult, userIdOf(identity))) throw new Error("Not yours to read")
 
-    const messages = await ctx.db
+    const newest = await ctx.db
       .query("consult_messages")
       .withIndex("by_consult", (q) => q.eq("consultId", args.id))
-      .collect()
+      .order("desc")
+      .take(THREAD_SIZE)
+    const messages = newest.reverse()
 
     return {
       id: consult._id,
@@ -442,16 +485,18 @@ export const queue = query({
     const mine = await ctx.db
       .query("consults")
       .withIndex("by_nutritionistId", (q) => q.eq("nutritionistId", userIdOf(identity)))
-      .take(200)
+      .order("desc")
+      .take(QUEUE_SIZE)
 
     const withLast = await Promise.all(
       mine.map(async (r) => {
-        const messages = await ctx.db
+        // Newest first, and only as many as the count shown needs.
+        const recent = await ctx.db
           .query("consult_messages")
           .withIndex("by_consult", (q) => q.eq("consultId", r._id))
-          .collect()
-        const sorted = messages.sort((a, b) => a.created_at - b.created_at)
-        const last = sorted[sorted.length - 1]
+          .order("desc")
+          .take(REPLIES_COUNTED)
+        const last = recent[0]
         return {
           id: r._id,
           topic: r.topic,
@@ -460,7 +505,7 @@ export const queue = query({
           payment_status: r.payment_status ?? "free",
           created_at: r.created_at,
           updated_at: r.updated_at,
-          replies: sorted.length,
+          replies: recent.length,
           last_message: last?.body ?? "",
           // Waiting on you, rather than on them.
           needs_reply: !last || last.from === "you",

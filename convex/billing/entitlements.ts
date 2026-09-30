@@ -2,6 +2,7 @@ import { userIdOf } from "../lib/me"
 import { v } from "convex/values"
 import { internalMutation, query, type QueryCtx } from "../_generated/server"
 import { internal } from "../_generated/api"
+import { refundPlacement } from "../articles"
 
 /** What a user is entitled to, and what they have left. */
 
@@ -83,6 +84,62 @@ export const applyVerified = internalMutation({
       created_at: now,
     })
     return { applied: true }
+  },
+})
+
+/**
+ * Applies what Apple's server notification says happened to a purchase. Keyed by the original
+ * transaction, which is the one id that stays the same across every renewal.
+ */
+export const applyNotification = internalMutation({
+  args: {
+    type: v.string(),
+    transactionId: v.string(),
+    originalTransactionId: v.optional(v.string()),
+    productId: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const takenBack = args.type === "REFUND" || args.type === "REVOKE"
+    if (takenBack) await refundPlacement(ctx, args.transactionId)
+
+    if (!args.originalTransactionId) return { applied: false }
+    const row = await ctx.db
+      .query("entitlements")
+      .withIndex("by_original_transaction_id", (q) =>
+        q.eq("original_transaction_id", args.originalTransactionId),
+      )
+      .first()
+    if (!row) return { applied: false }
+
+    const now = Date.now()
+    if (takenBack) {
+      await ctx.db.patch(row._id, { subscription_status: "revoked", updated_at: now })
+      return { applied: true }
+    }
+    // Notifications can arrive out of order, so one about an earlier period changes nothing.
+    const current = typeof args.expiresAt === "number" && args.expiresAt >= (row.expires_at ?? 0)
+    if (!current) return { applied: false }
+
+    if (args.type === "EXPIRED" || args.type === "GRACE_PERIOD_EXPIRED") {
+      await ctx.db.patch(row._id, { subscription_status: "expired", updated_at: now })
+      return { applied: true }
+    }
+    if (
+      args.type === "DID_RENEW" ||
+      args.type === "SUBSCRIBED" ||
+      args.type === "RENEWAL_EXTENDED" ||
+      args.type === "REFUND_REVERSED"
+    ) {
+      await ctx.db.patch(row._id, {
+        subscription_status: "active",
+        product_id: args.productId ?? row.product_id,
+        expires_at: args.expiresAt,
+        updated_at: now,
+      })
+      return { applied: true }
+    }
+    return { applied: false }
   },
 })
 

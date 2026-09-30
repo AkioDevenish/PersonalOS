@@ -66,6 +66,9 @@ in the repo. The backend reads:
   (Apple's root certificates, base64 DER, separated by `|`), and `APPLE_APP_ID` (the app's numeric
   Apple ID from App Store Connect, required for `production`). `xcode` also needs
   `APPLE_IAP_ALLOW_UNSIGNED=true`, because Xcode's local purchases are not signed by Apple.
+  Point App Store Connect's Server Notifications (version 2) at
+  `https://<deployment>.convex.site/appstore/notifications` so renewals, expiries and refunds
+  reach the backend.
 - **Push (APNs)**: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_P8`, and `APNS_ENVIRONMENT` (`production`
   or `sandbox`; nothing is sent until it is set)
 - **Payouts**: `STRIPE_SECRET_KEY`, `PLATFORM_FEE_PERCENT`

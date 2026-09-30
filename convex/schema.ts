@@ -160,7 +160,8 @@ export default defineSchema({
     updated_at: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_subscription_status_and_expires_at", ["subscription_status", "expires_at"]),
+    .index("by_subscription_status_and_expires_at", ["subscription_status", "expires_at"])
+    .index("by_original_transaction_id", ["original_transaction_id"]),
 
   /** Every App Store purchase that has been applied. */
   purchase_receipts: defineTable({
@@ -296,6 +297,8 @@ export default defineSchema({
     transactionId: v.string(),
     productId: v.string(),
     live_until: v.number(),
+    /** When Apple refunded it, if it did. */
+    refunded_at: v.optional(v.number()),
     created_at: v.number(),
   })
     .index("by_transactionId", ["transactionId"])

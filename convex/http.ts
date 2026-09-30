@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server"
 import { httpAction } from "./_generated/server"
+import { internal } from "./_generated/api"
 import { auth } from "./auth"
 import { privacy, terms } from "./legal"
 
@@ -8,6 +9,26 @@ const http = httpRouter()
 
 // Token verification keys, and the return leg of Google, Facebook and Apple.
 auth.addHttpRoutes(http)
+
+// App Store Server Notifications, version 2. Anything Apple did not sign is refused, so Apple
+// retries a genuine one that failed and nobody else can move an entitlement.
+http.route({
+  path: "/appstore/notifications",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    let signedPayload: unknown
+    try {
+      signedPayload = ((await request.json()) as { signedPayload?: unknown }).signedPayload
+    } catch {
+      return new Response(null, { status: 400 })
+    }
+    if (typeof signedPayload !== "string" || signedPayload.length > 100_000) {
+      return new Response(null, { status: 400 })
+    }
+    const result = await ctx.runAction(internal.billing.notifications.receive, { signedPayload })
+    return new Response(null, { status: result.ok ? 200 : 400 })
+  }),
+})
 
 http.route({
   path: "/pay/done",
