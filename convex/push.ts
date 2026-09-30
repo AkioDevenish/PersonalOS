@@ -6,13 +6,9 @@ import jwt from "jsonwebtoken"
 import { internalAction } from "./_generated/server"
 import { internal } from "./_generated/api"
 import { BUNDLE_ID } from "./lib/app"
+import { apnsHost, isGone } from "./lib/apns"
 
 /** Sending a notification to somebody's lock screen. */
-
-const HOSTS = {
-  production: "https://api.push.apple.com",
-  sandbox: "https://api.sandbox.push.apple.com",
-}
 
 function providerToken(): string | null {
   const keyId = process.env.APNS_KEY_ID
@@ -37,12 +33,12 @@ export const send = internalAction({
   },
   handler: async (ctx, args): Promise<Sent> => {
     const authorization = providerToken()
-    if (!authorization) return { delivered: 0, forgotten: 0, skipped: true }
+    const host = apnsHost(process.env.APNS_ENVIRONMENT)
+    if (!authorization || !host) return { delivered: 0, forgotten: 0, skipped: true }
 
     const tokens: string[] = await ctx.runQuery(internal.devices.forUser, { userId: args.userId })
     if (tokens.length === 0) return { delivered: 0, forgotten: 0, skipped: false }
 
-    const host = process.env.APNS_ENVIRONMENT === "production" ? HOSTS.production : HOSTS.sandbox
     const payload = JSON.stringify({
       aps: {
         alert: { title: args.title, body: args.body },
@@ -69,15 +65,18 @@ export const send = internalAction({
                 "content-type": "application/json",
               })
               let status = 0
+              let body = ""
+              request.setEncoding("utf8")
               request.on("response", (headers) => {
                 status = Number(headers[":status"] ?? 0)
+              })
+              request.on("data", (chunk: string) => {
+                body += chunk
               })
               request.on("error", () => resolve())
               request.on("end", () => {
                 if (status === 200) delivered += 1
-                // 410 is Apple saying the app is gone from that device; 400 with BadDeviceToken is
-                // the same thing said differently.
-                else if (status === 410 || status === 400) dead.push(token)
+                else if (isGone(status, body)) dead.push(token)
                 resolve()
               })
               request.end(payload)

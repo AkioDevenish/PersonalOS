@@ -1,4 +1,5 @@
 import { userIdOf } from "../lib/me"
+import { requireSettled } from "../lib/consults"
 import { v } from "convex/values"
 import { internalMutation, mutation, query } from "../_generated/server"
 import { internal } from "../_generated/api"
@@ -381,6 +382,7 @@ export const send = mutation({
     if (!consult) throw new Error("No such consultation")
 
     if (!party(consult, userIdOf(identity))) throw new Error("Not yours to answer")
+    requireSettled(consult)
     // Which side of the conversation this is.
     const mine = consult.userId === userIdOf(identity)
 
@@ -435,10 +437,12 @@ export const queue = query({
       (profile && profile.status === "approved") || isStaff(userIdOf(identity))
     if (!approved) throw new Error("You are not listed as a practitioner")
 
-    // by_user indexes the person who booked; the practitioner's own consults have to be found the
-    // other way round.
-    const all = await ctx.db.query("consults").collect()
-    const mine = all.filter((r) => r.nutritionistId === userIdOf(identity))
+    // by_user indexes the person who booked; the practitioner's own consults are found the other
+    // way round.
+    const mine = await ctx.db
+      .query("consults")
+      .withIndex("by_nutritionistId", (q) => q.eq("nutritionistId", userIdOf(identity)))
+      .take(200)
 
     const withLast = await Promise.all(
       mine.map(async (r) => {

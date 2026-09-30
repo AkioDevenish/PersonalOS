@@ -1,4 +1,5 @@
 import { userIdOf } from "../lib/me"
+import { requireSettled } from "../lib/consults"
 import { v } from "convex/values"
 import { mutation, query, type QueryCtx } from "../_generated/server"
 import type { Id } from "../_generated/dataModel"
@@ -24,7 +25,7 @@ export const post = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error("Not authenticated")
-    await participant(ctx, args.id, userIdOf(identity))
+    requireSettled(await participant(ctx, args.id, userIdOf(identity)))
 
     await ctx.db.insert("call_signals", {
       consultId: args.id,

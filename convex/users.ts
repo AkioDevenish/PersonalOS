@@ -18,14 +18,18 @@ const OWNED = [
   { table: "entitlements", index: "by_user" },
   { table: "purchase_receipts", index: "by_userId" },
   { table: "push_devices", index: "by_userId" },
-  { table: "nutritionists", index: "by_user" },
   { table: "contacts", index: "by_user" },
   { table: "interactions", index: "by_user" },
   { table: "posts", index: "by_user" },
   { table: "projects", index: "by_user" },
   { table: "finance_entries", index: "by_user" },
   { table: "time_blocks", index: "by_user" },
-] as const
+  { table: "cuisine_dishes", index: "by_userId" },
+  // An author's articles are keyed by the same id under another name. The payments go first so
+  // none is left pointing at an article that is gone.
+  { table: "article_payments", index: "by_authorToken", field: "authorToken" },
+  { table: "articles", index: "by_authorToken_and_updated_at", field: "authorToken" },
+] as const satisfies readonly { table: string; index: string; field?: string }[]
 
 /** Rows deleted per run, before the sweep hands off to a fresh transaction. */
 const BUDGET = 1500
@@ -117,72 +121,89 @@ export const purge = internalMutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     let budget = BUDGET
+    const again = async () => {
+      await ctx.scheduler.runAfter(0, internal.users.purge, args)
+      return null
+    }
 
-    for (const { table, index } of OWNED) {
+    // A practitioner's photo lives in file storage, which only the profile row points at, so it
+    // goes before the row does.
+    const profiles = await ctx.db
+      .query("nutritionists")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .take(10)
+    for (const profile of profiles) {
+      if (profile.photo && (await ctx.db.system.get(profile.photo))) {
+        await ctx.storage.delete(profile.photo)
+      }
+      await ctx.db.delete(profile._id)
+      budget -= 1
+    }
+
+    for (const entry of OWNED) {
+      const field = "field" in entry ? entry.field : "userId"
       while (budget > 0) {
         // The table name is a variable here, so the types collapse to the intersection of twenty
         // different row shapes and the index name narrows to never.
-        const query = ctx.db.query(table) as unknown as {
+        const query = ctx.db.query(entry.table) as unknown as {
           withIndex: (
             name: string,
             range: (q: { eq: (field: string, value: string) => unknown }) => unknown,
           ) => { take: (count: number) => Promise<{ _id: Parameters<typeof ctx.db.delete>[0] }[]> }
         }
         const rows = await query
-          .withIndex(index, (q) => q.eq("userId", args.userId))
+          .withIndex(entry.index, (q) => q.eq(field, args.userId))
           .take(Math.min(200, budget))
         if (rows.length === 0) break
         for (const row of rows) await ctx.db.delete(row._id)
         budget -= rows.length
       }
-      if (budget <= 0) {
-        await ctx.scheduler.runAfter(0, internal.users.purge, args)
-        return null
-      }
+      if (budget <= 0) return await again()
     }
 
     // A consultation's messages and call signalling hang off the consultation rather than off the
-    // person, so they go first — deleting the parent first would leave children nothing points at.
+    // person, so a consultation is only deleted once nothing points at it any more. One at a time,
+    // because a long one can hold more messages than a whole run's budget.
     while (budget > 0) {
-      const consults = await ctx.db
+      const consult = await ctx.db
         .query("consults")
         .withIndex("by_user", (q) => q.eq("userId", args.userId))
-        .take(20)
-      if (consults.length === 0) break
-      for (const consult of consults) {
-        const messages = await ctx.db
-          .query("consult_messages")
+        .first()
+      if (!consult) break
+      let empty = true
+      for (const table of ["consult_messages", "call_signals"] as const) {
+        const rows = await ctx.db
+          .query(table)
           .withIndex("by_consult", (q) => q.eq("consultId", consult._id))
-          .take(500)
-        for (const message of messages) await ctx.db.delete(message._id)
-
-        const signals = await ctx.db
-          .query("call_signals")
-          .withIndex("by_consult", (q) => q.eq("consultId", consult._id))
-          .take(500)
-        for (const signal of signals) await ctx.db.delete(signal._id)
-
+          .take(Math.min(200, budget))
+        for (const row of rows) await ctx.db.delete(row._id)
+        budget -= rows.length
+        if (rows.length > 0) empty = false
+      }
+      if (empty) {
         await ctx.db.delete(consult._id)
-        budget -= messages.length + signals.length + 1
+        budget -= 1
       }
     }
+    if (budget <= 0) return await again()
 
-    // One vote per person per dish, indexed by country rather than by person, so this is the one
-    // table that has to be looked through instead of looked up.
-    if (budget > 0) {
-      const votes = await ctx.db
-        .query("cuisine_dishes")
-        .filter((q) => q.eq(q.field("userId"), args.userId))
-        .take(Math.min(200, budget))
-      for (const vote of votes) await ctx.db.delete(vote._id)
-      budget -= votes.length
-      if (votes.length > 0) {
-        await ctx.scheduler.runAfter(0, internal.users.purge, args)
-        return null
-      }
+    // Consultations this person answered as a practitioner belong to the people who asked, so they
+    // stay, closed and no longer tied to an account that is gone.
+    while (budget > 0) {
+      const consult = await ctx.db
+        .query("consults")
+        .withIndex("by_nutritionistId", (q) => q.eq("nutritionistId", args.userId))
+        .first()
+      if (!consult) break
+      await ctx.db.patch(consult._id, {
+        nutritionistId: undefined,
+        status: "closed",
+        updated_at: Date.now(),
+      })
+      budget -= 1
     }
 
-    if (budget <= 0) await ctx.scheduler.runAfter(0, internal.users.purge, args)
+    if (budget <= 0) return await again()
     return null
   },
 })

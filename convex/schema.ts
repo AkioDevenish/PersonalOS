@@ -240,6 +240,7 @@ export default defineSchema({
     updated_at: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_nutritionistId", ["nutritionistId"])
     .index("by_status", ["status"]),
 
   /** How two phones find each other for a call. */
@@ -296,7 +297,9 @@ export default defineSchema({
     productId: v.string(),
     live_until: v.number(),
     created_at: v.number(),
-  }).index("by_transactionId", ["transactionId"]),
+  })
+    .index("by_transactionId", ["transactionId"])
+    .index("by_authorToken", ["authorToken"]),
 
   /** Devices to push to, one row per install. */
   push_devices: defineTable({
@@ -351,7 +354,8 @@ export default defineSchema({
   })
     .index("by_country", ["country"])
     .index("by_country_key", ["country", "key"])
-    .index("by_country_user", ["country", "userId"]),
+    .index("by_country_user", ["country", "userId"])
+    .index("by_userId", ["userId"]),
 
   ai_preferences: defineTable({
     userId: v.string(),

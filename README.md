@@ -62,8 +62,12 @@ in the repo. The backend reads:
 - **Auth** (`@convex-dev/auth`): `JWT_PRIVATE_KEY` and `JWKS` (set by `npx @convex-dev/auth`), plus `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`,
   `AUTH_FACEBOOK_ID`/`AUTH_FACEBOOK_SECRET`, `AUTH_APPLE_ID`/`AUTH_APPLE_SECRET`. Each social
   provider is enabled only when its pair is set; email and password always work.
-- **App Store**: `APPLE_IAP_ENVIRONMENT`, `APPLE_ROOT_CERTS`
-- **Push (APNs)**: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_P8`, `APNS_ENVIRONMENT`
+- **App Store**: `APPLE_IAP_ENVIRONMENT` (`sandbox` by default, or `production`), `APPLE_ROOT_CERTS`
+  (Apple's root certificates, base64 DER, separated by `|`), and `APPLE_APP_ID` (the app's numeric
+  Apple ID from App Store Connect, required for `production`). `xcode` also needs
+  `APPLE_IAP_ALLOW_UNSIGNED=true`, because Xcode's local purchases are not signed by Apple.
+- **Push (APNs)**: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_P8`, and `APNS_ENVIRONMENT` (`production`
+  or `sandbox`; nothing is sent until it is set)
 - **Payouts**: `STRIPE_SECRET_KEY`, `PLATFORM_FEE_PERCENT`
 - **Consultation payments (WAM)**: `WAM_API_KEY`, `WAM_BUSINESS_ID`, `WAM_ENVIRONMENT`
 - **Calls**: `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` (optional; STUN is used without them)

@@ -3,6 +3,7 @@ import { convexTest } from "convex-test"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { api, internal } from "./_generated/api"
 import schema from "./schema"
+import { apnsHost, isGone } from "./lib/apns"
 
 const modules = import.meta.glob("./**/*.ts")
 
@@ -86,5 +87,26 @@ describe("a reply still lands when push cannot", () => {
     const thread = await t.withIdentity(ME).query(api.health.consult.thread, { id: opened.id })
     expect(thread.messages).toHaveLength(1)
     expect(thread.messages[0].body).toBe("Is this normal?")
+  })
+})
+
+describe("what Apple says back", () => {
+  test("only a token Apple calls gone is forgotten", () => {
+    expect(isGone(410, "")).toBe(true)
+    expect(isGone(400, JSON.stringify({ reason: "BadDeviceToken" }))).toBe(true)
+    expect(isGone(400, JSON.stringify({ reason: "Unregistered" }))).toBe(true)
+    // Our own mistakes: a bad payload, a stale key, a wrong topic.
+    expect(isGone(400, JSON.stringify({ reason: "BadTopic" }))).toBe(false)
+    expect(isGone(400, JSON.stringify({ reason: "PayloadEmpty" }))).toBe(false)
+    expect(isGone(400, "not json")).toBe(false)
+    expect(isGone(403, JSON.stringify({ reason: "ExpiredProviderToken" }))).toBe(false)
+    expect(isGone(500, "")).toBe(false)
+  })
+
+  test("the environment has to be named, since the wrong one makes every token look bad", () => {
+    expect(apnsHost("production")).toBe("https://api.push.apple.com")
+    expect(apnsHost("sandbox")).toBe("https://api.sandbox.push.apple.com")
+    expect(apnsHost(undefined)).toBeNull()
+    expect(apnsHost("")).toBeNull()
   })
 })
