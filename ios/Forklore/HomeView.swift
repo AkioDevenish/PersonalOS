@@ -64,7 +64,6 @@ struct HomeView: View {
             }
             .padding(.bottom, 28)
         }
-        .compactsTabBar()
         .scrollDismissesKeyboard(.immediately)
         .appBackground()
         .task { await library.refresh() }

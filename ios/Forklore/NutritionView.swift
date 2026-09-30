@@ -186,7 +186,6 @@ struct NutritionView: View {
             .animation(Theme.Motion.flow, value: signals.count)
             .padding(.horizontal, 24)
         }
-        .compactsTabBar()
         .appBackground()
         .task { await loadSignals() }
         .task { await loadBook() }

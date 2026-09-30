@@ -122,7 +122,6 @@ struct ArticleView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 30)
         }
-        .compactsTabBar()
         .appBackground()
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -242,7 +241,6 @@ struct ArticleListView: View {
             }
             .padding(.bottom, 24)
         }
-        .compactsTabBar()
         .appBackground()
         .navigationBarTitleDisplayMode(.inline)
     }
