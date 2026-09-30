@@ -5,10 +5,18 @@ import Observation
 @Observable
 final class TabBarState {
     private(set) var compact = false
+    /// Whether the keyboard is up. The bar steps aside while it is, so whatever is being typed into
+    /// sits straight on top of the keys.
+    private(set) var keyboard = false
 
     func set(compact next: Bool) {
         guard next != compact else { return }
         withAnimation(Theme.Motion.flow) { compact = next }
+    }
+
+    func set(keyboard next: Bool) {
+        guard next != keyboard else { return }
+        withAnimation(Theme.Motion.flow) { keyboard = next }
     }
 }
 

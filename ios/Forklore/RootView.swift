@@ -4,8 +4,8 @@ import SwiftUI
 enum AppTab: CaseIterable, Hashable {
     case home, meals, assistant, practitioners, profile
 
-    /// What the tab bar shows. Home is hidden for now; Profile is reached from the picture at the top right.
-    static let visible: [AppTab] = [.meals, .assistant, .practitioners]
+    /// What the tab bar shows. Home is hidden for now.
+    static let visible: [AppTab] = [.meals, .assistant, .practitioners, .profile]
 
     /// The system fills the selected one and tints it, so only the outline is named here.
     var symbol: String {
@@ -67,9 +67,18 @@ struct RootView: View {
             // Laid over the pages rather than beneath them, so content scrolls under the glass the
             // way it does under the system's own bar.
             .overlay(alignment: .bottom) {
-                AppTabBar(selected: tab) { selection.wrappedValue = $0 }
+                if !bar.keyboard {
+                    AppTabBar(selected: tab) { selection.wrappedValue = $0 }
+                        .transition(.opacity)
+                }
             }
             .environment(bar)
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                bar.set(keyboard: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                bar.set(keyboard: false)
+            }
     }
 
     /// The pages, in a TabView whose own bar is hidden.
@@ -162,11 +171,18 @@ struct RootView: View {
     }
 }
 
-extension View {
-    /// Hides the system's tab bar and leaves room at the bottom for the app's.
-    func hidesSystemTabBar() -> some View {
-        self
+/// Hides the system's tab bar and leaves room at the bottom for the app's, except while the keyboard
+/// is up and the bar has stepped aside.
+private struct HidesSystemTabBar: ViewModifier {
+    @Environment(TabBarState.self) private var bar: TabBarState?
+
+    func body(content: Content) -> some View {
+        content
             .toolbarVisibility(.hidden, for: .tabBar)
-            .safeAreaPadding(.bottom, AppTabBar.clearance)
+            .safeAreaPadding(.bottom, bar?.keyboard == true ? 0 : AppTabBar.clearance)
     }
+}
+
+extension View {
+    func hidesSystemTabBar() -> some View { modifier(HidesSystemTabBar()) }
 }
