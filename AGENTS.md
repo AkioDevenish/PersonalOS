@@ -35,7 +35,10 @@ The full list is in `README.md` under Configuration. Key groups:
 - **Health data:** samples live in Convex (`convex/health/samples.ts`), keyed by
   user, provider, metric and time. There is no SQLite.
 - **AI:** insights are generated on the phone with Apple's Foundation Models
-  (`ios/Forklore/OnDeviceInsights.swift`); there is no server model.
+  (`ios/Forklore/OnDeviceInsights.swift`). The one server model call is
+  `convex/health/cuisineAi.ts`, which turns a country's Wikipedia cuisine article
+  into a dish list with Claude (`ANTHROPIC_API_KEY`). It sends only the country
+  and the article, never user data, and the privacy page says so. Keep it that way.
 - **Tests:** `npm test` runs the vitest suites in `convex/**/*.test.ts`.
 
 <!-- convex-ai-start -->
