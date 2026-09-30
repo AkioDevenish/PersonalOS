@@ -32,8 +32,8 @@ final class Store {
     }
 
     /// `deinit` is nonisolated, so the handle it cancels has to be reachable from outside the
-    /// actor.
-    private nonisolated(unsafe) var listener: Task<Void, Never>?
+    /// actor. Ignored by observation so it stays a plain stored property the attribute applies to.
+    @ObservationIgnored private nonisolated(unsafe) var listener: Task<Void, Never>?
 
     init() {
         listener = Task.detached { [weak self] in

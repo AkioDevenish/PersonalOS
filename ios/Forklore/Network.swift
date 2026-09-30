@@ -16,8 +16,9 @@ final class Network: ObservableObject {
 
     private init() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                self?.online = path.status == .satisfied
+            let online = path.status == .satisfied
+            Task { @MainActor [weak self] in
+                self?.online = online
             }
         }
         monitor.start(queue: DispatchQueue(label: "network.path"))
