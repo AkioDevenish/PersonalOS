@@ -1,7 +1,6 @@
 import Accelerate
 import AVFoundation
 import Combine
-import FoundationModels
 import Speech
 import SwiftUI
 
@@ -23,7 +22,8 @@ struct ChatLine: Identifiable, Equatable, Hashable, Codable {
     var seconds: Int = 0
 }
 
-/// The conversation, run on the phone's own model so your data stays on the phone.
+/// The conversation. Replies come from Claude through the Convex backend, which can also look up the
+/// person's own synced health history while it answers.
 @MainActor
 final class Assistant: ObservableObject {
     @Published private(set) var lines: [ChatLine] = []
@@ -34,25 +34,23 @@ final class Assistant: ObservableObject {
     /// Which saved chat this is, so each message updates the same one.
     @Published private(set) var chatID = UUID()
 
-    private var session: LanguageModelSession?
+    private var context = ""
     private var sources: [ThinkingStep] = []
+    /// A reply can take a few lookups, so this waits longer than the usual call.
+    private let transport = Transport(timeout: 90)
 
     /// Starts a conversation with today's numbers as background: a fresh one, or a saved one picked up again.
     func start(context: String, sources: [ThinkingStep], resuming chat: SavedChat? = nil) {
         lines = chat?.lines ?? []
         chatID = chat?.id ?? UUID()
         failure = nil
+        self.context = context
         self.sources = sources
-        session = LanguageModelSession(instructions: Self.instructions(context: context, earlier: Self.recap(lines)))
     }
 
     func send(_ text: String) async -> String? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !thinking, let session else { return nil }
-        guard OnDeviceInsights.availability.isReady else {
-            failure = OnDeviceInsights.availability.explanation
-            return nil
-        }
+        guard !text.isEmpty, !thinking else { return nil }
 
         failure = nil
         let chat = chatID
@@ -64,7 +62,7 @@ final class Assistant: ObservableObject {
         let plan = [ThinkingStep(symbol: "text.bubble", label: "Reading your question")]
             + sources
             + [ThinkingStep(symbol: "sparkles", label: "Writing a reply")]
-        // Show each step in turn while the model works.
+        // Show each step in turn while the reply is on its way.
         let reveal = Task { @MainActor in
             for step in plan {
                 withAnimation(Theme.Motion.flow) { liveSteps.append(step) }
@@ -78,60 +76,39 @@ final class Assistant: ObservableObject {
         }
 
         do {
-            let reply = try await session.respond(to: text).content
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let answer = try await ask()
             // They moved to another chat while this one was thinking.
             guard chat == chatID else { return nil }
-            let clean = MealReading.clean(reply)
+            let clean = MealReading.clean(answer.text.trimmingCharacters(in: .whitespacesAndNewlines))
+            let looked = answer.looked.map { ThinkingStep(symbol: "chart.xyaxis.line", label: $0) }
+            let steps = Array(plan.dropLast()) + looked + [plan[plan.count - 1]]
             let seconds = max(1, Int(Date().timeIntervalSince(began).rounded()))
-            lines.append(ChatLine(who: .assistant, text: clean, steps: plan, seconds: seconds))
+            lines.append(ChatLine(who: .assistant, text: clean, steps: steps, seconds: seconds))
             keep()
             return clean
-        } catch let error as LanguageModelSession.GenerationError {
-            failure = OnDeviceInsights.OnDeviceError.generation(error).localizedDescription
+        } catch TransportError.notSignedIn {
+            failure = "Sign in to talk to Pitchfork."
         } catch {
-            failure = error.localizedDescription
+            failure = "Pitchfork couldn't answer just now. Check your connection and try again."
         }
         return nil
     }
 
+    private struct Answer: Decodable {
+        let text: String
+        let looked: [String]
+    }
+
+    private func ask() async throws -> Answer {
+        let history: [[String: Any]] = lines.map { ["who": $0.who.rawValue, "text": $0.text] }
+        let data = try await transport.action(
+            "health/pitchfork:reply", ["lines": history, "context": context]
+        )
+        return try JSONDecoder().decode(Answer.self, from: data)
+    }
+
     private func keep() {
         Chats.shared.save(SavedChat(id: chatID, lines: lines, updated: Date()))
-    }
-
-    /// The end of an earlier conversation, so a picked-up chat carries on from where it was. The phone's
-    /// model only holds a few pages, so a long chat keeps just its latest part.
-    private static func recap(_ lines: [ChatLine]) -> String {
-        var kept: [String] = []
-        var used = 0
-        for line in lines.reversed() {
-            let entry = (line.who == .you ? "Them: " : "You: ") + line.text
-            if used + entry.count > 2400 { break }
-            kept.insert(entry, at: 0)
-            used += entry.count
-        }
-        return kept.joined(separator: "\n")
-    }
-
-    private static func instructions(context: String, earlier: String) -> String {
-        """
-        Your name is Pitchfork. You are a friendly personal assistant inside a food and health app \
-        called Forklore. Talk like a helpful friend: short, warm, plain sentences. No lists unless \
-        asked. No long dashes. If the message includes text from a photo, such as a recipe or a \
-        food label, use it to answer.
-
-        You help with what to eat, cooking, groceries, and making sense of the person's own \
-        health numbers below. Never diagnose anything or mention medication. If something sounds \
-        medical or worrying, suggest they talk to a nutritionist in the app or see a doctor.
-
-        What you know about them today:
-        \(context)
-        """ + (earlier.isEmpty ? "" : """
-
-
-        You are picking up an earlier conversation with them. It ended like this:
-        \(earlier)
-        """)
     }
 }
 

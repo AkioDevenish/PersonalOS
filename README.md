@@ -21,8 +21,10 @@ serves the privacy policy and terms.
 - **Billing**: App Store subscriptions and one-off purchases, verified on the
   server.
 
-AI insights run on the phone with Apple's Foundation Models (Apple Intelligence),
-so no health data is sent to a model server.
+Meal ideas run on the phone with Apple's Foundation Models (Apple Intelligence).
+Pitchfork, the chat assistant, runs on Claude through `convex/health/pitchfork.ts`:
+it sends the conversation and the numbers it looks up to Anthropic, and the
+privacy page says so.
 
 The code still uses the working name Personal OS in places (the Xcode target,
 the `personalos://` sign-in scheme, the legal pages).
