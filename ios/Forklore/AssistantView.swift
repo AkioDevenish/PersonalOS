@@ -73,7 +73,7 @@ struct AssistantView: View {
         // Pinned above the chat, so the buttons stay put while it scrolls under them.
         .safeAreaInset(edge: .top, spacing: 0) {
             header
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
                 .background { Theme.gradient.ignoresSafeArea(edges: .top) }
         }
         // A solid backdrop, so the chat doesn't show through the message box or behind the keyboard.
@@ -115,22 +115,22 @@ struct AssistantView: View {
 
     // MARK: Pieces
 
-    /// Pitchfork's blob top left once a chat is going, the chat's name in a pill in the middle, and the
-    /// menu top right.
+    /// The menu top left, the chat's name in a pill in the middle, and Pitchfork's blob top right once a
+    /// chat is going.
     private var header: some View {
         ZStack {
             HStack {
+                MenuButton()
+                Spacer()
                 if !assistant.lines.isEmpty {
-                    blobButton(size: 34)
-                        .frame(width: 40, height: 40)
+                    blobButton(size: 38)
+                        .frame(width: GlassCircle.size, height: GlassCircle.size)
                         .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
-                Spacer()
-                MenuButton()
             }
 
             chatPill
-                .padding(.horizontal, 52)
+                .padding(.horizontal, GlassCircle.size + 12)
         }
         .padding(.top, 4)
         .padding(.bottom, 4)
@@ -156,8 +156,8 @@ struct AssistantView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Theme.secondaryText)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 36)
+            .padding(.horizontal, 18)
+            .frame(height: GlassCircle.size)
             .glassEffect(.regular.interactive(), in: Capsule())
             .contentShape(Capsule())
         }

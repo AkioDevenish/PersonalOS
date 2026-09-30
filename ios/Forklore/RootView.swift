@@ -100,11 +100,7 @@ struct RootView: View {
             root(for: t)
                 .hidesSystemTabBar()
                 // Pitchfork draws its own header, with the menu button in it.
-                .toolbar {
-                    if t != .assistant {
-                        ToolbarItem(placement: .topBarTrailing) { MenuButton() }
-                    }
-                }
+                .modifier(RootHeader(tab: t))
                 .navigationDestination(for: Route.self) { route in
                     Group {
                     switch route {
@@ -169,6 +165,19 @@ struct RootView: View {
 private struct HidesSystemTabBar: ViewModifier {
     func body(content: Content) -> some View {
         content.toolbarVisibility(.hidden, for: .tabBar)
+    }
+}
+
+/// The menu button over every root page but Pitchfork's, which has its own header.
+private struct RootHeader: ViewModifier {
+    let tab: AppTab
+
+    func body(content: Content) -> some View {
+        if tab == .assistant {
+            content.toolbar(.hidden, for: .navigationBar)
+        } else {
+            content.menuHeader()
+        }
     }
 }
 
