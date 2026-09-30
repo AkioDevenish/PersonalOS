@@ -4,12 +4,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 import Vision
 
-/// Pitchfork, a personal assistant you can type or talk to. It answers out loud if you want it to.
+/// Pitchfork, a personal assistant you can type or talk to. It answers out loud unless you tap its blob to mute it.
 struct AssistantView: View {
     @EnvironmentObject private var health: HealthKitManager
     @Environment(Store.self) private var store
     @StateObject private var assistant = Assistant()
     @StateObject private var voice = Voice()
+    @ObservedObject private var chats = Chats.shared
 
     @AppStorage("assistant_speaks") private var speaks = true
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
@@ -22,6 +23,7 @@ struct AssistantView: View {
     @State private var pickingFile = false
     @State private var takingPhoto = false
     @State private var micOff = false
+    @State private var browsing = false
     @FocusState private var typing: Bool
 
     var body: some View {
@@ -71,6 +73,19 @@ struct AssistantView: View {
             if was && !now && !draft.isEmpty { Task { await send(draft) } }
         }
         .onDisappear { voice.stopSpeaking(); voice.stopListening() }
+        .sheet(isPresented: $browsing) {
+            ChatHistory(chats: chats, current: assistant.chatID) { chat in
+                browsing = false
+                voice.stopSpeaking()
+                Task { await begin(fresh: true, resuming: chat) }
+            } onDelete: { chat in
+                chats.remove(chat)
+                if chat.id == assistant.chatID {
+                    voice.stopSpeaking()
+                    Task { await begin(fresh: true) }
+                }
+            }
+        }
         .subscriptionNeeded($locked, toDo: "chat with you")
         .alert("Turn on the microphone", isPresented: $micOff) {
             Button("Open Settings") {
@@ -84,53 +99,69 @@ struct AssistantView: View {
 
     // MARK: Pieces
 
-    /// Read-aloud and new-conversation buttons, top right.
+    /// Past chats top left, Pitchfork's blob in the middle once a chat is going, a new chat top right.
     private var header: some View {
         HStack {
-            Spacer()
             Button {
-                speaks.toggle()
-                if !speaks { voice.stopSpeaking() }
                 Haptics.select()
+                browsing = true
             } label: {
-                Image(systemName: speaks ? "speaker.wave.2.fill" : "speaker.slash")
+                Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 17))
-                    .foregroundStyle(speaks ? Theme.accent : Theme.tertiaryText)
+                    .foregroundStyle(Theme.text)
                     .frame(width: 40, height: 40)
             }
             .buttonStyle(.press)
-            .accessibilityLabel(speaks ? "Stop reading replies aloud" : "Read replies aloud")
+            .accessibilityLabel("Past chats")
+
+            Spacer()
 
             if !assistant.lines.isEmpty {
-                Button {
-                    voice.stopSpeaking()
-                    Task { await begin(fresh: true) }
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 17))
-                        .foregroundStyle(Theme.text)
-                        .frame(width: 40, height: 40)
-                }
-                .buttonStyle(.press)
-                .accessibilityLabel("New conversation")
+                blobButton(size: 30)
+                    .transition(.opacity.combined(with: .scale(scale: 0.6)))
             }
+
+            Spacer()
+
+            Button {
+                voice.stopSpeaking()
+                Task { await begin(fresh: true) }
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 17))
+                    .foregroundStyle(Theme.text)
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.press)
+            .accessibilityLabel("New conversation")
+            .opacity(assistant.lines.isEmpty ? 0 : 1)
+            .disabled(assistant.lines.isEmpty)
         }
         .padding(.top, 12)
+        .animation(Theme.Motion.flow, value: assistant.lines.isEmpty)
     }
 
-    /// Before the first message: Pitchfork's blob, a little above the middle, with its name under it.
+    /// Before the first message: Pitchfork's blob, a little above the middle.
     private var welcome: some View {
         GeometryReader { geo in
-            VStack(spacing: 18) {
-                PitchforkBlob(size: min(geo.size.width * 0.42, 170))
-                Text("Pitchfork")
-                    .font(Theme.serif(26))
-                    .foregroundStyle(Theme.text)
-            }
-            .position(x: geo.size.width / 2, y: geo.size.height * 0.4)
+            blobButton(size: min(geo.size.width * 0.42, 170))
+                .position(x: geo.size.width / 2, y: geo.size.height * 0.4)
         }
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .combine)
+    }
+
+    /// Pitchfork's blob. Tapping it mutes or unmutes the spoken replies.
+    private func blobButton(size: CGFloat) -> some View {
+        Button {
+            speaks.toggle()
+            if !speaks { voice.stopSpeaking() }
+            Haptics.select()
+        } label: {
+            PitchforkBlob(size: size, muted: !speaks)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Pitchfork")
+        .accessibilityValue(speaks ? "Reading replies aloud" : "Muted")
+        .accessibilityHint(speaks ? "Double tap to mute" : "Double tap to read replies aloud")
     }
 
     @ViewBuilder
@@ -340,11 +371,11 @@ struct AssistantView: View {
 
     // MARK: Actions
 
-    private func begin(fresh: Bool = false) async {
+    private func begin(fresh: Bool = false, resuming chat: SavedChat? = nil) async {
         guard fresh || !started else { return }
         started = true
         let (text, sources) = await context()
-        assistant.start(context: text, sources: sources)
+        assistant.start(context: text, sources: sources, resuming: chat)
     }
 
     private func send(_ text: String) async {
@@ -479,9 +510,10 @@ private struct ThoughtSummary: View {
     }
 }
 
-/// Pitchfork's face: a soft, slowly shifting blob of warm colour.
+/// Pitchfork's face: a soft, slowly shifting blob of warm colour. Muted, it fades to grey.
 private struct PitchforkBlob: View {
     let size: CGFloat
+    var muted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let colors = [
@@ -495,6 +527,8 @@ private struct PitchforkBlob: View {
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
+            // The canvas runs past the blob on every side so the glow fades out before its edge,
+            // rather than being cut off in a square.
             Canvas { context, canvas in
                 let center = CGPoint(x: canvas.width / 2, y: canvas.height / 2)
                 let radius = size * 0.4
@@ -516,8 +550,22 @@ private struct PitchforkBlob: View {
                     endRadius: radius * 1.1
                 ))
             }
+            .frame(width: size * 1.6, height: size * 1.6)
+            .saturation(muted ? 0.1 : 1)
+            .opacity(muted ? 0.6 : 1)
+            .padding(-size * 0.3)
         }
         .frame(width: size, height: size)
+        .overlay(alignment: .bottomTrailing) {
+            if muted {
+                Image(systemName: "speaker.slash.fill")
+                    .font(.system(size: max(9, size * 0.14)))
+                    .foregroundStyle(Theme.tertiaryText)
+                    .transition(.opacity.combined(with: .scale(scale: 0.5)))
+            }
+        }
+        .contentShape(Circle())
+        .animation(Theme.Motion.flow, value: muted)
         .accessibilityHidden(true)
     }
 
@@ -589,5 +637,72 @@ private struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.done(nil)
         }
+    }
+}
+
+/// Past chats, newest first. Tap one to carry on where it left off, or swipe to delete it.
+private struct ChatHistory: View {
+    @ObservedObject var chats: Chats
+    let current: UUID
+    let onPick: (SavedChat) -> Void
+    let onDelete: (SavedChat) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if chats.all.isEmpty {
+                    Text("Your chats with Pitchfork will show up here.")
+                        .font(Theme.sans(15))
+                        .foregroundStyle(Theme.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .padding(40)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(chats.all) { chat in
+                            Button { onPick(chat) } label: { row(chat) }
+                                .listRowBackground(Color.clear)
+                        }
+                        .onDelete { offsets in
+                            offsets.map { chats.all[$0] }.forEach(onDelete)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+            }
+            .appBackground()
+            .navigationTitle("Chats")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func row(_ chat: SavedChat) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(chat.title)
+                    .font(Theme.sans(16))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
+                Text(chat.updated.formatted(.relative(presentation: .named)))
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.tertiaryText)
+            }
+            Spacer()
+            if chat.id == current {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
