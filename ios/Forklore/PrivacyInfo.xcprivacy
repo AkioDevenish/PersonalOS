@@ -113,7 +113,7 @@
 	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- Sync progress, whose data is on this phone, and whether the introduction was seen. -->
+		<!-- Sync progress and whose data is on this phone. -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
