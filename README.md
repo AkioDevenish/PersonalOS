@@ -1,33 +1,37 @@
 # Forklore
 
-An iOS app for health, food and the rest of a day: it reads Apple Health, writes a
-morning briefing on the phone itself, and connects people with nutritionists and
-other practitioners for paid consultations.
+An iOS food app that reads Apple Health and suggests what to eat next, with a chat
+assistant called Pitchfork and paid consultations with nutritionists.
 
 The repository holds the app, its Convex backend, and a small Next.js site that
 serves the privacy policy and terms.
 
 ## What's in the app
 
-- **Health**: a morning briefing, a ledger of Apple Health readings, trends,
-  insights, goals and cycle tracking. Samples sync to Convex incrementally.
-- **Food**: cuisine by country (a written list of dishes plus people's votes) and
-  meal readings.
-- **Time and money**: simple ledgers for where the day and the money went.
-- **Specialists**: a directory of practitioners, consultation calls over
-  WebRTC, and payouts to practitioners with a platform fee.
-- **Articles**: practitioners write articles, a review team verifies them, and
-  readers unlock them with a purchase.
-- **Billing**: App Store subscriptions and one-off purchases, verified on the
-  server.
+Pages are picked from a sidebar opened by the glass menu button at the top left.
 
-Meal ideas run on the phone with Apple's Foundation Models (Apple Intelligence).
-Pitchfork, the chat assistant, runs on Claude through `convex/health/pitchfork.ts`:
-it sends the conversation and the numbers it looks up to Anthropic, and the
-privacy page says so.
+- **Meals**: today's glucose, carbs, sleep and activity, a country to cook in, and a
+  suggestion for the next meal. Suggestions are written on the phone with Apple's
+  Foundation Models; on a phone without Apple Intelligence the button asks Pitchfork
+  instead. Each country's dish list is written from its Wikipedia cuisine article,
+  plus people's votes.
+- **Pitchfork**: the chat assistant, by text, voice, photo or file. Replies come from
+  Claude through `convex/health/pitchfork.ts`, which can look up the person's own synced
+  health history. Chats are saved on the phone only.
+- **Read**: articles, six built in plus ones practitioners write. A review team
+  verifies practitioners' articles before they're published.
+- **Experts**: a directory of nutritionists and other practitioners, with chat, video
+  calls over WebRTC, and consultations paid by web checkout (Stripe or WAM).
+  Practitioners apply from Profile, then get a practice page, articles and payouts.
+- **Profile**: account details, notifications, privacy and terms, log out and account
+  deletion.
 
-The code still uses the working name Personal OS in places (the Xcode target,
-the `personalos://` sign-in scheme, the legal pages).
+Apple Health samples sync to Convex incrementally in the background. App Store
+subscriptions and one-off purchases are verified on the server, but the paywall is
+off for now (`Paywall.enabled` in `ios/Forklore/Store.swift`).
+
+The code still uses the working name Personal OS in places (the `personalos://`
+sign-in scheme, the legal pages).
 
 ## Layout
 
