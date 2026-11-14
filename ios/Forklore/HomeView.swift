@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The landing page, laid out as a reading catalogue.
+/// Articles, laid out as a reading catalogue. Reached from Read in the sidebar.
 struct HomeView: View {
     @EnvironmentObject private var session: Session
     @State private var query = ""
@@ -76,7 +76,7 @@ struct HomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center) {
-                Text("Home")
+                Text("Read")
                     .font(Theme.serif(28))
                     .foregroundStyle(Theme.text)
                 Spacer()
@@ -168,12 +168,12 @@ struct HomeView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: Daily News
+    // MARK: Featured
 
     /// On a band of its own, cards snapping one at a time, with a dot per card.
     private var mostRead: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Daily News")
+            Text("Featured")
                 .font(Theme.sans(19, medium: true))
                 .foregroundStyle(Theme.text)
                 .padding(.horizontal, margin)
