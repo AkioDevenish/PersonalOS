@@ -2,14 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 /**
- * There is no website. Forklore is a phone app; this Next project is its
- * API server plus the two documents the app stores require a public URL for
- * (/privacy and /terms). Hence no providers, no fonts, no chrome — the only
- * pages this layout wraps are legal text.
+ * The bare document. The web app lives in the (app) route group, which brings its own Convex
+ * provider, fonts and sidebar; /privacy and /terms sit outside it as plain text.
  */
 export const metadata: Metadata = {
   title: "Forklore",
-  description: "Forklore runs on your phone. This site hosts its legal documents.",
+  description: "What to eat next, with Pitchfork and real nutritionists.",
   robots: { index: false },
 };
 

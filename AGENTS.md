@@ -6,10 +6,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # What this repo is
 
-The iOS app (`ios/Forklore`, SwiftUI) and its Convex backend (`convex/`).
-The Next.js app in `src/app` only serves the privacy and terms pages; there are
-no API routes, and the app talks to Convex directly. See `README.md` for the
-feature map.
+The iOS app (`ios/Forklore`, SwiftUI), its Convex backend (`convex/`), and a
+web version of the same app in Next.js (`src/app/(app)`, helpers in `src/web`).
+There are no API routes: both apps talk to Convex directly. See `README.md` for
+the feature map and how the web version differs from the phone.
 
 # Environment Variables
 
@@ -38,7 +38,7 @@ The full list is in `README.md` under Configuration. Key groups:
   (`ios/Forklore/OnDeviceInsights.swift`). Two server calls use Claude
   (`ANTHROPIC_API_KEY`): `convex/health/cuisineAi.ts` turns a country's Wikipedia
   cuisine article into a dish list and sends no user data; `convex/health/pitchfork.ts`
-  writes Pitchfork's chat replies and sends the conversation, the phone's summary
+  writes Pitchfork's chat replies and sends the conversation, the phone's (or web page's) summary
   of today's numbers, and whatever health history its `health_history` tool reads
   (`convex/health/pitchforkData.ts`). Chats are not stored on the server. The
   privacy page describes both; update it if what either sends changes. For testing,

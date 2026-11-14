@@ -1,0 +1,171 @@
+/* The web app's look, taken from the iOS app's Theme.swift: pale bone and espresso, EB Garamond
+   for words that matter, Jost for labels. Scoped to .fl so the legal pages keep their own. */
+
+.fl {
+  --fl-bg: #f6f2eb;
+  --fl-bg-2: #f9f6f1;
+  --fl-surface: rgba(255, 255, 255, 0.55);
+  --fl-raised: rgba(255, 255, 255, 0.82);
+  --fl-text: #26211c;
+  --fl-text-2: #6b6259;
+  --fl-text-3: #9a9084;
+  --fl-accent: #8c6a4a;
+  --fl-positive: #4e7f52;
+  --fl-danger: #a8473f;
+  --fl-line: rgba(38, 33, 28, 0.1);
+  --fl-shadow: 0 1px 2px rgba(38, 33, 28, 0.04), 0 6px 24px rgba(38, 33, 28, 0.05);
+  color-scheme: light;
+  min-height: 100dvh;
+  background: var(--fl-bg);
+  color: var(--fl-text);
+  font-family: var(--fl-sans), system-ui, sans-serif;
+  font-weight: 400;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fl {
+    --fl-bg: #201b16;
+    --fl-bg-2: #221d18;
+    --fl-surface: rgba(58, 51, 44, 0.55);
+    --fl-raised: rgba(69, 61, 53, 0.78);
+    --fl-text: #f4efe6;
+    --fl-text-2: #b8afa4;
+    --fl-text-3: #8a8177;
+    --fl-accent: #d2b48c;
+    --fl-positive: #8cc48f;
+    --fl-danger: #e08b80;
+    --fl-line: rgba(244, 239, 230, 0.1);
+    --fl-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 24px rgba(0, 0, 0, 0.18);
+    color-scheme: dark;
+  }
+}
+
+.fl ::selection { background: color-mix(in srgb, var(--fl-accent) 30%, transparent); }
+
+.fl-serif { font-family: var(--fl-serif), Georgia, serif; font-weight: 500; }
+.fl-serif-body { font-family: var(--fl-serif), Georgia, serif; font-weight: 400; }
+.fl-italic { font-family: var(--fl-serif), Georgia, serif; font-style: italic; }
+
+.fl-kicker {
+  font-family: var(--fl-sans), system-ui, sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--fl-text-3);
+}
+.fl-kicker.accent { color: var(--fl-accent); }
+
+.fl-title { font-family: var(--fl-serif), Georgia, serif; font-weight: 500; font-size: 34px; line-height: 1.1; letter-spacing: -0.01em; }
+.fl-lede { font-family: var(--fl-serif), Georgia, serif; font-size: 18px; line-height: 1.55; color: var(--fl-text-2); }
+.fl-note { font-size: 12.5px; line-height: 1.6; color: var(--fl-text-2); }
+.fl-fine { font-size: 12px; line-height: 1.6; color: var(--fl-text-3); }
+.fl-error { font-size: 13px; line-height: 1.5; color: var(--fl-danger); }
+
+.fl-plate {
+  background: var(--fl-surface);
+  border: 1px solid var(--fl-line);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: var(--fl-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.fl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 999px; padding: 13px 22px;
+  font-size: 13.5px; font-weight: 500; letter-spacing: 0.01em;
+  background: var(--fl-text); color: var(--fl-bg);
+  border: 1px solid transparent;
+}
+.fl-btn:hover:not(:disabled) { opacity: 0.88; }
+.fl-btn:disabled { opacity: 0.45; }
+.fl-btn.ghost { background: transparent; color: var(--fl-text); border-color: var(--fl-line); }
+.fl-btn.ghost:hover:not(:disabled) { background: var(--fl-surface); opacity: 1; }
+.fl-btn.danger { background: transparent; color: var(--fl-danger); border-color: color-mix(in srgb, var(--fl-danger) 35%, transparent); }
+.fl-btn.small { padding: 8px 14px; font-size: 12.5px; }
+.fl-btn.wide { width: 100%; }
+
+.fl-input, .fl-textarea, .fl-select {
+  width: 100%;
+  background: var(--fl-raised);
+  border: 1px solid var(--fl-line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--fl-text);
+  outline: none;
+}
+.fl-input:focus, .fl-textarea:focus, .fl-select:focus { border-color: color-mix(in srgb, var(--fl-accent) 55%, transparent); }
+.fl-input::placeholder, .fl-textarea::placeholder { color: var(--fl-text-3); }
+.fl-textarea { resize: none; line-height: 1.5; }
+
+.fl-pill {
+  border-radius: 999px; padding: 7px 14px;
+  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fl-text-2); border: 1px solid var(--fl-line); background: transparent;
+}
+.fl-pill[aria-pressed="true"] { background: var(--fl-text); color: var(--fl-bg); border-color: transparent; }
+
+.fl-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px; padding: 6px 12px; font-size: 13px;
+  background: var(--fl-raised); border: 1px solid var(--fl-line); color: var(--fl-text);
+}
+.fl-chip button { color: var(--fl-text-3); font-size: 14px; line-height: 1; }
+.fl-chip button:hover { color: var(--fl-danger); }
+
+.fl-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 0; border-bottom: 1px solid var(--fl-line); text-align: left;
+}
+.fl-link { color: var(--fl-accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+.fl-nav-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 14px; border-radius: 12px;
+  font-family: var(--fl-serif), Georgia, serif; font-size: 19px; color: var(--fl-text-2);
+}
+.fl-nav-item:hover { background: var(--fl-surface); color: var(--fl-text); }
+.fl-nav-item[aria-current="page"] { background: var(--fl-raised); color: var(--fl-text); box-shadow: var(--fl-shadow); }
+
+.fl-bubble-you {
+  align-self: flex-end; max-width: min(80%, 560px);
+  background: var(--fl-text); color: var(--fl-bg);
+  border-radius: 20px 20px 6px 20px; padding: 10px 15px;
+  font-size: 15px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.fl-bubble-them {
+  align-self: flex-start; max-width: min(88%, 640px);
+  font-family: var(--fl-serif), Georgia, serif; font-size: 18px; line-height: 1.6;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+.fl-dots span {
+  display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%;
+  background: var(--fl-text-3); animation: fl-dot 1.2s infinite ease-in-out;
+}
+.fl-dots span:nth-child(2) { animation-delay: 0.15s; }
+.fl-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes fl-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+
+.fl-blob {
+  width: 120px; height: 120px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--fl-accent) 45%, white) 0%, transparent 60%),
+    radial-gradient(circle at 70% 75%, color-mix(in srgb, var(--fl-positive) 35%, transparent) 0%, transparent 60%),
+    color-mix(in srgb, var(--fl-accent) 30%, var(--fl-bg));
+  filter: blur(0.5px);
+  animation: fl-breathe 6s ease-in-out infinite;
+}
+.fl-blob.busy { animation-duration: 1.6s; }
+@keyframes fl-breathe { 0%, 100% { transform: scale(1); border-radius: 50% 48% 52% 50%; } 50% { transform: scale(1.06); border-radius: 46% 54% 48% 52%; } }
+
+.fl-in { animation: fl-in 320ms cubic-bezier(0.2, 0, 0, 1) both; }
+@keyframes fl-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* The page behind the app, so overscroll and short pages match it. */
+body:has(> .fl) { background: #f6f2eb; }
+@media (prefers-color-scheme: dark) { body:has(> .fl) { background: #201b16; } }
+
+/* The chat boxes draw their own focus ring on the pill around them. */
+.fl-bare:focus-visible { outline: none; }
