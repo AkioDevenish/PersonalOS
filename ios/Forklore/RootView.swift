@@ -5,13 +5,13 @@ import SwiftUI
 enum AppTab: CaseIterable, Hashable {
     case home, meals, assistant, practitioners, profile
 
-    /// What the sidebar lists. Home is hidden for now.
-    static let visible: [AppTab] = [.meals, .assistant, .practitioners, .profile]
+    /// What the sidebar lists. `home` is the reading page, shown as Read.
+    static let visible: [AppTab] = [.meals, .assistant, .home, .practitioners, .profile]
 
     /// The outline; the sidebar fills the selected one.
     var symbol: String {
         switch self {
-        case .home: return "house"
+        case .home: return "book"
         case .meals: return "leaf"
         case .assistant: return "sparkles"
         case .practitioners: return "person.2"
@@ -22,7 +22,7 @@ enum AppTab: CaseIterable, Hashable {
     /// Single words, as the guidelines ask, and the label a screen reader announces either way.
     var title: String {
         switch self {
-        case .home: return "Home"
+        case .home: return "Read"
         case .meals: return "Meals"
         case .assistant: return "Pitchfork"
         case .practitioners: return "Experts"
