@@ -5,6 +5,10 @@ struct NutritionView: View {
     @EnvironmentObject var health: HealthKitManager
     @Environment(Store.self) private var store
     @ObservedObject private var readings = Readings.shared
+    @Environment(PitchforkHandoff.self) private var handoff: PitchforkHandoff?
+    /// Whether this phone can write the suggestion itself. Without Apple Intelligence, Pitchfork
+    /// answers instead, when asked.
+    @State private var onDevice = OnDeviceInsights.availability
     @State private var latest = ""
     @State private var status = ""
     @State private var isBusy = false
@@ -115,9 +119,13 @@ struct NutritionView: View {
                     .flowIn(5)
 
                 Button {
-                    Task { await generate() }
+                    if onDevice.isReady {
+                        Task { await generate() }
+                    } else {
+                        askPitchfork()
+                    }
                 } label: {
-                    Text(isBusy ? "Thinking…" : "Suggest \(context)")
+                    Text(isBusy ? "Thinking…" : onDevice.isReady ? "Suggest \(context)" : "Ask Pitchfork for \(context)")
                         .font(Theme.sans(13, medium: true))
                         .foregroundStyle(Theme.surface)
                         .frame(maxWidth: .infinity)
@@ -132,6 +140,15 @@ struct NutritionView: View {
                 .buttonStyle(.press)
                 .disabled(isBusy)
                 .padding(.top, 16)
+
+                if !onDevice.isReady {
+                    Text("\(onDevice.explanation) Pitchfork can suggest one instead. It sends today's numbers to its AI to answer.")
+                        .font(Theme.sans(12))
+                        .foregroundStyle(Theme.secondaryText)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 14)
+                }
 
                 if !status.isEmpty {
                     Text(status)
@@ -166,6 +183,14 @@ struct NutritionView: View {
                                 .lineSpacing(5)
                         }
                         .padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                withAnimation(Theme.Motion.flow) { readings.remove(r) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
 
@@ -188,6 +213,8 @@ struct NutritionView: View {
         }
         .appBackground()
         .task { await loadSignals() }
+        // Apple Intelligence can be switched on, or finish downloading, while the app is open.
+        .onAppear { onDevice = OnDeviceInsights.availability }
         .task { await loadBook() }
         .onChange(of: country) { _, _ in
             book = .empty
@@ -218,6 +245,13 @@ struct NutritionView: View {
         today = try? await health.fetchTodaySnapshot()
     }
 
+    /// The same question, asked of Pitchfork, for a phone that can't write it here.
+    private func askPitchfork() {
+        guard !Paywall.enabled || store.entitlement.isSubscribed else { locked = true; return }
+        let place = country.isEmpty ? "" : " I cook and shop in \(Cuisine.name(for: country))."
+        handoff?.ask("Suggest a \(context) for me that fits today's numbers.\(place)")
+    }
+
     private func generate() async {
         // The reading is written on this phone and costs nothing to serve, so this is a price on
         // the feature rather than on a bill we pay.
@@ -240,6 +274,8 @@ struct NutritionView: View {
             )
             readings.add(Reading(kind: .meal, text: latest))
         } catch {
+            // It went away between appearing and tapping: switch the button over to Pitchfork.
+            onDevice = OnDeviceInsights.availability
             status = error.localizedDescription
         }
     }

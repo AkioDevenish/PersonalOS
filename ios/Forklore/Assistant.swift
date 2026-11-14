@@ -1,6 +1,7 @@
 import Accelerate
 import AVFoundation
 import Combine
+import Observation
 import Speech
 import SwiftUI
 
@@ -9,6 +10,27 @@ struct ThinkingStep: Identifiable, Equatable, Hashable, Codable {
     var id = UUID()
     let symbol: String
     let label: String
+}
+
+/// A question another page wants Pitchfork to answer, such as Meals on a phone without Apple
+/// Intelligence. Setting one switches to Pitchfork, which opens a new chat and sends it.
+@Observable
+final class PitchforkHandoff {
+    var question: String?
+    /// Goes up with every question, so the app can switch to Pitchfork even after the chat has
+    /// already taken the question and cleared it.
+    private(set) var asked = 0
+
+    func ask(_ text: String) {
+        question = text
+        asked += 1
+    }
+
+    /// Hands the question over once, so it isn't sent again when the page comes back.
+    func take() -> String? {
+        defer { question = nil }
+        return question
+    }
 }
 
 /// One line in the conversation.

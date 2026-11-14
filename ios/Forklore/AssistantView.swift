@@ -11,12 +11,15 @@ struct AssistantView: View {
     @StateObject private var assistant = Assistant()
     @StateObject private var voice = Voice()
     @ObservedObject private var chats = Chats.shared
+    @Environment(PitchforkHandoff.self) private var handoff: PitchforkHandoff?
 
     @AppStorage("assistant_speaks") private var speaks = true
     @AppStorage(Cuisine.key) private var country = Cuisine.deviceDefault
     @State private var draft = ""
     @State private var locked = false
     @State private var started = false
+    /// Counts starts, so a slow one finishing late can't wipe a chat begun after it.
+    @State private var generation = 0
     @State private var photo: PhotosPickerItem?
     @State private var reading = false
     @State private var pickingPhoto = false
@@ -84,6 +87,10 @@ struct AssistantView: View {
         }
         .appBackground()
         .task { await begin() }
+        .onChange(of: handoff?.question, initial: true) { _, question in
+            guard question != nil, let asked = handoff?.take() else { return }
+            Task { await answer(handedOver: asked) }
+        }
         .onChange(of: voice.heard) { _, text in if voice.listening { draft = text } }
         .onChange(of: voice.listening) { was, now in
             // Finished talking: send what was heard.
@@ -415,8 +422,20 @@ struct AssistantView: View {
     private func begin(fresh: Bool = false, resuming chat: SavedChat? = nil) async {
         guard fresh || !started else { return }
         started = true
+        generation += 1
+        let mine = generation
         let (text, sources) = await context()
+        guard mine == generation else { return }
         assistant.start(context: text, sources: sources, resuming: chat)
+    }
+
+    /// A question from another page, in a chat of its own. If Pitchfork is still answering
+    /// something, it waits in the message box instead.
+    private func answer(handedOver question: String) async {
+        guard !assistant.thinking else { draft = question; return }
+        voice.stopSpeaking()
+        await begin(fresh: true)
+        await send(question)
     }
 
     private func send(_ text: String) async {

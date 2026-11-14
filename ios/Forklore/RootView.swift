@@ -60,6 +60,7 @@ struct RootView: View {
     /// A stack per tab rather than one shared between them.
     @State private var paths: [AppTab: [Route]] = [:]
     @State private var menu = SideMenu()
+    @State private var handoff = PitchforkHandoff()
 
     var body: some View {
         page
@@ -72,6 +73,15 @@ struct RootView: View {
                 }
             }
             .environment(menu)
+            .environment(handoff)
+            // Another page asked Pitchfork something: go there, at the chat rather than a pushed page.
+            .onChange(of: handoff.asked) { _, _ in
+                guard tab != .assistant else { return }
+                withAnimation(Theme.Motion.flow) {
+                    paths[.assistant] = []
+                    tab = .assistant
+                }
+            }
     }
 
     /// The pages, in a TabView whose own bar is hidden.
