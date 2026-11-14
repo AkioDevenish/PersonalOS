@@ -1,10 +1,10 @@
 # Forklore
 
 An iOS food app that reads Apple Health and suggests what to eat next, with a chat
-assistant called Pitchfork and paid consultations with nutritionists.
+assistant called Pitchfork and paid consultations with nutritionists, plus a web
+version of the same app.
 
-The repository holds the app, its Convex backend, and a small Next.js site that
-serves the privacy policy and terms.
+The repository holds the iOS app, its Convex backend, and the Next.js web app.
 
 ## What's in the app
 
@@ -26,6 +26,24 @@ Pages are picked from a sidebar opened by the glass menu button at the top left.
 - **Profile**: account details, notifications, privacy and terms, log out and account
   deletion.
 
+## The web version
+
+`src/app/(app)/` is the same app in a browser, on the same account and backend: Meals,
+Pitchfork, Read, Experts and Profile, with a sidebar that stays out on a wide window
+and slides in on a narrow one. Differences from the phone:
+
+- Sign-in is email and password only. Google, Facebook and Apple return only to the
+  phone app (`safeRedirect` in `convex/auth.ts`).
+- A browser can't read Apple Health, so Meals always asks Pitchfork, which reads the
+  history the phone has synced.
+- Pitchfork chats, meal ideas, the chosen country and the consultations you started are
+  kept in the browser's local storage, as the phone keeps them on the device.
+- Text only: no voice, photos or video calls. Practitioners can answer their queue from
+  Experts but apply from the phone.
+
+It talks to the dev deployment under `npm run dev` and to production in a production
+build, or to whatever `NEXT_PUBLIC_CONVEX_URL` says.
+
 Apple Health samples sync to Convex incrementally in the background. App Store
 subscriptions and one-off purchases are verified on the server, but the paywall is
 off for now (`Paywall.enabled` in `ios/Forklore/Store.swift`).
@@ -40,7 +58,8 @@ sign-in scheme, the legal pages).
 | `ios/Forklore/` | The SwiftUI app (iOS 26.5+). Open `ios/Forklore.xcodeproj`. |
 | `convex/` | The backend: schema, auth, health ingest, consultations, payouts, articles, billing, push. |
 | `convex/*.test.ts` | Backend tests, run with vitest and `convex-test`. |
-| `src/app/` | Next.js pages for `/privacy` and `/terms`, plus icons. There is no web app. |
+| `src/app/(app)/`, `src/web/` | The web app (Next.js), talking to Convex directly. |
+| `src/app/privacy`, `src/app/terms` | Plain Next.js legal pages, plus icons. |
 | `scripts/apple-secret.mjs` | Makes the Sign in with Apple client secret from a `.p8` key. |
 | `docs/machine-backups/` | Old crontab and launchd files from the Mac setup, kept for reference. |
 
@@ -56,8 +75,8 @@ Then open `ios/Forklore.xcodeproj` in Xcode and run on a device. The app
 talks straight to Convex; the deployment URL is in
 `ios/Forklore/AppConfig.swift`.
 
-`npm run dev` starts the Next.js site if you're working on the legal pages. The
-same pages are also served by Convex at `/privacy` and `/terms` on the deployment's
+`npm run dev` starts the web app at http://localhost:3000, signed in against the dev
+deployment. The privacy and terms pages the app links to are served by Convex at `/privacy` and `/terms` on the deployment's
 `.convex.site` URL, which is what the app links to.
 
 ## Configuration
